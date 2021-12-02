@@ -1,0 +1,9 @@
+
+            config.VPRINT('joining {0} and {1}...'.format('diurco',key))
+      o(verbose=config.VERBOSE,null_counts=True))             
+  dataPath=config.INDISPENSABLEDATAPATH+
+configurations config
+            config.VPRINT('predictors: ',predictors)
+      
+            config.VPRINT('predictors: ',config.PREDICTORREGEX)
+            predictors=[p for p 
