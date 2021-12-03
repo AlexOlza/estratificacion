@@ -30,13 +30,19 @@ np.random.seed(config.SEED)
 X,y=getData(2016,oldbase=False)#new data
 Xx,Yy=getData(2016) #THIS IS FOR THE OLD MODEL 
 idx=[i for i, x in enumerate(Yy.ravel()==y.to_numpy().ravel()) if x==False]
-
+"""
+ Xxx=Xx.drop(Xx.index[idx]).drop('PATIENT_ID',axis=1)
+ eq=Xxx.eq(X)
+ all(eq)
+Out[83]: True
+"""
 print(idx)
 Yy=Yy.ravel()
 y=y.drop(idx).to_numpy().ravel()
 
 # del y[idx]
 X.drop(X.index[idx],inplace=True)
+Xxx=Xx.drop(Xx.index[idx]).drop('PATIENT_ID',axis=1)
 # sum(Yy!=y.urg)
 #%%
 # assert len(y.columns)==1, 'This model is built for a single response variable! Modify config.COLUMNS'
@@ -47,6 +53,7 @@ X.drop(X.index[idx],inplace=True)
 # y.drop(na_indices,axis=0,inplace=True)
 # y[config.COLUMNS]=np.where(y[config.COLUMNS]>=1,1,0)
 Yy=np.where(Yy>=1,1,0)
+# Yy=[i for j, i in enumerate(Yy) if j not in idx]
 y=np.where(y>=1,1,0)
 print('Sample size ',len(X))
 # X_train, X_test, y_train, y_test = train_test_split(Xx,Yy,test_size=0.3,random_state=config.SEED)
