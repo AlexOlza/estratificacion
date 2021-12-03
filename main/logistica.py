@@ -27,8 +27,16 @@ from sklearn import linear_model
 from sklearn.model_selection import train_test_split
 np.random.seed(config.SEED)
 
-X,y=getData(2016,oldbase=False)
-Xx,Yy=getData(2016)
+X,y=getData(2016,oldbase=False)#new data
+Xx,Yy=getData(2016) #THIS IS FOR THE OLD MODEL 
+idx=[i for i, x in enumerate(Yy.ravel()==y.to_numpy().ravel()) if x==False]
+
+print(idx)
+Yy=Yy.ravel()
+y=y.drop(idx).to_numpy().ravel()
+
+# del y[idx]
+X.drop(X.index[idx],inplace=True)
 # sum(Yy!=y.urg)
 #%%
 # assert len(y.columns)==1, 'This model is built for a single response variable! Modify config.COLUMNS'
@@ -38,35 +46,38 @@ Xx,Yy=getData(2016)
 # X.drop(na_indices,axis=0,inplace=True)
 # y.drop(na_indices,axis=0,inplace=True)
 # y[config.COLUMNS]=np.where(y[config.COLUMNS]>=1,1,0)
-Yy=np.where(Yy.to_numpy()>=1,1,0)
-print('Sample size ',len(Xx))
+Yy=np.where(Yy>=1,1,0)
+y=np.where(y>=1,1,0)
+print('Sample size ',len(X))
 # X_train, X_test, y_train, y_test = train_test_split(Xx,Yy,test_size=0.3,random_state=config.SEED)
 
 
 #%%
 logistic=linear_model.LogisticRegression(penalty='none',max_iter=1000,verbose=0)
 # fit=logistic.fit(X_train,y_train)
-# fit=logistic.fit(Xx, Yy.to_numpy().ravel())
+# fit=logistic.fit(X, y.to_numpy().ravel())
 to_drop=['PATIENT_ID','ingresoUrg']
 for c in to_drop:
     try:
-        Xx.drop(c,axis=1,inplace=True)
+        X.drop(c,axis=1,inplace=True)
     except:
         pass
+        print('pass)')
 from time import time
 t0=time()
-fit=logistic.fit(Xx, Yy.ravel())
+config.PREDICTORS=X.columns #THIS SEEMS TO HAVE NO EFFECT
+fit=logistic.fit(X, y)
 print('fitting time: ',time()-t0)
 #%%
 from configurations.security import savemodel
-savemodel(config, fit, comments='this is with Xx and Yy')
+savemodel(config, fit, comments='this is with X and y, dropping the 24 problematic patients')
 #%%
-# 
+# # 
 import joblib 
 oldmodel=joblib.load('/home/aolza/Desktop/estratificacion/models/OLDBASE/oldlog.joblib')
 # newmodel=joblib.load('')
 # print(oldmodel.coef_[0]==fit.coef_[0])
-withX=joblib.load('/home/aolza/Desktop/estratificacion/models/OLDBASE/logistic20211201_180659.joblib')
+withXx=joblib.load('/home/aolza/Desktop/estratificacion/models/OLDBASE/logistic20211203_123027.joblib')
 oldpred=oldmodel.predict_proba(X.head())
-withXxpred=fit.predict_proba(X.head())
-withXpred=withX.predict_proba(X.head())
+withXpred=fit.predict_proba(X.head())
+withXxpred=withXx.predict_proba(X.head())

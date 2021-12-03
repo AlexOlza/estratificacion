@@ -165,6 +165,7 @@ def load_predictors(path,predictors=None):
         predictors.insert(0,'PATIENT_ID')
         
     util.vprint('predictors: ',predictors)
+    # config.PREDICTORS=predictors #NOT SURE IF THIS IS A GOOD IDEA
     return predictors
 
 def load(filename,directory=config.ROOTPATH,predictors=None):

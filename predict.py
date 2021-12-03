@@ -19,8 +19,8 @@ def configure(configname=None):
              configuration[k]= {int(yr):filename for yr,filename in v.items()}
     print(configuration)
     conf=Struct(**configuration)
-    conf.TRACEBACK=False
-    conf.VERBOSE=False
+    conf.TRACEBACK=True
+    conf.VERBOSE=True
     if not config.configured:
         config.configure(conf) # configure() receives a python module
     assert config.configured
@@ -106,28 +106,16 @@ import numpy as np
 if __name__=='__main__':
         
     # FIXME STRUCT KEYS TO INT, FIX GENERARTABLASVARIABLES.RETRIEVE INDIICE
-    configname='configurations/local/used/logistic20211201_162631.json'
-    configure(configname)
-    modelfilename='models/OLDBASE/logistic20211201_162631.joblib'
+    configname='configurations/local/used/logistic20211203_135307.json'
+    configuration=configure(configname)
+    modelfilename='models/OLDBASE/logistic20211203_135307.joblib'
     model=job.load(modelfilename)
     
     
-    X,y=getData(2017,prediction=True)
-    cols=X.columns
-    # na_indices=X[X.isna().any(axis=1)].index
-    # X.drop(na_indices,axis=0,inplace=True)
-    # y.drop(na_indices,axis=0,inplace=True)
-
-
-    # preds.OBS=np.where(preds.OBS>=1,1,0)
-    # print('AUC: ',roc_auc_score(preds.OBS,preds.PRED))
-
-    # cols=X.drop('PATIENT_ID',axis=1).columns
-    # dat=pd.merge(X,y,on='PATIENT_ID')
-    # del X,y
-    # dat.drop(dat[dat.isna().any(axis=1)].index,inplace=True)
-    # # probs=performance(model,dat,predictors=cols,probs=None,key='urg',file=None,AUC=True)
-
+    X,y=getData(2017,prediction=True,oldbase=False)
+    Xx,Yy=getData(2017,prediction=True,oldbase=True)
+    cols=list(X.columns)
+    if 'ingresoUrg' in cols: cols.remove('ingresoUrg')
     
     save('test2018.csv',
           config.DATAPATH+'test{0}.csv'.format(2017),
@@ -136,7 +124,7 @@ if __name__=='__main__':
     probs=pd.read_csv('test2018.csv')
     # #%%
     # dat['binurg']=np.where(dat.urg>=1,1,0)
-    auc=roc_auc_score(np.where(y>=1,1,0), probs.PROB)
-    oldprobs=pd.read_csv('predecirIngresos/logistica/urgSinPrevio18.csv')
-    oldauc=roc_auc_score(np.where(y>=1,1,0), oldprobs.PROB_ING)
+    auc=roc_auc_score(np.where(y.urg>=1,1,0), probs.PROB)
+    oldprobs=pd.read_csv('untracked/predecirIngresos/logistica/urgSinPrevio18.csv')
+    oldauc=roc_auc_score(np.where(Yy>=1,1,0), oldprobs.PROB_ING)
 
