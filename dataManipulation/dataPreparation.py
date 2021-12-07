@@ -33,16 +33,16 @@ def excludeHosp(df,filtro,criterio):
 
 # TODO MOVE ASSERTIONS BEFORE LOADING BIG FILES!!!!
 # TODO TEST NEW DEFAULT predictors=config.PREDICTORREGEX INSTEAD OF predictors=config.PREDICTORS
+# config.PREDICTORS may be currently unused, consider removing it
 def getData(yr,columns=config.COLUMNS,previousHosp=config.PREVIOUSHOSP,predictors=config.PREDICTORREGEX,
             exclude=config.EXCLUDE,
             resourceUsage=config.RESOURCEUSAGE,
-            prediction=False,
             **kwargs):
     oldbase = kwargs.get('oldbase','OLDBASE' in config.CONFIGNAME)
     if oldbase:
         acg=load(filename=config.ACGFILES[yr],predictors=predictors)
         print('not opening allhospfile')
-        return (acg.drop('ingresoUrg',axis=1),acg['ingresoUrg'])
+        return (acg.drop('ingresoUrg',axis=1),acg[['PATIENT_ID','ingresoUrg']])
     cols=columns.copy() #FIXME find better approach
     t0=time.time()
     ing=loadIng(config.ALLHOSPITFILE,config.ROOTPATH)
@@ -82,15 +82,9 @@ def getData(yr,columns=config.COLUMNS,previousHosp=config.PREVIOUSHOSP,predictor
 
             
     y17=pd.merge(ingT[yr+1],full16['PATIENT_ID'],on='PATIENT_ID',how='outer').fillna(0)
-    if prediction:
-        data=pd.merge(pred16,y17,on='PATIENT_ID')
-        data.to_csv(config.DATAPATH+'test{0}.csv'.format(yr))
-        print('getData time: ',time.time()-t0)
-        return(data[listIntersection(data.columns,pred16.columns)],data[cols])#includes PATIENT ID
-    else: #drop the ID
-        data=pd.merge(pred16,y17,on='PATIENT_ID').drop('PATIENT_ID',axis=1)
+    data=pd.merge(pred16,y17,on='PATIENT_ID')
     print('getData time: ',time.time()-t0)
-    return(data[listIntersection(data.columns,pred16.columns)],data[columns])
+    return(data[listIntersection(data.columns,pred16.columns)],data[cols])
 
 if __name__=='__main__':
     import sys
