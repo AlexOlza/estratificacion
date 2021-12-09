@@ -9,7 +9,7 @@ SEED=42 #random seed
 """LOCATIONS"""
 PROJECT='estratificacion'
 ROOTPATH='/home/aolza/Desktop/estratificacion/'
-DATAPATH=ROOTPATH+'estratificacionDatos/'
+DATAPATH='/home/aolza/Desktop/estratificacionDatos/'
 INDISPENSABLEDATAPATH=DATAPATH+'indispensable/'
 """these will be overwritten for cluster """
 CONFIGPATH=ROOTPATH+'configurations/local/'

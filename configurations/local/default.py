@@ -9,7 +9,7 @@ Created on Tue Nov 23 09:29:36 2021
 import os
 project='estratificacion'
 rootPath='/home/aolza/Desktop/estratificacion/'
-dataPath=rootPath+'estratificacionDatos/'
+DATAPATH='/home/aolza/Desktop/estratificacionDatos/'
 indispensableDataPath=dataPath+'indispensable/'
 outPath=rootPath+'predictions/'
 modelPath=rootPath+'models/'

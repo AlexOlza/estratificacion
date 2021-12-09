@@ -1,2 +1,9 @@
 untracked/
 models/
+modelEvaluation/
+configurations/local/used/
+configurations/cluster/used/
+predictions/
+*__pycache__*
+*.ini
+*.zip

@@ -8,7 +8,6 @@ Created on Mon Nov 22 15:19:44 2021
 import sys
 sys.path.append('/home/aolza/Desktop/estratificacion/')
 from python_settings import settings as config
-# from python_settings import SetupSettings
 from configurations.cluster import configRandomForest as randomForest_settings
 if not config.configured:
     config.configure(randomForest_settings) # configure() receives a python module
@@ -23,16 +22,14 @@ import numpy as np
 import pandas as pd
 import itertools
 from sklearn.ensemble import RandomForestClassifier
-# from functions import save, performance
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import RandomizedSearchCV
 np.random.seed(config.SEED)
 
-pred16,y17=getData(2016,predictors='AGE_|INDICE_PRIVACION')
+pred16,y17=getData(2016,predictors=True)
 assert len(y17.columns)==1, 'This model is built for a single response variable! Modify config.COLUMNS'
 #%%
 """BALANCEO LAS CLASES Y TRAIN-TEST SPLIT"""
-#this is necessary for compatibility with cluster
 idx=np.array(list(itertools.chain.from_iterable((y17[config.COLUMNS] >= 1).values)))
 ing_indices = y17.loc[idx].index
 noing_indices = y17.loc[(~idx)].index
@@ -47,6 +44,7 @@ X.drop(na_indices,axis=0,inplace=True)
 y=pd.concat([y17.loc[random_indices],y17.loc[ing_indices]])
 y.drop(na_indices,axis=0,inplace=True)
 y[config.COLUMNS]=np.where(y[config.COLUMNS]>=1,1,0)
+print('Dropping NA')
 print('Sample size ',len(X))
 X_train, X_test, y_train, y_test = train_test_split(X,y,test_size=0.3,random_state=config.SEED)
 
@@ -56,13 +54,12 @@ forest = RandomizedSearchCV(estimator = config.FOREST,
                                param_distributions = config.RANDOM_GRID,
                                n_iter = config.N_ITER,
                                cv = config.CV, 
-                               verbose=2,
+                               verbose=0,
                                random_state=config.SEED,
                                n_jobs =-1)
 forest.fit(X_train,y_train)
 #%%
 """ SAVE TRAINED MODEL """
 from configurations.security import savemodel
-from configurations.utility import makeAllPaths 
 savemodel(config,forest)
 #
