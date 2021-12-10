@@ -76,7 +76,7 @@ from dataManipulation.dataPreparation import getData
 from sklearn.metrics import roc_auc_score
 import numpy as np
 from sklearn import linear_model
-from main import SafeLogisticRegression
+from main.SafeLogisticRegression import SafeLogisticRegression
 
 #%%
 if __name__=='__main__':
