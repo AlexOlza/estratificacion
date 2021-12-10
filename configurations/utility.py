@@ -1,13 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """ UTILITY FUNCTIONS THAT HAVE TO DO WITH SETTINGS 
-    should be imported as: import utility as util
+    should be imported as: from configurations import utility as util
 """
-
+    
+from stat import S_IREAD, S_IRGRP, S_IROTH, S_IWUSR
+from joblib import dump
+from configurations import utility as util
+import re
+import json
 import os
-from datetime import datetime 
+from datetime import datetime as dt
 from contextlib import redirect_stdout
-from python_settings import settings as config
+from python_settings import settings as config #MUST BE ALREADY CONFIGURED
 
 class Struct:
     def __init__(self, **entries):
@@ -26,7 +31,7 @@ def makeAllPaths():
         
 """ INFO FILE"""
 def info(modelfilename,modelPath=config.MODELSPATH,**kwargs):
-    now = datetime.now() # current date and time
+    now = dt.now() # current date and time
     file=os.path.join(modelPath,'available_models.txt')
     with open(file, 'a+') as f:
         with redirect_stdout(f):
@@ -54,5 +59,43 @@ def tracefunc(frame, event, arg, indent=[0]):
 if config.TRACEBACK:
     import sys
     sys.setprofile(tracefunc)
+
+def readonly(filename):  os.chmod(filename, S_IREAD|S_IRGRP|S_IROTH)
+
+def readwrite(filename): os.chmod(filename, S_IWUSR|S_IREAD) # This makes the file read/write for the owner
+
+def savemodel(config,model,**kwargs):
+    timestamp = str(dt.now())[:19]
+    timestamp = re.sub(r'[\:-]','', timestamp) # replace unwanted chars
+    NOW = re.sub(r'[\s]','_', timestamp)
+    if not os.path.exists(config.MODELPATH):
+        os.mkdir(config.MODELPATH)
+    modelname=config.ALGORITHM+NOW
+    modelfilename=modelname+'.joblib'
+    configname=config.USEDCONFIGPATH+modelname+'.json'
+    os.chdir(config.MODELPATH)
+    print('dump',config.MODELPATH+modelfilename)
+    dump(model, config.MODELPATH+modelfilename)
+    os.chdir(config.USEDCONFIGPATH)
+    attrs=saveconfig(config,configname)
+    util.info(modelfilename,conf=attrs,**kwargs)
+
+def is_jsonable(x):
+    try:
+        json.dumps(x)
+        return True
+    except:
+        return False
+
+def saveconfig(config,configname):
+    settings=config.__dict__['_wrapped'].default_settings.__dict__
+    attrs={k:v for k,v in settings.items() if k==k.upper()}#TODO POTENTIALLY INCLUDE MORE FIELDS
+    for k,v in attrs.items():
+        if not is_jsonable(v):
+            attrs[k]=str(v)
+    with open(configname,'w') as f:
+        json.dump(attrs, f)
+    return attrs
     
- 
+        
+            

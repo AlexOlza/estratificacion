@@ -29,7 +29,7 @@ def assertMissingCols(needed,df,function_name):
     missing_columns=set(needed)-set(df.columns)
     assert len(missing_columns)==0,'{1}: MISSING NEEDED COLS {0} IN THE HOSPITALIZATION DATASET.'.format(missing_columns,function_name)
     
-def loadIng(f='ingresos2016_2018.csv',project_dir='/home/aolza/Desktop/estratificacion'):
+def loadIng(f='ingresos2016_2018.csv',project_dir=config.DATAPATH):
     for path in Path(project_dir).rglob(f):
         ing=pd.read_csv(path)
         break  

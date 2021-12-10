@@ -13,7 +13,7 @@ class SafeLogisticRegression(linear_model.LogisticRegression):
         super().__init__(penalty=penalty,max_iter=max_iter,verbose=verbose) 
     def set_columns(self,columns):
         self.columns=columns
-    def safeFit(self, X, y):
+    def safeFit(self, X, y):#FIXME dataconversionwarning
         self.columns = X.columns
         print(self.columns)
         return self.fit( X, y)

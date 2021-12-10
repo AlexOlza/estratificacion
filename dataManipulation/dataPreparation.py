@@ -46,7 +46,7 @@ def getData(yr,columns=config.COLUMNS,previousHosp=config.PREVIOUSHOSP,predictor
         return (acg.drop('ingresoUrg',axis=1),acg[['PATIENT_ID','ingresoUrg']])
     cols=columns.copy() #FIXME find better approach
     t0=time.time()
-    ing=loadIng(config.ALLHOSPITFILE,config.ROOTPATH)
+    ing=loadIng(config.ALLHOSPITFILE,config.DATAPATH)
     ingT=createYearlyDataFrames(ing)
     missing_columns=set([yr,yr+1])-set(ingT.keys())
     assert len(missing_columns)==0,'getData: HOSPITALIZATION DATA FOR YEAR {0} NOT AVAILABLE.'.format(missing_columns)
@@ -79,6 +79,8 @@ def getData(yr,columns=config.COLUMNS,previousHosp=config.PREVIOUSHOSP,predictor
         assertMissingCols(previousHosp,ingT[yr],'getData')
         pred16=pd.merge(full16,ingT[yr][previousHosp],on='PATIENT_ID',how='left').fillna({c:0 for c in previousHosp},inplace=True)
     else:
+        # assert 'PATIENT_ID' in ingT[yr].columns OK
+        assert 'PATIENT_ID' in full16.columns
         pred16=pd.merge(full16,ingT[yr]['PATIENT_ID'],on='PATIENT_ID',how='left')
 
             
@@ -90,7 +92,7 @@ def getData(yr,columns=config.COLUMNS,previousHosp=config.PREVIOUSHOSP,predictor
 if __name__=='__main__':
     import sys
     sys.path.append('/home/aolza/Desktop/estratificacion/')
-    ing=loadIng(config.ALLHOSPITFILE,config.ROOTPATH)
+    ing=loadIng(config.ALLHOSPITFILE,config.DATAPATH)
     ingT=createYearlyDataFrames(ing)
 
     # import inspect

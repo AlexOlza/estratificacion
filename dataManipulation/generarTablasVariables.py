@@ -30,14 +30,8 @@ PROBLEMAS:
         más pacientes que los que utilizabamos hasta ahora???
 
 """
-# from pathlib import Path
-# import sys
-# path = str(Path('/home/aolza/Desktop/estratificacion'))
-# sys.path.insert(0, path)
-# from configurations.config import *
 from python_settings import settings as config
 import configurations.utility as util
-# from configurations import config
 import pandas as pd
 import os
 import re
@@ -168,7 +162,7 @@ def load_predictors(path,predictors=None):
     # config.PREDICTORS=predictors #NOT SURE IF THIS IS A GOOD IDEA
     return predictors
 
-def load(filename,directory=config.ROOTPATH,predictors=None):
+def load(filename,directory=config.DATAPATH,predictors=None):
     acg=pd.DataFrame()
     t0=time.time()
     
@@ -195,10 +189,6 @@ def load(filename,directory=config.ROOTPATH,predictors=None):
     # acg.drop(constant,axis=1)
     return(acg)
 def retrieveIndicePrivacion(save=True,verbose=config.VERBOSE,yrs=[2016,2017,2018],keep=None,predictors=False):
-    # if keep is None:
-    #     keep=list(yrs)
-    # else:
-    #     keep=list(keep)
     keep=list(yrs) if keep is None else ([keep] if isinstance(keep,int) else keep)
     savestr=', save them ' if save else ''
     keepstr=' and return dataframes for years {0}'.format(keep) if keep else ''

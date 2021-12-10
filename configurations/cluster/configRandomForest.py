@@ -1,15 +1,33 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+import sys
+experiment='configurations.'+sys.argv[2]
+# experiment='configurations.'+'urgcms_excl_hdia_nbinj'
+import importlib
+importlib.invalidate_caches()
+# from python_settings import settings as config
+"""THIS EMULATES 'from experiment import *' USING IMPORTLIB 
+info: 
+    https://stackoverflow.com/questions/43059267/how-to-do-from-module-import-using-importlib
+"""
+mdl=importlib.import_module(experiment,package='estratificacion')
+# is there an __all__?  if so respect it
+if "__all__" in mdl.__dict__:
+    names = mdl.__dict__["__all__"]
+else:
+    # otherwise we import all names that don't begin with _
+    names = [x for x in mdl.__dict__ if not x.startswith("_")]
+globals().update({k: getattr(mdl, k) for k in names}) #brings everithing into namespace
 
 from configurations.cluster.default import *
 import os
-EXPERIMENT='urg'
-MODELPATH+=EXPERIMENT
-ALGORITHM='rfCV'
+import sys
+
+MODELPATH=MODELSPATH+EXPERIMENT+'/'
+ALGORITHM='randomForest'
 CONFIGNAME='configRandomForest.py'
 PREDPATH=os.path.join(OUTPATH,EXPERIMENT)
 PREDFILES={yr: os.path.join(PREDPATH,'{1}{0}.csv'.format(yr,ALGORITHM)) for yr in [2016,2017,2018]}
-COLUMNS=['urg']
 TRACEBACK=False
 
 """ SETTINGS FOR THE RANDOM FOREST """

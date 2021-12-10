@@ -5,7 +5,7 @@ Created on Wed Nov 24 12:33:34 2021
 
 @author: aolza
 """
-# from python_settings import settings as config
+assert False, "CONTENTS ARE NOW IN UTILITY! THIS MODULE IS OBSOLETE"
 import os
 from stat import S_IREAD, S_IRGRP, S_IROTH
 from joblib import dump

@@ -25,13 +25,6 @@ ACGFILES={2016:'ing2016-2017Activos.csv',
 ACGINDPRIVFILES={2016:'ing2016-2017ActivosIndPriv.csv',
                   2017:'ing2017-2018ActivosIndPriv.csv',
                   2018:'ing2018-2019ActivosIndPriv.csv'}
-"""PREDICTORS: They will be different for each script."""
-PREDICTORREGEX=r'PATIENT_ID|FEMALE|AGE_[0-9]+$|ACG|EDC_|HOSDOM|FRAILTY|RXMG_|INGRED_14GT|INDICE_PRIVACION'
-PREDICTORS=True
-INDICEPRIVACION=True
-COLUMNS=[]
-PREVIOUSHOSP=[]
-EXCLUDE=[]
 
 """VERBOSITY SETTINGS"""
 VERBOSE=True 

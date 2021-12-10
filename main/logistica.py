@@ -5,8 +5,11 @@ Created on Thu Nov 25 16:23:21 2021
 
 @author: aolza
 """
-chosen_config=input('CONFIG FILENAME: ')#example logisticOLDBASE
-chosen_config='configurations.local.'+chosen_config
+import sys
+sys.path.append('/home/aolza/Desktop/estratificacion/')#necessary in cluster
+
+chosen_config='configurations.local.'+sys.argv[1]
+experiment='configurations.'+sys.argv[2]
 import importlib
 importlib.invalidate_caches()
 from python_settings import settings as config
@@ -17,13 +20,9 @@ assert config.configured
 import configurations.utility as util
 util.makeAllPaths()
 
-#%%
-""" BEGGINNING """
 from dataManipulation.dataPreparation import getData
-import os
 import numpy as np
-import pandas as pd
-from main import SafeLogisticRegression
+from main.SafeLogisticRegression import SafeLogisticRegression
 
 #%%
 np.random.seed(config.SEED)
@@ -31,7 +30,7 @@ np.random.seed(config.SEED)
 X,y=getData(2016,oldbase=False)#new data 
 #%%
 
-y=np.where(y.urg>=1,1,0)
+y=np.where(y[config.COLUMNS]>=1,1,0)
 print('Sample size ',len(X))
 
 #%%
@@ -50,6 +49,5 @@ t0=time()
 fit=logistic.safeFit(X, y)
 print('fitting time: ',time()-t0)
 #%%
-from configurations.security import savemodel
-savemodel(config, fit)
+util.savemodel(config, fit)
 

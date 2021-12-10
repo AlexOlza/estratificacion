@@ -6,6 +6,7 @@ Created on Tue Nov 23 09:29:36 2021
 @author: aolza
 """
 """LOCATIONS"""
+assert False,'obsolete moddule'
 import os
 project='estratificacion'
 rootPath='/home/aolza/Desktop/estratificacion/'

@@ -7,7 +7,7 @@ Created on Thu Nov 25 16:33:56 2021
 """
 from configurations.default import *
 import os
-EXPERIMENT='urg'
+EXPERIMENT='urgcms_excl_hdia_nbinj'
 MODELPATH+=EXPERIMENT+'/'
 ALGORITHM='logistic'
 CONFIGNAME='logistic.py'

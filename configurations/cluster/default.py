@@ -10,4 +10,4 @@ from configurations.default import *
 CONFIGPATH=ROOTPATH+'configurations/cluster/'
 USEDCONFIGPATH=CONFIGPATH+'used/'
 OUTPATH=ROOTPATH+'predictions/'
-MODELPATH=ROOTPATH+'models/'
+MODELSPATH=ROOTPATH+'models/'

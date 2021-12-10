@@ -6,19 +6,36 @@ Created on Thu Nov 25 16:33:56 2021
 @author: aolza
 """
 from configurations.default import *
+import importlib
 import os
-PREVIOUSHOSP=None
-RESOURCEUSAGE=False
-PREDICTORREGEX=r'PATIENT_ID|FEMALE|AGE_[0-9]+$|ACG|EDC_|HOSDOM|FRAILTY|RXMG|ingresoUrg'
-# PREDICTORREGEX=r'PATIENT_ID|FEMALE|AGE_[0-9]+$|ACG|EDC_|HOSDOM|FRAILTY|RXMG_|INGRED_14GT|INDICE_PRIVACION'
-PREDICTORS=True
-INDICEPRIVACION=False
-EXPERIMENT='OLDBASE'
+import sys
+try:
+    chosen_config=sys.argv[1]
+    experiment='configurations.'+sys.argv[2]
+except:
+    chosen_config=input('CONFIG FILENAME: ')#example logisticOLDBASE
+    experiment=input('EXPERIMENT NAME: ')#example urgcms_excl_hdia_nbinj
+
+"""THIS EMULATES 'from experiment import *' USING IMPORTLIB 
+info: 
+    https://stackoverflow.com/questions/43059267/how-to-do-from-module-import-using-importlib
+"""
+mdl=importlib.import_module(experiment,package='estratificacion')
+# is there an __all__?  if so respect it
+if "__all__" in mdl.__dict__:
+    names = mdl.__dict__["__all__"]
+else:
+    # otherwise we import all names that don't begin with _
+    names = [x for x in mdl.__dict__ if not x.startswith("_")]
+globals().update({k: getattr(mdl, k) for k in names}) #brings everthing into namespace
+print(names)
+
 MODELPATH=MODELSPATH+EXPERIMENT+'/'
 ALGORITHM='logistic'
 CONFIGNAME='logisticOLDBASE.py'
 PREDPATH=os.path.join(OUTPATH,EXPERIMENT)
 PREDFILES={yr: os.path.join(PREDPATH,'{1}{0}.csv'.format(yr,ALGORITHM)) for yr in [2016,2017,2018]}
-COLUMNS=['urg']
+# COLUMNS=['urg']
 TRACEBACK=True
-EXCLUDE=None
+# EXCLUDE=None
+# print(globals())

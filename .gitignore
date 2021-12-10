@@ -1,4 +1,4 @@
-untracked/
+*untracked/
 models/
 modelEvaluation/
 configurations/local/used/
@@ -7,3 +7,6 @@ predictions/
 *__pycache__*
 *.ini
 *.zip
+*.csv
+.Rhistory
+.spyproject/
