@@ -41,9 +41,12 @@ def getData(yr,columns=config.COLUMNS,previousHosp=config.PREVIOUSHOSP,predictor
             **kwargs):
     oldbase = kwargs.get('oldbase','OLDBASE' in config.CONFIGNAME)
     if oldbase:
+        if 'ingresoUrg' not in predictors:
+            predictors=predictors+'|ingresoUrg'
         acg=load(filename=config.ACGFILES[yr],predictors=predictors)
         print('not opening allhospfile')
         return (acg.drop('ingresoUrg',axis=1),acg[['PATIENT_ID','ingresoUrg']])
+        # return(acg,0)
     cols=columns.copy() #FIXME find better approach
     t0=time.time()
     ing=loadIng(config.ALLHOSPITFILE,config.DATAPATH)

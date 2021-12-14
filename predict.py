@@ -6,6 +6,9 @@ Created on Thu Nov 25 09:59:25 2021
 @author: aolza
 """
 from python_settings import settings as config
+import json
+import joblib as job
+# import traceback as tb
 class Struct:
     def __init__(self, **entries):
         self.__dict__.update(entries)
@@ -16,15 +19,24 @@ def configure(configname=None):
         configuration=json.load(c)
     for k,v in configuration.items():
         if isinstance(v,dict):#for example ACGFILES
-             configuration[k]= {int(yr):filename for yr,filename in v.items()}
-    print(configuration)
+            try:
+                 configuration[k]= {int(yr):filename for yr,filename in v.items()}
+            except Exception as exc:
+                # print (tb.format_exc())
+                print (exc)
+    # print(configuration)
     conf=Struct(**configuration)
     conf.TRACEBACK=True
     conf.VERBOSE=True
     if not config.configured:
         config.configure(conf) # configure() receives a python module
     assert config.configured
+    # for statement in config.IMPORTS:  #FIXME is this ugly code?
+    #     exec(statement)
+    #     print(statement)
     return configuration
+if not config.configured:
+    configure(configname='/home/aolza/Desktop/estratificacion/configurations/local/used/logistic20211214_094151.json')
 def performance(logistic,dat,predictors,probs=None,key='algunIngresoProg',file=None,mode='a',header='',AUC=True,**kwargs):
     global config
     if not config.configured:
@@ -61,15 +73,11 @@ def predict_save(yr,model,X,y,columns=config.COLUMNS[0]):
             for element in zip(chunk['PATIENT_ID'],ychunk['PATIENT_ID'],predictions,ychunk[columns]):
                 csv_out.writerow(element)
                 del element
-    print('saved') 
+    print('saved',config.PREDFILES[yr-1]) 
  
     #%%
-import json
-import joblib as job
 import csv
 import pandas as pd
-if not config.configured:
-    configure()
 import configurations.utility as util
 # from dataManipulation.generarTablasVariables import load
 from dataManipulation.dataPreparation import getData
@@ -77,24 +85,33 @@ from sklearn.metrics import roc_auc_score
 import numpy as np
 from sklearn import linear_model
 from main.SafeLogisticRegression import SafeLogisticRegression
-
+import importlib
 #%%
 if __name__=='__main__':
         
     # FIXME STRUCT KEYS TO INT, FIX GENERARTABLASVARIABLES.RETRIEVE INDICE
-    configname='configurations/local/used/logistic20211207_132452.json'
+    configname='configurations/local/used/logistic20211214_094151.json'
     configuration=configure(configname)
-    modelfilename='/home/aolza/Desktop/estratificacion/models/OLDBASE/logistic20211207_132452.joblib'
-    model=job.load(modelfilename)
-    
-    Xx,Yy=getData(2017,oldbase=True)
+    modelfilename='/home/aolza/Desktop/estratificacion/models/sin_residenciado/logistic20211214_094151.joblib'
+    success=False
+    while not success:
+        try:
+            model=job.load(modelfilename)
+            success=True
+        except Exception as exc:#FIXME this does not work
+            print(str(exc))
+            print('Importing ',str(exc).split(' ')[-1])
+            module=importlib.import_module(str(exc).split(' ')[-1])
+            print('Imported ',str(exc).split(' ')[-1])
+    Xx,Yy=getData(2017,oldbase=False)
+    x,y=getData(2017,oldbase=True)
     cols=list(Xx.columns)
     if 'ingresoUrg' in cols: cols.remove('ingresoUrg')
   
-    predict_save(2018, model, Xx, Yy,columns='ingresoUrg')
+    predict_save(2018, model, Xx, Yy)
     probs=pd.read_csv(config.PREDFILES[2017])
 
     auc=roc_auc_score(np.where(probs.OBS>=1,1,0), probs.PRED)
     oldprobs=pd.read_csv('untracked/predecirIngresos/logistica/urgSinPrevio18.csv')
-    oldauc=roc_auc_score(np.where(Yy.ingresoUrg>=1,1,0), oldprobs.PROB_ING)
+    oldauc=roc_auc_score(np.where(y.ingresoUrg>=1,1,0), oldprobs.PROB_ING)
 
