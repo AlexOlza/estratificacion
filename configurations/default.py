@@ -13,7 +13,7 @@ DATAPATH='/home/aolza/Desktop/estratificacionDatos/'
 INDISPENSABLEDATAPATH=DATAPATH+'indispensable/'
 """these will be overwritten for cluster """
 CONFIGPATH=ROOTPATH+'configurations/local/'
-USEDCONFIGPATH=CONFIGPATH+'used/'
+USEDCONFIGPATH=ROOTPATH+'configurations/used/'
 OUTPATH=ROOTPATH+'predictions/'
 MODELSPATH=ROOTPATH+'models/'
 
