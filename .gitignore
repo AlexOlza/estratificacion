@@ -1,8 +1,7 @@
 *untracked/
 models/
 modelEvaluation/
-configurations/local/used/
-configurations/cluster/used/
+configurations/used/
 predictions/
 *__pycache__*
 *.ini

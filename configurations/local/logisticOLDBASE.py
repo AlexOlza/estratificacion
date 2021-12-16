@@ -5,7 +5,7 @@ Created on Thu Nov 25 16:33:56 2021
 
 @author: aolza
 """
-from configurations.default import *
+from configurations.default import *#contains paths and verbosity
 import importlib
 import os
 import sys
@@ -28,11 +28,11 @@ else:
     # otherwise we import all names that don't begin with _
     names = [x for x in mdl.__dict__ if not x.startswith("_")]
 globals().update({k: getattr(mdl, k) for k in names}) #brings everthing into namespace
-print(names)
+# print(names)
 
 MODELPATH=MODELSPATH+EXPERIMENT+'/'
 ALGORITHM='logistic'
-CONFIGNAME='logisticOLDBASE.py'
+CONFIGNAME='logisticOLDBASE.py'#FIXME may be obsolete, or it should be 
 PREDPATH=os.path.join(OUTPATH,EXPERIMENT)
 PREDFILES={yr: os.path.join(PREDPATH,'{1}{0}.csv'.format(yr,ALGORITHM)) for yr in [2016,2017,2018]}
 # COLUMNS=['urg']

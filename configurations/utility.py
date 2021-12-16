@@ -73,6 +73,7 @@ def savemodel(config,model,**kwargs):
     modelname=config.ALGORITHM+NOW
     modelfilename=modelname+'.joblib'
     configname=config.USEDCONFIGPATH+modelname+'.json'
+    print('configname',configname)
     os.chdir(config.MODELPATH)
     print('dump',config.MODELPATH+modelfilename)
     dump(model, config.MODELPATH+modelfilename)
