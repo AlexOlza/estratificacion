@@ -36,7 +36,7 @@ def configure(configname=None):
     #     print(statement)
     return configuration
 if not config.configured:
-    configure(configname='/home/aolza/Desktop/estratificacion/configurations/local/used/logistic20211214_094151.json')
+    configure()
 def performance(logistic,dat,predictors,probs=None,key='algunIngresoProg',file=None,mode='a',header='',AUC=True,**kwargs):
     global config
     if not config.configured:
@@ -90,9 +90,9 @@ import importlib
 if __name__=='__main__':
         
     # FIXME STRUCT KEYS TO INT, FIX GENERARTABLASVARIABLES.RETRIEVE INDICE
-    configname='configurations/local/used/logistic20211214_094151.json'
-    configuration=configure(configname)
-    modelfilename='/home/aolza/Desktop/estratificacion/models/sin_residenciado/logistic20211214_094151.joblib'
+    configname='/home/aolza/Desktop/estratificacion/configurations/used/randomForest20211215_161544.json'
+    # configuration=configure(configname)
+    modelfilename='/home/aolza/Desktop/estratificacion/models/urgcms_excl_hdia_nbinj/randomForest20211215_161544.joblib'
     success=False
     while not success:
         try:
@@ -103,8 +103,8 @@ if __name__=='__main__':
             print('Importing ',str(exc).split(' ')[-1])
             module=importlib.import_module(str(exc).split(' ')[-1])
             print('Imported ',str(exc).split(' ')[-1])
-    Xx,Yy=getData(2017,oldbase=False)
-    x,y=getData(2017,oldbase=True)
+    Xx,Yy=getData(2017)
+    # x,y=getData(2017,oldbase=True)
     cols=list(Xx.columns)
     if 'ingresoUrg' in cols: cols.remove('ingresoUrg')
   
@@ -112,6 +112,6 @@ if __name__=='__main__':
     probs=pd.read_csv(config.PREDFILES[2017])
 
     auc=roc_auc_score(np.where(probs.OBS>=1,1,0), probs.PRED)
-    oldprobs=pd.read_csv('untracked/predecirIngresos/logistica/urgSinPrevio18.csv')
-    oldauc=roc_auc_score(np.where(y.ingresoUrg>=1,1,0), oldprobs.PROB_ING)
+    # oldprobs=pd.read_csv('untracked/predecirIngresos/logistica/urgSinPrevio18.csv')
+    # oldauc=roc_auc_score(np.where(y.ingresoUrg>=1,1,0), oldprobs.PROB_ING)
 

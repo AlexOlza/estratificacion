@@ -26,6 +26,7 @@ import pandas as pd
 import itertools
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import RandomizedSearchCV
+from sklearn.ensemble import RandomForestClassifier
 np.random.seed(config.SEED)
 
 pred16,y17=getData(2016,predictors=True)
@@ -44,6 +45,10 @@ random_indices = np.random.choice(noing_indices, half_sample_size,
 X=pd.concat([pred16.loc[random_indices],pred16.loc[ing_indices]])
 na_indices=X[X.isna().any(axis=1)].index
 X.drop(na_indices,axis=0,inplace=True)
+try:
+    X.drop('PATIENT_ID',axis=1,inplace=True)
+except:
+    pass
 
 y=pd.concat([y17.loc[random_indices],y17.loc[ing_indices]])
 y.drop(na_indices,axis=0,inplace=True)
@@ -51,7 +56,13 @@ y=np.where(y[config.COLUMNS]>=1,1,0)
 print('Dropping NA')
 print('Sample size ',len(X))
 
-forest = RandomizedSearchCV(estimator = config.FOREST, 
+if not isinstance(config.FOREST,RandomForestClassifier):
+    print('exec happening')
+    exec("estimator="+config.FOREST)
+else:
+    print('exec not needed')
+    estimator=config.FOREST
+forest = RandomizedSearchCV(estimator = estimator, 
                                param_distributions = config.RANDOM_GRID,
                                n_iter = config.N_ITER,
                                cv = config.CV, 
