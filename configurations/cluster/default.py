@@ -5,11 +5,11 @@ Created on Thu Nov 18 16:14:16 2021
 
 @author: aolza
 """
-<<<<<<< HEAD
+#<<<<<<< HEAD
 assert True, "looks like obsolete module"
-=======
+#=======
 # assert False, "looks like obsolete module"
->>>>>>> 873d2010ef4ab6eddf4113afcd123c67786b5465
+#>>>>>>> 873d2010ef4ab6eddf4113afcd123c67786b5465
 from configurations.default import *
 CONFIGPATH=ROOTPATH+'configurations/cluster/'
 USEDCONFIGPATH=ROOTPATH+'configurations/used/'
