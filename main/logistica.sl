@@ -1,10 +1,10 @@
 #!/bin/bash
-#SBATCH--time=80:00:00
-#SBATCH--job-name="rfBase"
-#SBATCH --mem-per-cpu=26G
-#SBATCH--partition="large"
-#SBATCH--output=/home/aolza/Desktop/estratificacion/main/cluster/outRF.txt
-#SBATCH--error=/home/aolza/Desktop/estratificacion/main/cluster/errRF.txt
+#SBATCH--time=01:00:00
+#SBATCH--job-name="logisticBase"
+#SBATCH --mem-per-cpu=16G
+#SBATCH--partition="medium"
+#SBATCH--output=/home/aolza/Desktop/estratificacion/main/cluster/outlog.txt
+#SBATCH--error=/home/aolza/Desktop/estratificacion/main/cluster/errlog.txt
 echo "-------" 
 echo "Copying input files to temporary run dir" 
 cp *.py -v $SCRATCH_JOB
@@ -16,7 +16,7 @@ date +"%F %T"
 module load python-settings/0.2.2-GCCcore-10.2.0-Python-3.8.6
 module load SciPy-bundle
 module load scikit-learn
-srun python randomForest.py configRandomForest urgcms_excl_hdia_nbinj
+srun python logistica.py logisticOLDBASE urgcms_excl_hdia_nbinj
 
 sleep 2
 echo "-------" 
@@ -25,4 +25,5 @@ date +"%F %T"
 
 cp -r $SCRATCH_JOB  /home/aolza/$SLURM_JOB_ID
 chmod -R 770 /home/aolza/$SLURM_JOB_ID
+
 

@@ -31,7 +31,7 @@ np.random.seed(config.SEED)
 
 pred16,y17=getData(2016,predictors=True)
 assert len(config.COLUMNS)==1, 'This model is built for a single response variable! Modify config.COLUMNS'
-
+print('Sample size ',len(pred16))
 
 #%%
 """BALANCEO LAS CLASES Y TRAIN-TEST SPLIT"""
@@ -55,7 +55,6 @@ y.drop(na_indices,axis=0,inplace=True)
 y=np.where(y[config.COLUMNS]>=1,1,0)
 print('Dropping NA')
 print('Sample size ',len(X))
-# X_train, X_test, y_train, y_test = train_test_split(X,y,test_size=0.3,random_state=config.SEED)
 
 if not isinstance(config.FOREST,RandomForestClassifier):
     print('exec happening')
@@ -73,5 +72,5 @@ forest = RandomizedSearchCV(estimator = estimator,
 forest.fit(X,y)
 #%%
 """ SAVE TRAINED MODEL """
-util.savemodel(config,forest)
+util.savemodel(config,forest.best_estimator_)
 #
