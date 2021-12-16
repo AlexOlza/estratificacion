@@ -9,3 +9,5 @@ predictions/
 *.csv
 .Rhistory
 .spyproject/
+*.txt
+

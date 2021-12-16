@@ -163,31 +163,38 @@ def load_predictors(path,predictors=None):
     return predictors
 
 def load(filename,directory=config.DATAPATH,predictors=None):
-    acg=pd.DataFrame()
-    t0=time.time()
-    
-    for path in Path(directory).rglob(filename):
-        predictors=load_predictors(path,predictors)
-        # predictors.insert(-1,'ingresoUrg')
-        print('Loading ',path)
-        for chunk in pd.read_csv(path, chunksize=100000,usecols=predictors):
-            d = dict.fromkeys(chunk.select_dtypes(np.int64).columns, np.int8)
-            d['PATIENT_ID']=np.int64
-            chunk= chunk.astype(d)
-            acg = pd.concat([acg, chunk], ignore_index=True)
-        break 
-    util.vprint('Loaded in ',time.time()-t0,' seconds')
-    try:    
-        acg=acg.drop(labels=['EDC_NUR11','EDC_RES10','RXMG_ZZZX000',
-                       'ACG_5320','ACG_5330','ACG_5340'],axis=1)
-        print('dropped')
-    except KeyError:
-        print('pass')
-        pass
-    # constant=[c for c in acg.loc[:,~(acg != acg.iloc[0]).any()].columns]
-    # print('Dropping constant columns:',constant)
-    # acg.drop(constant,axis=1)
-    return(acg)
+	acg=pd.DataFrame()
+	t0=time.time()
+
+	for path in Path(directory).rglob(filename):
+		predictors=load_predictors(path,predictors)
+		# predictors.insert(-1,'ingresoUrg')
+		print('Loading ',path)
+		for chunk in pd.read_csv(path, chunksize=100000,usecols=predictors):
+			d = dict.fromkeys(chunk.select_dtypes(np.int64).columns, np.int8)
+			d['PATIENT_ID']=np.int64
+			ignore=[]
+			for k in d.keys():
+				if any(np.isnan(chunk[k].values)):
+					ignore.append(k)
+			print(ignore)
+			for k in ignore:
+				d.pop(k)
+			chunk= chunk.astype(d)
+			acg = pd.concat([acg, chunk], ignore_index=True)
+		break 
+	util.vprint('Loaded in ',time.time()-t0,' seconds')
+	try:    
+		acg=acg.drop(labels=['EDC_NUR11','EDC_RES10','RXMG_ZZZX000',
+		'ACG_5320','ACG_5330','ACG_5340'],axis=1)
+		print('dropped')
+	except KeyError:
+		print('not dropping cols')
+		pass
+	# constant=[c for c in acg.loc[:,~(acg != acg.iloc[0]).any()].columns]
+	# print('Dropping constant columns:',constant)
+	# acg.drop(constant,axis=1)
+	return(acg)
 def retrieveIndicePrivacion(save=True,verbose=config.VERBOSE,yrs=[2016,2017,2018],keep=None,predictors=False):
     keep=list(yrs) if keep is None else ([keep] if isinstance(keep,int) else keep)
     savestr=', save them ' if save else ''
