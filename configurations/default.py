@@ -11,9 +11,8 @@ PROJECT='estratificacion'
 ROOTPATH='/home/aolza/Desktop/estratificacion/'
 DATAPATH='/home/aolza/Desktop/estratificacionDatos/'
 INDISPENSABLEDATAPATH=DATAPATH+'indispensable/'
-"""these will be overwritten for cluster """
-CONFIGPATH=ROOTPATH+'configurations/local/'
-USEDCONFIGPATH=ROOTPATH+'configurations/used/'
+CONFIGPATH=ROOTPATH+'configurations/'
+USEDCONFIGPATH=CONFIGPATH+'used/'
 OUTPATH=ROOTPATH+'predictions/'
 MODELSPATH=ROOTPATH+'models/'
 

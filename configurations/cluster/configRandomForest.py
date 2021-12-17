@@ -5,7 +5,7 @@ experiment='configurations.'+sys.argv[2]
 # experiment='configurations.'+'urgcms_excl_hdia_nbinj'
 import importlib
 importlib.invalidate_caches()
-# from python_settings import settings as config
+
 """THIS EMULATES 'from experiment import *' USING IMPORTLIB 
 info: 
     https://stackoverflow.com/questions/43059267/how-to-do-from-module-import-using-importlib
@@ -19,7 +19,7 @@ else:
     names = [x for x in mdl.__dict__ if not x.startswith("_")]
 globals().update({k: getattr(mdl, k) for k in names}) #brings everithing into namespace
 
-from configurations.cluster.default import *
+from configurations.default import *
 import os
 import sys
 
