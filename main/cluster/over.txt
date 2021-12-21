@@ -1,0 +1,29 @@
+-------
+Copying input files to temporary run dir
+‘predict.py’ -> ‘/workspace/scratch/jobs/aolza/2433300/predict.py’
+‘randomForest.py’ -> ‘/workspace/scratch/jobs/aolza/2433300/randomForest.py’
+‘untitled0.py’ -> ‘/workspace/scratch/jobs/aolza/2433300/untitled0.py’
+‘versions.py’ -> ‘/workspace/scratch/jobs/aolza/2433300/versions.py’
+-------
+START python
+2021-12-20 12:09:16
+3.7.4.final.0
+1.0.0
+
+System:
+    python: 3.7.4 (default, Mar 18 2020, 20:37:21)  [GCC 8.3.0]
+executable: /workspace/easybuild/x86_64/software/Python/3.7.4-GCCcore-8.3.0/bin/python
+   machine: Linux-3.10.0-1062.el7.x86_64-x86_64-with-centos-7.7.1908-Core
+
+Python deps:
+       pip: 19.0.3
+setuptools: 41.2.0
+   sklearn: 0.21.3
+     numpy: 1.17.3
+     scipy: 1.5.4
+    Cython: 0.29.13
+    pandas: 0.25.3
+None
+-------
+Copying output files to home folder
+2021-12-20 12:09:36

@@ -1,9 +1,10 @@
 #!/bin/bash
-#SBATCH--time=100:00:00
-#SBATH--name=forestURG
-#SBATCH--partition="xlarge"
-#SBATCH--output=/home/aolza/Desktop/estratificacion/main/cluster/outRFxl.txt
-#SBATCH--error=/home/aolza/Desktop/estratificacion/main/cluster/errRFxl.txt
+#SBATCH--time=03:00:00
+#SBATCH--job-name="pred"
+#SBATCH --mem-per-cpu=16G
+#SBATCH--partition="medium"
+#SBATCH--output=/home/aolza/Desktop/estratificacion/main/cluster/outpred.txt
+#SBATCH--error=/home/aolza/Desktop/estratificacion/main/cluster/errpred.txt
 echo "-------" 
 echo "Copying input files to temporary run dir" 
 cp *.py -v $SCRATCH_JOB
@@ -14,7 +15,7 @@ echo "START python"
 date +"%F %T" 
 module load python-settings/0.2.2-GCCcore-10.2.0-Python-3.8.6
 module load SciPy-bundle
-srun python randomForest.py
+srun python predict.py
 
 sleep 2
 echo "-------" 
