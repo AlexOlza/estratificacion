@@ -14,7 +14,6 @@ echo "START python"
 date +"%F %T" 
 module load python-settings/0.2.2-GCCcore-10.2.0-Python-3.8.6
 module load SciPy-bundle
-module load scikit-learn
 srun python randomForest.py
 
 sleep 2
