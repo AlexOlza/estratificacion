@@ -177,7 +177,7 @@ def load(filename,directory=config.DATAPATH,predictors=None):
 			for k in d.keys():
 				if any(np.isnan(chunk[k].values)):
 					ignore.append(k)
-			print(ignore)
+ 			# print(ignore)
 			for k in ignore:
 				d.pop(k)
 			chunk= chunk.astype(d)
