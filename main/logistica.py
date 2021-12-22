@@ -31,8 +31,9 @@ X,y=getData(2016,oldbase=False)#new data
 #%%
 
 y=np.where(y[config.COLUMNS]>=1,1,0)
+y=y.ravel()
 print('Sample size ',len(X))
-
+assert False
 #%%
 logistic=SafeLogisticRegression(penalty='none',max_iter=1000,verbose=0)
 

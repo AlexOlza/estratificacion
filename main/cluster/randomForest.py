@@ -53,6 +53,7 @@ except:
 y=pd.concat([y17.loc[random_indices],y17.loc[ing_indices]])
 y.drop(na_indices,axis=0,inplace=True)
 y=np.where(y[config.COLUMNS]>=1,1,0)
+y=y.ravel()
 print('Dropping NA')
 print('Sample size ',len(X))
 
