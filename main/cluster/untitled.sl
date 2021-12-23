@@ -3,8 +3,8 @@
 #SBATCH--job-name="unt"
 #SBATCH --mem-per-cpu=16G
 #SBATCH--partition="medium"
-#SBATCH--output=/home/aolza/Desktop/estratificacion/main/cluster/outunt.txt
-#SBATCH--error=/home/aolza/Desktop/estratificacion/main/cluster/errunt.txt
+#SBATCH--output=/home/aolza/Desktop/estratificacion/main/cluster/oRFunt.txt
+#SBATCH--error=/home/aolza/Desktop/estratificacion/main/cluster/eRFunt.txt
 echo "-------" 
 echo "Copying input files to temporary run dir" 
 cp *.py -v $SCRATCH_JOB
@@ -18,7 +18,7 @@ module load Python/3.8.6-GCCcore-10.2.0
 module load python-settings/0.2.2-GCCcore-10.2.0-Python-3.8.6
 module load SciPy-bundle
 
-srun python untitled0.py configUntitled urgcms_excl_hdia_nbinj
+srun python untitled0.py configRandomForest urgcms_excl_hdia_nbinj
 
 
 sleep 2
