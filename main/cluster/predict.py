@@ -26,19 +26,15 @@ def configure(configname=None):
             except Exception as exc:
                 # print (tb.format_exc())
                 print (exc)
-    # print(configuration)
     conf=Struct(**configuration)
     conf.TRACEBACK=True
     conf.VERBOSE=True
     if not config.configured:
         config.configure(conf) # configure() receives a python module
     assert config.configured
-    # for statement in config.IMPORTS:  #FIXME is this ugly code?
-    #     exec(statement)
-    #     print(statement)
     return configuration
 if not config.configured:
-    configure('/home/aolza/Desktop/estratificacion/configurations/used/randomForest20211217_153917.json')
+    configure('/home/aolza/Desktop/estratificacion/configurations/used/randomForest20211222_161609.json')
 def performance(logistic,dat,predictors,probs=None,key='algunIngresoProg',file=None,mode='a',header='',AUC=True,**kwargs):
     global config
     if not config.configured:
@@ -81,30 +77,23 @@ def predict_save(yr,model,X,y,columns=config.COLUMNS[0]):
 import csv
 import pandas as pd
 import configurations.utility as util
-# from dataManipulation.generarTablasVariables import load
 from dataManipulation.dataPreparation import getData
 from sklearn.metrics import roc_auc_score
 import numpy as np
 from sklearn import linear_model
 from main.SafeLogisticRegression import SafeLogisticRegression
 import importlib
+np.random.seed(config.SEED)
 #%%
 if __name__=='__main__':
         
     # FIXME STRUCT KEYS TO INT, FIX GENERARTABLASVARIABLES.RETRIEVE INDICE
-    configname='/home/aolza/Desktop/estratificacion/configurations/used/randomForest20211217_153917.json'
+    configname='/home/aolza/Desktop/estratificacion/configurations/used/randomForest20211222_161609.json'
     # configuration=configure(configname)
-    modelfilename='/home/aolza/Desktop/estratificacion/models/urgcms_excl_hdia_nbinj/randomForest20211217_153917.joblib'
-    success=False
-    while not success:
-        try:
-            model=job.load(modelfilename)
-            success=True
-        except Exception as exc:#FIXME this does not work
-            print(str(exc))
-            print('Importing ',str(exc).split(' ')[-1])
-            module=importlib.import_module(str(exc).split(' ')[-1])
-            print('Imported ',str(exc).split(' ')[-1])
+    modelfilename='/home/aolza/Desktop/estratificacion/models/urgcms_excl_hdia_nbinj/randomForest20211222_161609.joblib'
+
+    model=job.load(modelfilename)
+
     Xx,Yy=getData(2017)
     # x,y=getData(2017,oldbase=True)
     cols=list(Xx.columns)
@@ -113,7 +102,10 @@ if __name__=='__main__':
     predict_save(2018, model, Xx, Yy)
     probs=pd.read_csv(config.PREDFILES[2017])
 
-    print(roc_auc_score(np.where(probs.OBS>=1,1,0), probs.PRED))
+    print(roc_auc_score(np.where(probs.OBS>=1,1,0), probs.PRED)) 
     # oldprobs=pd.read_csv('untracked/predecirIngresos/logistica/urgSinPrevio18.csv')
     # oldauc=roc_auc_score(np.where(y.ingresoUrg>=1,1,0), oldprobs.PROB_ING)
 
+    print(model.score(Xx.drop('PATIENT_ID',axis=1),Yy.drop('PATIENT_ID',axis=1))) 
+    print('feat importances')
+    print(model.feature_importances_)
