@@ -102,7 +102,7 @@ if __name__=='__main__':
     # ingT=createYearlyDataFrames(ing)
     x,y=getData(2017)
     xx,yy=getData(2017,oldbase=True)
-    X,Y=getData(2017,columns=['urgcms'])
+    X,Y=getData(2017,exclude=['nbinj','hdia'])
     # import inspect
     # used=[createYearlyDataFrames, loadIng,assertMissingCols,
     #       prepare,resourceUsageDataFrames]
