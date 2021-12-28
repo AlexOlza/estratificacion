@@ -19,8 +19,10 @@ Created on Wed Nov 17 11:20:27 2021
 import pandas as pd
 import time
 from python_settings import settings as config
-assert config.configured, 'CONFIGURE FIRST!'
+
+# assert config.configured, 'CONFIGURE FIRST!'
 import configurations.utility as util
+configuration=util.configure()
 from dataManipulation.generarTablasIngresos import createYearlyDataFrames, loadIng,assertMissingCols
 from dataManipulation.generarTablasVariables import prepare,resourceUsageDataFrames,load
 # from matplotlib_venn import venn2
@@ -95,9 +97,12 @@ def getData(yr,columns=config.COLUMNS,previousHosp=config.PREVIOUSHOSP,predictor
 if __name__=='__main__':
     import sys
     sys.path.append('/home/aolza/Desktop/estratificacion/')
-    ing=loadIng(config.ALLHOSPITFILE,config.DATAPATH)
-    ingT=createYearlyDataFrames(ing)
-
+    
+    # ing=loadIng(config.ALLHOSPITFILE,configs.DATAPATH)
+    # ingT=createYearlyDataFrames(ing)
+    x,y=getData(2017)
+    xx,yy=getData(2017,oldbase=True)
+    X,Y=getData(2017,columns=['urgcms'])
     # import inspect
     # used=[createYearlyDataFrames, loadIng,assertMissingCols,
     #       prepare,resourceUsageDataFrames]

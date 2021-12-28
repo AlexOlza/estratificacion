@@ -1,23 +1,53 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-""" UTILITY FUNCTIONS THAT HAVE TO DO WITH SETTINGS 
+""" UTILITY FUNCTIONS THAT HAVE TO DO WITH SETTINGS AND MODEL PERSISTENCE
     should be imported as: from configurations import utility as util
 """
     
 from stat import S_IREAD, S_IRGRP, S_IROTH, S_IWUSR
 from joblib import dump
-from configurations import utility as util
 import re
 import json
 import os
 from datetime import datetime as dt
 from contextlib import redirect_stdout
-from python_settings import settings as config #MUST BE ALREADY CONFIGURED
 
 class Struct:
     def __init__(self, **entries):
         self.__dict__.update(entries)
+from python_settings import settings as config
 
+def configure(configname=None,**kwargs):
+    if config.configured and (not configname):
+        print('Already configured with configname ',config.CONFIGNAME)
+        return None
+    if not configname:
+        configname=input('Enter configuration json file path: ')
+    if configname.endswith('.json'):
+        with open(configname) as c:
+            configuration=json.load(c)
+        for k,v in configuration.items():
+            if isinstance(v,dict):#for example ACGFILES
+                try:
+                     configuration[k]= {int(yr):filename for yr,filename in v.items()}
+                except Exception as exc:
+                    print (exc)
+        conf=Struct(**configuration)
+        conf.TRACEBACK=kwargs.get('TRACEBACK', conf.TRACEBACK)
+        conf.VERBOSE=kwargs.get('VERBOSE',conf.VERBOSE)
+    else:
+        import importlib
+        importlib.invalidate_caches()
+        conf=importlib.import_module(configname,package='estratificacion')
+    # else:
+    #     print('Provide .json or .py configuration file!')
+    if not config.configured:
+        config.configure(conf) # configure() receives a python module
+        configuration=None
+    assert config.configured
+    return configuration
+
+configuration=configure()
 vprint = print if config.VERBOSE else lambda *a, **k: None
  
 def makeAllPaths():
@@ -79,7 +109,7 @@ def savemodel(config,model,**kwargs):
     dump(model, config.MODELPATH+modelfilename)
     os.chdir(config.USEDCONFIGPATH)
     attrs=saveconfig(config,configname)
-    util.info(modelfilename,conf=attrs,**kwargs)
+    info(modelfilename,conf=attrs,**kwargs)
 
 def is_jsonable(x):
     try:

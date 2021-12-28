@@ -17,7 +17,7 @@ if "__all__" in mdl.__dict__:
 else:
     # otherwise we import all names that don't begin with _
     names = [x for x in mdl.__dict__ if not x.startswith("_")]
-globals().update({k: getattr(mdl, k) for k in names}) #brings everithing into namespace
+globals().update({k: getattr(mdl, k) for k in names}) #brings everything into namespace
 
 from configurations.default import *
 import os
