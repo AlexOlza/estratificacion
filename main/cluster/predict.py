@@ -52,7 +52,7 @@ def performance(logistic,dat,predictors,probs=None,key='algunIngresoProg',file=N
         print('AUC=',auc,file=file)
     return(probs)
 def predict_save(yr,model,X,y,columns=config.COLUMNS[0]):
-
+    # seed= np.random.default_rng(42)
     from more_itertools import sliced
     CHUNK_SIZE = 50000
     
@@ -67,6 +67,7 @@ def predict_save(yr,model,X,y,columns=config.COLUMNS[0]):
             util.vprint(i,'/',n)
             chunk = X.iloc[index_slice] # your dataframe chunk ready for use
             ychunk=y.iloc[index_slice]
+            seed= np.random.default_rng(42)
             predictions=model.predict_proba(chunk.drop('PATIENT_ID',axis=1))[:,1] #Probab of being top1
             for element in zip(chunk['PATIENT_ID'],ychunk['PATIENT_ID'],predictions,ychunk[columns]):
                 csv_out.writerow(element)
@@ -84,6 +85,7 @@ from sklearn import linear_model
 from main.SafeLogisticRegression import SafeLogisticRegression
 import importlib
 np.random.seed(config.SEED)
+# seed= np.random.default_rng(42)
 #%%
 if __name__=='__main__':
         
@@ -95,17 +97,18 @@ if __name__=='__main__':
 
     model=job.load(modelfilename)
     
-    try:
-        model.random_sate=np.random.seed(config.SEED)
-        print('Warning: Changing random seed on pretrained model')
-    except:
-        print('Cannot change random seed')
+    # try:
+    #     model.random_sate=seed
+    #     print('Warning: Changing random seed on pretrained model')
+    # except:
+    #     print('Cannot change random seed')
 
     Xx,Yy=getData(2017)
+    print(Xx.describe())
     # x,y=getData(2017,oldbase=True)
     cols=list(Xx.columns)
     if 'ingresoUrg' in cols: cols.remove('ingresoUrg')
-    for i in range(5):
+    for i in range(3):
         predict_save(2018, model, Xx, Yy)
         probs=pd.read_csv(config.PREDFILES[2017])
         print(probs.head())
