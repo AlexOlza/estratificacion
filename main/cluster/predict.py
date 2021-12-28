@@ -10,11 +10,11 @@ sys.path.append('/home/aolza/Desktop/estratificacion/')
 from python_settings import settings as config
 import json
 import joblib as job
-# import traceback as tb
+
 class Struct:
     def __init__(self, **entries):
         self.__dict__.update(entries)
-def configure(configname=None):#FIXME verbosity kwargs
+def configure(configname=None,**kwargs):
     if not configname:
         configname=input('Enter saved configuration file path: ')
     with open(configname) as c:
@@ -24,17 +24,17 @@ def configure(configname=None):#FIXME verbosity kwargs
             try:
                  configuration[k]= {int(yr):filename for yr,filename in v.items()}
             except Exception as exc:
-                # print (tb.format_exc())
                 print (exc)
     conf=Struct(**configuration)
-    conf.TRACEBACK=False
-    conf.VERBOSE=False
+    conf.TRACEBACK=kwargs.get('TRACEBACK', conf.TRACEBACK)
+    conf.VERBOSE=kwargs.get('VERBOSE',conf.VERBOSE)
+
     if not config.configured:
         config.configure(conf) # configure() receives a python module
     assert config.configured
     return configuration
 if not config.configured:
-    configure('/home/aolza/Desktop/estratificacion/configurations/used/randomForest20211222_161609.json')
+    configure('/home/aolza/Desktop/estratificacion/configurations/used/randomForest20211222_161609.json',TRACEBACK=False, VERBOSE=False)
 def performance(logistic,dat,predictors,probs=None,key='algunIngresoProg',file=None,mode='a',header='',AUC=True,**kwargs):
     global config
     if not config.configured:
@@ -89,7 +89,7 @@ if __name__=='__main__':
         
     # FIXME STRUCT KEYS TO INT, FIX GENERARTABLASVARIABLES.RETRIEVE INDICE
     configname='/home/aolza/Desktop/estratificacion/configurations/used/randomForest20211222_161609.json'
-    configuration=configure(configname)
+    configuration=configure(configname,TRACEBACK=False, VERBOSE=False)
     print(configuration)
     modelfilename='/home/aolza/Desktop/estratificacion/models/urgcms_excl_hdia_nbinj/randomForest20211222_161609.joblib'
 
@@ -114,5 +114,3 @@ if __name__=='__main__':
     # oldauc=roc_auc_score(np.where(y.ingresoUrg>=1,1,0), oldprobs.PROB_ING)
 
     print(model.score(Xx.drop('PATIENT_ID',axis=1),Yy.drop('PATIENT_ID',axis=1))) 
-    print('feat importances')
-    print(model.feature_importances_)
