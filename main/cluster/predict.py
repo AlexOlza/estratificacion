@@ -14,7 +14,7 @@ import joblib as job
 class Struct:
     def __init__(self, **entries):
         self.__dict__.update(entries)
-def configure(configname=None):
+def configure(configname=None):#FIXME verbosity kwargs
     if not configname:
         configname=input('Enter saved configuration file path: ')
     with open(configname) as c:
@@ -27,8 +27,8 @@ def configure(configname=None):
                 # print (tb.format_exc())
                 print (exc)
     conf=Struct(**configuration)
-    conf.TRACEBACK=True
-    conf.VERBOSE=True
+    conf.TRACEBACK=False
+    conf.VERBOSE=False
     if not config.configured:
         config.configure(conf) # configure() receives a python module
     assert config.configured
@@ -89,10 +89,17 @@ if __name__=='__main__':
         
     # FIXME STRUCT KEYS TO INT, FIX GENERARTABLASVARIABLES.RETRIEVE INDICE
     configname='/home/aolza/Desktop/estratificacion/configurations/used/randomForest20211222_161609.json'
-    # configuration=configure(configname)
+    configuration=configure(configname)
+    print(configuration)
     modelfilename='/home/aolza/Desktop/estratificacion/models/urgcms_excl_hdia_nbinj/randomForest20211222_161609.joblib'
 
     model=job.load(modelfilename)
+    
+    try:
+        model.random_sate=np.random.seed(config.SEED)
+        print('Warning: Changing random seed on pretrained model')
+    except:
+        print('Cannot change random seed')
 
     Xx,Yy=getData(2017)
     # x,y=getData(2017,oldbase=True)
