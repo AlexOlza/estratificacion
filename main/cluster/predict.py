@@ -105,12 +105,13 @@ if __name__=='__main__':
     # x,y=getData(2017,oldbase=True)
     cols=list(Xx.columns)
     if 'ingresoUrg' in cols: cols.remove('ingresoUrg')
-  
-    predict_save(2018, model, Xx, Yy)
-    probs=pd.read_csv(config.PREDFILES[2017])
+    for i in range(5):
+        predict_save(2018, model, Xx, Yy)
+        probs=pd.read_csv(config.PREDFILES[2017])
+        print(probs.head())
 
-    print(roc_auc_score(np.where(probs.OBS>=1,1,0), probs.PRED)) 
+        print(roc_auc_score(np.where(probs.OBS>=1,1,0), probs.PRED)) 
     # oldprobs=pd.read_csv('untracked/predecirIngresos/logistica/urgSinPrevio18.csv')
     # oldauc=roc_auc_score(np.where(y.ingresoUrg>=1,1,0), oldprobs.PROB_ING)
 
-    print(model.score(Xx.drop('PATIENT_ID',axis=1),Yy.drop('PATIENT_ID',axis=1))) 
+    # print(model.score(Xx.drop('PATIENT_ID',axis=1),Yy.drop('PATIENT_ID',axis=1))) 
