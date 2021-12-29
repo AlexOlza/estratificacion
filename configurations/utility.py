@@ -39,16 +39,22 @@ def configure(configname=None,**kwargs):
         import importlib
         importlib.invalidate_caches()
         conf=importlib.import_module(configname,package='estratificacion')
+        configuration=None
     # else:
     #     print('Provide .json or .py configuration file!')
     if not config.configured:
         config.configure(conf) # configure() receives a python module
-        configuration=None
     assert config.configured
+    if config.TRACEBACK:
+        import sys
+        sys.setprofile(tracefunc)
     return configuration
 
-configuration=configure()
-vprint = print if config.VERBOSE else lambda *a, **k: None
+# configuration=configure()
+# vprint = print if config.VERBOSE else lambda *a, **k: None
+def vprint(*args):
+    print(*args) if config.VERBOSE else lambda *a, **k: None
+    
  
 def makeAllPaths():
     settings=config.__dict__['_wrapped'].default_settings.__dict__
@@ -60,7 +66,8 @@ def makeAllPaths():
     vprint('All paths exist now')
         
 """ INFO FILE"""
-def info(modelfilename,modelPath=config.MODELSPATH,**kwargs):
+def info(modelfilename,**kwargs):
+    modelPath=kwargs.get('modelPath',config.MODELSPATH)
     now = dt.now() # current date and time
     file=os.path.join(modelPath,'available_models.txt')
     with open(file, 'a+') as f:
@@ -86,9 +93,7 @@ def tracefunc(frame, event, arg, indent=[0]):
                   print("<" + "-" * indent[0], "exit function", fname)
                   indent[0] -= 2
               return tracefunc
-if config.TRACEBACK:
-    import sys
-    sys.setprofile(tracefunc)
+          
 
 def readonly(filename):  os.chmod(filename, S_IREAD|S_IRGRP|S_IROTH)
 
