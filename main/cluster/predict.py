@@ -8,33 +8,11 @@ Created on Thu Nov 25 09:59:25 2021
 import sys
 sys.path.append('/home/aolza/Desktop/estratificacion/')
 from python_settings import settings as config
-import json
+from configurations.utility import configure
 import joblib as job
+configname='/home/aolza/Desktop/estratificacion/configurations/used/randomForest20211222_161609.json'
+configuration=configure(configname,TRACEBACK=False, VERBOSE=True)
 
-class Struct:
-    def __init__(self, **entries):
-        self.__dict__.update(entries)
-def configure(configname=None,**kwargs):
-    if not configname:
-        configname=input('Enter saved configuration file path: ')
-    with open(configname) as c:
-        configuration=json.load(c)
-    for k,v in configuration.items():
-        if isinstance(v,dict):#for example ACGFILES
-            try:
-                 configuration[k]= {int(yr):filename for yr,filename in v.items()}
-            except Exception as exc:
-                print (exc)
-    conf=Struct(**configuration)
-    conf.TRACEBACK=kwargs.get('TRACEBACK', conf.TRACEBACK)
-    conf.VERBOSE=kwargs.get('VERBOSE',conf.VERBOSE)
-
-    if not config.configured:
-        config.configure(conf) # configure() receives a python module
-    assert config.configured
-    return configuration
-if not config.configured:
-    configure('/home/aolza/Desktop/estratificacion/configurations/used/randomForest20211222_161609.json',TRACEBACK=False, VERBOSE=False)
 def performance(logistic,dat,predictors,probs=None,key='algunIngresoProg',file=None,mode='a',header='',AUC=True,**kwargs):
     global config
     if not config.configured:
@@ -51,8 +29,8 @@ def performance(logistic,dat,predictors,probs=None,key='algunIngresoProg',file=N
         auc=roc_auc_score(dat[key], probs)
         print('AUC=',auc,file=file)
     return(probs)
-def predict_save(yr,model,X,y,columns=config.COLUMNS[0]):
-    # seed= np.random.default_rng(42)
+def predict_save(yr,model,X,y,**kwargs):
+    columns=kwargs.get('columns',config.COLUMNS[0])
     from more_itertools import sliced
     CHUNK_SIZE = 50000
     
@@ -81,30 +59,21 @@ import configurations.utility as util
 from dataManipulation.dataPreparation import getData
 from sklearn.metrics import roc_auc_score
 import numpy as np
-from sklearn import linear_model
-from main.SafeLogisticRegression import SafeLogisticRegression
-import importlib
-np.random.seed(config.SEED)
-# seed= np.random.default_rng(42)
+
+# np.random.seed(config.SEED) #This is enough for intra-machine reproducibility
 #%%
 if __name__=='__main__':
         
     # FIXME STRUCT KEYS TO INT, FIX GENERARTABLASVARIABLES.RETRIEVE INDICE
-    configname='/home/aolza/Desktop/estratificacion/configurations/used/randomForest20211222_161609.json'
-    configuration=configure(configname,TRACEBACK=False, VERBOSE=False)
+    
     print(configuration)
     modelfilename='/home/aolza/Desktop/estratificacion/models/urgcms_excl_hdia_nbinj/randomForest20211222_161609.joblib'
 
     model=job.load(modelfilename)
-    
-    # try:
-    #     model.random_sate=seed
-    #     print('Warning: Changing random seed on pretrained model')
-    # except:
-    #     print('Cannot change random seed')
+    model=model.set_params(n_jobs=1)
 
     Xx,Yy=getData(2017)
-    print(Xx.describe())
+    print(min(Yy))#FIXME remove this
     # x,y=getData(2017,oldbase=True)
     cols=list(Xx.columns)
     if 'ingresoUrg' in cols: cols.remove('ingresoUrg')
