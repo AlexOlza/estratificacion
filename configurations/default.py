@@ -5,6 +5,7 @@ Created on Thu Nov 18 16:14:16 2021
 
 @author: aolza
 """
+#from configurations.almeria import *
 SEED=42 #random seed
 """LOCATIONS"""
 PROJECT='estratificacion'
@@ -28,3 +29,6 @@ ACGINDPRIVFILES={2016:'ing2016-2017ActivosIndPriv.csv',
 """VERBOSITY SETTINGS"""
 VERBOSE=True 
 TRACEBACK=False #EXTREME VERBOSITY 
+
+
+

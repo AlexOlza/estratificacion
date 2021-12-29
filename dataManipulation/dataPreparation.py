@@ -18,18 +18,22 @@ Created on Wed Nov 17 11:20:27 2021
 
 import pandas as pd
 import time
+import numpy as np
 from python_settings import settings as config
-assert config.configured, 'CONFIGURE FIRST!'
+
+# assert config.configured, 'CONFIGURE FIRST!'
 import configurations.utility as util
+configuration=util.configure()
 from dataManipulation.generarTablasIngresos import createYearlyDataFrames, loadIng,assertMissingCols
 from dataManipulation.generarTablasVariables import prepare,resourceUsageDataFrames,load
 # from matplotlib_venn import venn2
 def listIntersection(a,b): return list(set(a) & set(b))
 # FIXME not robust!!!
-def excludeHosp(df,filtro,criterio):
-    remove='{0}_{1}'.format(filtro,criterio)
-    assertMissingCols([remove,criterio],df,'exclude')
-    df[criterio]=df[criterio]-df[remove]
+def excludeHosp(df,filtros,criterio):#FIXME the bug is here
+    filtros=['{0}_{1}'.format(f,criterio) for f in filtros]
+    assertMissingCols(filtros+[criterio],df,'exclude')
+    df['remove']=np.where((any(df[filtros]) & df[criterio]),1,0)
+    df[criterio]=df[criterio]-df['remove']
 
 # TODO MOVE ASSERTIONS BEFORE LOADING BIG FILES!!!!
 # TODO TEST NEW DEFAULT predictors=config.PREDICTORREGEX INSTEAD OF predictors=config.PREDICTORS
@@ -57,9 +61,9 @@ def getData(yr,columns=config.COLUMNS,previousHosp=config.PREVIOUSHOSP,predictor
     if exclude:
         assert isinstance(exclude,(str,list)), 'getData accepts str or list or None/False as exclude!'
         exclude=[exclude] if isinstance(exclude,str) else exclude
-        for filtro in exclude:
-            for c in columns:
-                excludeHosp(ingT[yr+1], filtro, c)
+        for c in columns:
+            excludeHosp(ingT[yr+1], exclude, c)
+            assert min(ingT[yr+1][c])>=0, 'negative hospitalizations'
         util.vprint('excluded ',exclude)
     if cols:
         cols=[cols] if isinstance(cols,str) else cols
@@ -95,9 +99,12 @@ def getData(yr,columns=config.COLUMNS,previousHosp=config.PREVIOUSHOSP,predictor
 if __name__=='__main__':
     import sys
     sys.path.append('/home/aolza/Desktop/estratificacion/')
-    ing=loadIng(config.ALLHOSPITFILE,config.DATAPATH)
-    ingT=createYearlyDataFrames(ing)
-
+    
+    # ing=loadIng(config.ALLHOSPITFILE,configs.DATAPATH)
+    # ingT=createYearlyDataFrames(ing)
+    # x,y=getData(2017)
+    # xx,yy=getData(2017,oldbase=True)
+    X,Y=getData(2017,exclude=['nbinj','hdia'])
     # import inspect
     # used=[createYearlyDataFrames, loadIng,assertMissingCols,
     #       prepare,resourceUsageDataFrames]
