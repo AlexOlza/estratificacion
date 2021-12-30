@@ -60,7 +60,7 @@ from dataManipulation.dataPreparation import getData
 from sklearn.metrics import roc_auc_score
 import numpy as np
 
-# np.random.seed(config.SEED) #This is enough for intra-machine reproducibility
+np.random.seed(config.SEED) #This is enough for intra-machine reproducibility
 #%%
 if __name__=='__main__':
         
@@ -73,7 +73,7 @@ if __name__=='__main__':
     model=model.set_params(n_jobs=1)
 
     Xx,Yy=getData(2017)
-    print(min(Yy))#FIXME remove this
+    print('min {0}='.format(config.COLUMNS[0]),min(Yy[config.COLUMNS[0]]))#FIXME remove this
     # x,y=getData(2017,oldbase=True)
     cols=list(Xx.columns)
     if 'ingresoUrg' in cols: cols.remove('ingresoUrg')
