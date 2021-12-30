@@ -6,6 +6,7 @@
 #SBATCH--output=/home/aolza/Desktop/estratificacion/main/cluster/outpred.txt
 #SBATCH--error=/home/aolza/Desktop/estratificacion/main/cluster/errpred.txt
 echo "-------" 
+echo "predict.sl"
 echo "Copying input files to temporary run dir" 
 cp *.py -v $SCRATCH_JOB
 
