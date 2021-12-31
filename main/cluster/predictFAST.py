@@ -6,17 +6,17 @@ Created on Thu Nov 25 09:59:25 2021
 @author: aolza
 """
 import numpy as np
-np.random.seed(42)
-rng = np.random.RandomState(42)
-rng.seed(42)
-print(rng.random_sample(5))
-print(np.random.randint(0,100,size=5))
+# np.random.seed(42)
+# rng = np.random.RandomState(42)
+# rng.seed(42)
+# print(rng.random_sample(5))
+# print(np.random.randint(0,100,size=5))
 import sys
 sys.path.append('/home/aolza/Desktop/estratificacion/')
 from python_settings import settings as config
 from configurations.utility import configure
 import joblib as job
-configname='/home/aolza/Desktop/estratificacion/configurations/used/randomForest20211231_105343.json'
+configname='/home/aolza/Desktop/estratificacion/configurations/used/randomForest20211231_114533.json'
 configuration=configure(configname,TRACEBACK=False, VERBOSE=True)
 
     #%%
@@ -35,10 +35,10 @@ if __name__=='__main__':
         
     # FIXME STRUCT KEYS TO INT, FIX GENERARTABLASVARIABLES.RETRIEVE INDICE
     
-    modelfilename='/home/aolza/Desktop/estratificacion/models/urgcms_excl_hdia_nbinj/randomForest20211231_105343.joblib'
+    modelfilename='/home/aolza/Desktop/estratificacion/models/urgcms_excl_hdia_nbinj/randomForest20211231_114533.joblib'
 
     model=job.load(modelfilename)
-    model=model.set_params(n_jobs=1, random_state=42)#NOT enough for intra-machine reproducibility
+    # model=model.set_params(n_jobs=1, random_state=42)#NOT enough for intra-machine reproducibility
     print('njobs ',model.n_jobs)
     print('rand state',model.random_state)
 

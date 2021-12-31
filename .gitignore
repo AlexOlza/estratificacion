@@ -11,5 +11,5 @@ predictions/
 .Rhistory
 .spyproject/
 *.txt
-*untitled*
+
 configurations/*/used
