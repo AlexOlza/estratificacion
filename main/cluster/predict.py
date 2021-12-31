@@ -47,7 +47,6 @@ def predict_save(yr,model,X,y,**kwargs):
                 print(i,'/',n)
             chunk = X.iloc[index_slice] # your dataframe chunk ready for use
             ychunk=y.iloc[index_slice]
-            seed= np.random.default_rng(42)
             predictions=model.predict_proba(chunk.drop('PATIENT_ID',axis=1))[:,1] #Probab of being top1
             for element in zip(chunk['PATIENT_ID'],ychunk['PATIENT_ID'],predictions,ychunk[columns]):
                 csv_out.writerow(element)
@@ -57,13 +56,10 @@ def predict_save(yr,model,X,y,**kwargs):
     #%%
 import csv
 import pandas as pd
-import configurations.utility as util
 from dataManipulation.dataPreparation import getData
 from sklearn.metrics import roc_auc_score
 import numpy as np
 
-np.random.seed(config.SEED) #This is enough for intra-machine reproducibility
-print('the seed has ben set')
 #%%
 if __name__=='__main__':
         
@@ -72,20 +68,14 @@ if __name__=='__main__':
     modelfilename='/home/aolza/Desktop/estratificacion/models/urgcms_excl_hdia_nbinj/randomForest20211222_161609.joblib'
 
     model=job.load(modelfilename)
-    model=model.set_params(n_jobs=1)
-    print('njobs ',model.n_jobs)
 
     Xx,Yy=getData(2017)
-    print('min {0}='.format(config.COLUMNS[0]),min(Yy[config.COLUMNS[0]]))#FIXME remove this
-    # x,y=getData(2017,oldbase=True)
-    cols=list(Xx.columns)
-    if 'ingresoUrg' in cols: cols.remove('ingresoUrg')
-    for i in range(3):
-        predict_save(2018, model, Xx, Yy, verbose=False)
-        probs=pd.read_csv(config.PREDFILES[2017])
-        print(probs.head())
 
-        print('auc ',roc_auc_score(np.where(probs.OBS>=1,1,0), probs.PRED)) 
+    predict_save(2018, model, Xx, Yy, verbose=False)
+    probs=pd.read_csv(config.PREDFILES[2017])
+    print(probs.head())
+
+    print('auc ',roc_auc_score(np.where(probs.OBS>=1,1,0), probs.PRED)) 
     # oldprobs=pd.read_csv('untracked/predecirIngresos/logistica/urgSinPrevio18.csv')
     # oldauc=roc_auc_score(np.where(y.ingresoUrg>=1,1,0), oldprobs.PROB_ING)
 

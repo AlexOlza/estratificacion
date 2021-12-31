@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 import sys
 experiment='configurations.'+sys.argv[2]
-# experiment='configurations.'+'urgcms_excl_hdia_nbinj'
 import importlib
 importlib.invalidate_caches()
 
@@ -32,7 +31,6 @@ TRACEBACK=False
 
 """ SETTINGS FOR THE RANDOM FOREST """
 import numpy as np
-# rng = np.random.RandomState(SEED)
 from sklearn.ensemble import RandomForestClassifier
 IMPORTS=["from sklearn.ensemble import RandomForestClassifier","from sklearn.model_selection import RandomizedSearchCV"]
 FOREST=RandomForestClassifier(criterion='gini',
