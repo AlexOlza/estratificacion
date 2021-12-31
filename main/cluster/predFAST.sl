@@ -3,10 +3,10 @@
 #SBATCH--job-name="pred"
 #SBATCH --mem-per-cpu=16G
 #SBATCH--partition="medium"
-#SBATCH--output=/home/aolza/Desktop/estratificacion/main/cluster/outpred.txt
-#SBATCH--error=/home/aolza/Desktop/estratificacion/main/cluster/errpred.txt
+#SBATCH--output=/home/aolza/Desktop/estratificacion/main/cluster/opredFAST.txt
+#SBATCH--error=/home/aolza/Desktop/estratificacion/main/cluster/epredFAST.txt
 echo "-------" 
-echo "predict.sl"
+echo "predFAST.sl"
 echo "Copying input files to temporary run dir" 
 cp *.py -v $SCRATCH_JOB
 
@@ -16,7 +16,7 @@ echo "START python"
 date +"%F %T" 
 module load python-settings/0.2.2-GCCcore-10.2.0-Python-3.8.6
 module load SciPy-bundle
-srun python predict.py
+srun python predictFAST.py
 
 sleep 2
 echo "-------" 

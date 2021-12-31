@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 import sys
 experiment='configurations.'+sys.argv[2]
-# experiment='configurations.'+'urgcms_excl_hdia_nbinj'
 import importlib
 importlib.invalidate_caches()
 

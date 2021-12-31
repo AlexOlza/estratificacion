@@ -94,7 +94,8 @@ def getData(yr,columns=config.COLUMNS,previousHosp=config.PREVIOUSHOSP,predictor
     y17=pd.merge(ingT[yr+1],full16['PATIENT_ID'],on='PATIENT_ID',how='outer').fillna(0)
     data=pd.merge(pred16,y17,on='PATIENT_ID')
     print('getData time: ',time.time()-t0)
-    return(data[listIntersection(data.columns,pred16.columns)],data[cols])
+    finalcols=listIntersection(data.columns,pred16.columns)
+    return(data[finalcols].reindex(sorted(data[finalcols].columns), axis=1),data[cols])
 
 if __name__=='__main__':
     import sys
