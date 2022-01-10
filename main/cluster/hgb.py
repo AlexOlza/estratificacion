@@ -32,7 +32,7 @@ assert len(config.COLUMNS)==1, 'This model is built for a single response variab
 print('Sample size ',len(pred16))
 
 #%%
-"""BALANCEO LAS CLASES Y TRAIN-TEST SPLIT"""
+"""BALANCEO LAS CLASES Y TRAIN-TEST SPLIT"""#FIXME rewrite as a function in dataManipulation
 idx=np.array(list(itertools.chain.from_iterable((y17[config.COLUMNS] >= 1).values)))
 ing_indices = y17.loc[idx].index
 noing_indices = y17.loc[(~idx)].index
@@ -55,11 +55,38 @@ y=y.ravel()
 print('Dropping NA. Amount: ',len(na_indices))
 print('Sample size ',len(X))
 #%%
-forest = RandomizedSearchCV(estimator = config.FOREST, 
+
+def agrupar(datos):
+    edad=[p for p in np.array(datos.filter(regex=r'AGE').columns)]
+    edad.append('AGE_85GT')
+    datos['AGE_85GT']=0
+    datos.iloc[datos[edad].max(1)==0, datos.columns.get_loc('AGE_85GT')]=1
+    datos['edad']=datos[edad].idxmax(1)
+    datos['edad']=datos.edad.astype("category").cat.codes
+    
+    ACG=[p for p in np.array(datos.filter(regex=r'ACG_').columns)]
+    ACG.append('NINGUNO')
+    datos['NINGUNO']=0
+    datos.iloc[datos[ACG].max(1)==0, datos.columns.get_loc('NINGUNO')]=1
+    datos['ACG']=datos[ACG].idxmax(1)
+    datos.ACG=datos.ACG.astype("category").cat.codes
+    
+    datos=datos.drop(edad+ACG,axis=1)
+    return(datos)
+
+"""AGRUPO LAS VARIABLES CATEGORICAS- EDAD Y ACG"""
+
+X=agrupar(X)
+cat=np.array([False]*(len(X.columns)-2)+[True]*2)
+#%%
+estimator=config.FOREST
+estimator.set_params(categorical_features=cat)
+
+forest = RandomizedSearchCV(estimator = estimator, 
                                param_distributions = config.RANDOM_GRID,
                                n_iter = 3,
                                cv = 2, 
-                               verbose=2,
+                               verbose=5,
                                random_state=config.SEED,
                                n_jobs =-1)
 forest.fit(X,y)
