@@ -10,7 +10,7 @@ sys.path.append('/home/aolza/Desktop/estratificacion/')
 from python_settings import settings as config
 from configurations.utility import configure
 import joblib as job
-configname='/home/aolza/Desktop/estratificacion/configurations/used/randomForest20211222_161609.json'
+configname='/home/aolza/Desktop/estratificacion/configurations/used/randomForest20211231_172918.json'
 configuration=configure(configname,TRACEBACK=False, VERBOSE=True)
 
 def performance(logistic,dat,predictors,probs=None,key='algunIngresoProg',file=None,mode='a',header='',AUC=True,**kwargs):
@@ -65,7 +65,7 @@ if __name__=='__main__':
         
     # FIXME STRUCT KEYS TO INT, FIX GENERARTABLASVARIABLES.RETRIEVE INDICE
     
-    modelfilename='/home/aolza/Desktop/estratificacion/models/urgcms_excl_hdia_nbinj/randomForest20211222_161609.joblib'
+    modelfilename='/home/aolza/Desktop/estratificacion/models/urgcms_excl_hdia_nbinj/randomForest20211231_172918.joblib'
 
     model=job.load(modelfilename)
 
