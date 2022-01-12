@@ -21,7 +21,6 @@ import time
 import numpy as np
 from python_settings import settings as config
 
-# assert config.configured, 'CONFIGURE FIRST!'
 import configurations.utility as util
 configuration=util.configure()
 from dataManipulation.generarTablasIngresos import createYearlyDataFrames, loadIng,assertMissingCols
@@ -31,9 +30,23 @@ def listIntersection(a,b): return list(set(a) & set(b))
 # FIXME not robust!!!
 def excludeHosp(df,filtros,criterio):#FIXME the bug is here
     filtros=['{0}_{1}'.format(f,criterio) for f in filtros]
+    print('filtros ',filtros)
     assertMissingCols(filtros+[criterio],df,'exclude')
-    df['remove']=np.where((any(df[filtros]) & df[criterio]),1,0)
+    print('all criterio ',all(df[criterio]),min(df[criterio]))
+    
+    anyfiltros=(df[filtros].sum(axis=1)>=1)
+    crit=(df[criterio]>=1)
+    df['crit']=np.where(crit,1,0)
+    df['anyfiltros']=np.where(anyfiltros,1,0)
+    df['remove']=np.where((anyfiltros & crit),1,0)
+    
+    print('number of events before exclusion: ', sum(df[criterio]))
+    print('number of events to be removed: ', sum(df.remove))
+    print('number of patients before exclusion: ', sum(np.where(df[criterio]>=1,1,0)))
+    
     df[criterio]=df[criterio]-df['remove']
+    print('number of events after exclusion: ', sum(df[criterio]))
+    print('number of patients after exclusion: ', sum(np.where(df[criterio]>=1,1,0)))
 
 # TODO MOVE ASSERTIONS BEFORE LOADING BIG FILES!!!!
 # TODO TEST NEW DEFAULT predictors=config.PREDICTORREGEX INSTEAD OF predictors=config.PREDICTORS
@@ -65,6 +78,7 @@ def getData(yr,columns=config.COLUMNS,previousHosp=config.PREVIOUSHOSP,predictor
             excludeHosp(ingT[yr+1], exclude, c)
             assert min(ingT[yr+1][c])>=0, 'negative hospitalizations'
         util.vprint('excluded ',exclude)
+
     if cols:
         cols=[cols] if isinstance(cols,str) else cols
         if 'PATIENT_ID' not in cols:
@@ -92,9 +106,12 @@ def getData(yr,columns=config.COLUMNS,previousHosp=config.PREVIOUSHOSP,predictor
 
             
     y17=pd.merge(ingT[yr+1],full16['PATIENT_ID'],on='PATIENT_ID',how='outer').fillna(0)
+    print('number of patients y17: ', sum(np.where(y17[config.COLUMNS]>=1,1,0)))
     data=pd.merge(pred16,y17,on='PATIENT_ID')
+    print('number of patients in data: ', sum(np.where(data[config.COLUMNS]>=1,1,0)))
     print('getData time: ',time.time()-t0)
     finalcols=listIntersection(data.columns,pred16.columns)
+    # finalcols+=['anyfiltros','crit']+['remove']+exclude
     return(data[finalcols].reindex(sorted(data[finalcols].columns), axis=1),data[cols])
 
 if __name__=='__main__':
@@ -105,7 +122,8 @@ if __name__=='__main__':
     # ingT=createYearlyDataFrames(ing)
     # x,y=getData(2017)
     # xx,yy=getData(2017,oldbase=True)
-    X,Y=getData(2017,exclude=['nbinj','hdia'])
+    X,Y=getData(2016)
+    print('positive class ',sum(np.where(Y.urgcms>=1,1,0)))
     # import inspect
     # used=[createYearlyDataFrames, loadIng,assertMissingCols,
     #       prepare,resourceUsageDataFrames]

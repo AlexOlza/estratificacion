@@ -25,6 +25,8 @@ import time
 # from configurations import config
 from python_settings import settings as config
 import configurations.utility as util
+configuration=util.configure()
+
 def assertMissingCols(needed,df,function_name):
     missing_columns=set(needed)-set(df.columns)
     assert len(missing_columns)==0,'{1}: MISSING NEEDED COLS {0} IN THE HOSPITALIZATION DATASET.'.format(missing_columns,function_name)
@@ -136,7 +138,7 @@ if __name__=="__main__":
     ingT=createYearlyDataFrames(ing)
     
     #%%
-    y=2016
+    y=2017
     # for y in ingT.keys():
     print(len(ingT[y]),'patients had admissions in ',y)
     # print(ingT[y].describe()) 121662-18447-32046
