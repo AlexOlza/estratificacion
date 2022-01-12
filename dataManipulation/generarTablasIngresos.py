@@ -66,6 +66,11 @@ def transform(df,verbose=True):  #all of this can be written more compactly with
     plancms=(df.planned_cms==1)
     hdia=(df.tipo=='h.dia')
     nbinj=(df.newborn_injury==1)
+    
+    print('total plancms events ',sum(plancms))
+    print('total urgcms events ',sum(~plancms))
+    print('total hdia events ',sum(hdia))
+    
     #auxiliary cols
     df['nbinj']=df['newborn_injury']#shorter name
     df['tot']=df.groupby(['id']).ing.transform(sum)
@@ -78,8 +83,10 @@ def transform(df,verbose=True):  #all of this can be written more compactly with
     df['prog_num']=df.groupby(['id'])['prog'].transform(sum)
     
     df['urgcms']=np.where((~hdia) & (~plancms), 1,0)
+    print( 'total urgmcs NOT hdia in df.urgcms', sum(df.urgcms))
     df['progcms']=np.where((~hdia) & (plancms), 1,0)
     df['urgcms_num']=df.groupby(['id'])['urgcms'].transform(sum)
+    print( 'total urgmcs NOT hdia PATIENTS in df.urgcms_num', len(df.loc[df.urgcms_num>=1].id.unique()))
     df['progcms_num']=df.groupby(['id'])['progcms'].transform(sum)
     
     df['nbinj_urg']=np.where((urg) & (nbinj),1,0)
@@ -121,7 +128,7 @@ def transform(df,verbose=True):  #all of this can be written more compactly with
     util.vprint('transform time ',time.time()-t0)
     return dd
 
-#%% USAGE
+#%% USAGE 164301-37910-23040
 if __name__=="__main__":
 #%%
     # print('imported')
@@ -129,9 +136,24 @@ if __name__=="__main__":
     ingT=createYearlyDataFrames(ing)
     
     #%%
-    for y in ingT.keys():
-        print(len(ingT[y]),'patients had admissions in ',y)
-        # print(ingT[y].describe())
-        print('constant cols:',[c for c in ingT[y].loc[:,~(ingT[y] != ingT[y].iloc[0]).any()].columns])
-        print('\n')
+    y=2016
+    # for y in ingT.keys():
+    print(len(ingT[y]),'patients had admissions in ',y)
+    # print(ingT[y].describe()) 121662-18447-32046
+    for c in ingT[y]:
+        print(c, sum(ingT[y][c]),len(set(ingT[y]['PATIENT_ID'].loc[ingT[y][c]>=1])))
+    print('constant cols:',[c for c in ingT[y].loc[:,~(ingT[y] != ingT[y].iloc[0]).any()].columns])
+    print('\n')
 
+    D=ingT[y]
+    urg=(D.urg>=1)
+    urgcms=(D.urgcms>=1)
+    nbinjurg=(D.nbinj_urg==1)
+    nbinjurgcms=(D.nbinj_urgcms==1)
+    hdiaurg=(D.hdia_urg>=1)
+    hdiaurgcms=(D.hdia_urgcms>=1)
+    
+    events={'urg':urg,'urgmcs':urgcms,'nbinjurg':nbinjurg}
+    
+    for k,v in events.items():
+        print(k, sum(v))
