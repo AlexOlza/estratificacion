@@ -14,7 +14,6 @@ try:
     chosen_config=sys.argv[1]
     experiment='configurations.'+sys.argv[2]
 except:
-    chosen_config=input('CONFIG FILENAME: ')#example logisticOLDBASE
     experiment=input('EXPERIMENT NAME: ')#example urgcms_excl_hdia_nbinj
 
 """THIS EMULATES 'from experiment import *' USING IMPORTLIB 
