@@ -23,31 +23,24 @@ from python_settings import settings as config
 
 import configurations.utility as util
 configuration=util.configure()
-from dataManipulation.generarTablasIngresos import createYearlyDataFrames, loadIng,assertMissingCols
+from dataManipulation.generarTablasIngresos import createYearlyDataFrames, loadIng,assertMissingCols, report_transform
 from dataManipulation.generarTablasVariables import prepare,resourceUsageDataFrames,load
 # from matplotlib_venn import venn2
 def listIntersection(a,b): return list(set(a) & set(b))
 # FIXME not robust!!!
 def excludeHosp(df,filtros,criterio):#FIXME the bug is here
     filtros=['{0}_{1}'.format(f,criterio) for f in filtros]
-    print('filtros ',filtros)
+
     assertMissingCols(filtros+[criterio],df,'exclude')
-    print('all criterio ',all(df[criterio]),min(df[criterio]))
     
     anyfiltros=(df[filtros].sum(axis=1)>=1)
     crit=(df[criterio]>=1)
-    df['crit']=np.where(crit,1,0)
-    df['anyfiltros']=np.where(anyfiltros,1,0)
+    
     df['remove']=np.where((anyfiltros & crit),1,0)
-    
-    print('number of events before exclusion: ', sum(df[criterio]))
-    print('number of events to be removed: ', sum(df.remove))
-    print('number of patients before exclusion: ', sum(np.where(df[criterio]>=1,1,0)))
-    
-    df[criterio]=df[criterio]-df['remove']
-    print('number of events after exclusion: ', sum(df[criterio]))
-    print('number of patients after exclusion: ', sum(np.where(df[criterio]>=1,1,0)))
 
+    df[criterio]=df[criterio]-df['remove']
+
+    
 # TODO MOVE ASSERTIONS BEFORE LOADING BIG FILES!!!!
 # TODO TEST NEW DEFAULT predictors=config.PREDICTORREGEX INSTEAD OF predictors=config.PREDICTORS
 # config.PREDICTORS may be currently unused, consider removing it
@@ -63,7 +56,7 @@ def getData(yr,columns=config.COLUMNS,previousHosp=config.PREVIOUSHOSP,predictor
         acg=load(filename=config.ACGFILES[yr],predictors=predictors)
         print('not opening allhospfile')
         return (acg.drop('ingresoUrg',axis=1),acg[['PATIENT_ID','ingresoUrg']])
-        # return(acg,0)
+
     cols=columns.copy() #FIXME find better approach
     t0=time.time()
     ing=loadIng(config.ALLHOSPITFILE,config.DATAPATH)
@@ -78,6 +71,7 @@ def getData(yr,columns=config.COLUMNS,previousHosp=config.PREVIOUSHOSP,predictor
             excludeHosp(ingT[yr+1], exclude, c)
             assert min(ingT[yr+1][c])>=0, 'negative hospitalizations'
         util.vprint('excluded ',exclude)
+    report_transform(ingT[yr+1])
 
     if cols:
         cols=[cols] if isinstance(cols,str) else cols
@@ -100,7 +94,6 @@ def getData(yr,columns=config.COLUMNS,previousHosp=config.PREVIOUSHOSP,predictor
         assertMissingCols(previousHosp,ingT[yr],'getData')
         pred16=pd.merge(full16,ingT[yr][previousHosp],on='PATIENT_ID',how='left').fillna({c:0 for c in previousHosp},inplace=True)
     else:
-        # assert 'PATIENT_ID' in ingT[yr].columns OK
         assert 'PATIENT_ID' in full16.columns
         pred16=pd.merge(full16,ingT[yr]['PATIENT_ID'],on='PATIENT_ID',how='left')
 
@@ -111,7 +104,7 @@ def getData(yr,columns=config.COLUMNS,previousHosp=config.PREVIOUSHOSP,predictor
     print('number of patients in data: ', sum(np.where(data[config.COLUMNS]>=1,1,0)))
     print('getData time: ',time.time()-t0)
     finalcols=listIntersection(data.columns,pred16.columns)
-    # finalcols+=['anyfiltros','crit']+['remove']+exclude
+
     return(data[finalcols].reindex(sorted(data[finalcols].columns), axis=1),data[cols])
 
 if __name__=='__main__':

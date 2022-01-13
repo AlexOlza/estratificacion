@@ -17,12 +17,10 @@ Created on Fri Nov 12 12:01:39 2021
 @author: aolza
 """
 from pathlib import Path
-# from datetime import timedelta
 from warnings import warn
 import pandas as pd
 import numpy as np
 import time
-# from configurations import config
 from python_settings import settings as config
 import configurations.utility as util
 configuration=util.configure()
@@ -51,8 +49,8 @@ def createYearlyDataFrames(ing):
         dic[y]=transform(df)
     return(dic)
 
-def transform(df,verbose=True):  #all of this can be written more compactly with loops!!!!! 
-    t0=time.time()
+def transform(df,**kwargs):  #all of this can be written more compactly with loops!!!!! 
+    verbose=kwargs.get('verbose',config.VERBOSE)
     #Assertions and warnings:
     needed=['id', 'tipo','prioridad','planned_cms', 'newborn_injury']
     assertMissingCols(needed, df, 'transform')
@@ -69,28 +67,26 @@ def transform(df,verbose=True):  #all of this can be written more compactly with
     hdia=(df.tipo=='h.dia')
     nbinj=(df.newborn_injury==1)
     
-    print('total plancms events ',sum(plancms))
-    print('total urgcms events ',sum(~plancms))
-    print('total hdia events ',sum(hdia))
-    
     #auxiliary cols
     df['nbinj']=df['newborn_injury']#shorter name
-    df['tot']=df.groupby(['id']).ing.transform(sum)
+
     #Describing all the characteristics of each episode
     #And computing the number of similar episodes per id using groupby and transform(sum)
     ###################################################
-    df['urg']=np.where((~hdia) & (urg), 1,0)
-    df['prog']=np.where((~hdia) & (~urg), 1,0)
+    
+    #PRIORITY ACCORDING TO OSAKIDETZA ADMINISTRATIVE CRITERIA
+    df['urg']=np.where( (urg), 1,0)
+    df['prog']=np.where( (~urg), 1,0)
     df['urg_num']=df.groupby(['id'])['urg'].transform(sum)
     df['prog_num']=df.groupby(['id'])['prog'].transform(sum)
     
-    df['urgcms']=np.where((~hdia) & (~plancms), 1,0)
-    print( 'total urgmcs NOT hdia in df.urgcms', sum(df.urgcms))
-    df['progcms']=np.where((~hdia) & (plancms), 1,0)
+    #PRIORITY ACCORDING TO THE CMS ALGORITHM
+    df['urgcms']=np.where( (~plancms), 1,0) 
+    df['progcms']=np.where( (plancms), 1,0)
     df['urgcms_num']=df.groupby(['id'])['urgcms'].transform(sum)
-    print( 'total urgmcs NOT hdia PATIENTS in df.urgcms_num', len(df.loc[df.urgcms_num>=1].id.unique()))
     df['progcms_num']=df.groupby(['id'])['progcms'].transform(sum)
     
+    #POTENTIAL EXCLUSION CRITERIA: Hospitalizations due to birth/delivery/traumatic injury
     df['nbinj_urg']=np.where((urg) & (nbinj),1,0)
     df['nbinj_prog']=np.where((~urg) & (nbinj),1,0)
     df['nbinj_urgcms']=np.where((~plancms) & (nbinj),1,0)
@@ -109,6 +105,10 @@ def transform(df,verbose=True):  #all of this can be written more compactly with
     df['hdia_urgcms_num']=df.groupby(['id'])['hdia_urgcms'].transform(sum)
     df['hdia_progcms_num']=df.groupby(['id'])['hdia_progcms'].transform(sum)
     
+    #unnecessary at this point.
+    # one exclusion criteria is enough, both occuring simultaneously does not matter
+    # because we are using binary variables. 
+    # if we want to use hospitalization counts, it will matter, so I will keep it for now.
     df['hdia_nbinj_urg']=np.where((hdia) & (urg) & (nbinj),1,0)
     df['hdia_nbinj_prog']=np.where((hdia) & (~urg) & (nbinj),1,0)
     df['hdia_nbinj_urgcms']=np.where((hdia) & (~plancms) & (nbinj),1,0)
@@ -127,35 +127,33 @@ def transform(df,verbose=True):  #all of this can be written more compactly with
     types['id']='int64'
     dd=dd.astype(types)
     dd.rename(columns={'id':'PATIENT_ID'},inplace=True)
-    util.vprint('transform time ',time.time()-t0)
+    if verbose:
+        report_transform(df)
     return dd
 
-#%% USAGE 164301-37910-23040
+def report_transform(df):
+    events=['urg','urgcms','prog','progcms']
+    patients=['{0}_num'.format(e) for e in events]
+    ee,pp=[],[]
+    for e,p in zip(events,patients):
+        if (e in df.columns) and (p in df.columns):
+            ee.append(sum(df[e]))
+            pp.append(len(df.loc[df[p]>=1].id.unique()))
+        elif (e in df.columns) and not (p in df.columns):#FIXME explain this
+            pp.append(len(df.loc[df[e]>=1].PATIENT_ID.unique()))
+    report=pd.DataFrame(data=[pp,ee], columns=events, index=['Patients','Events'])
+    print(report)
+       
 if __name__=="__main__":
 #%%
-    # print('imported')
     ing=loadIng()
     ingT=createYearlyDataFrames(ing)
     
     #%%
     y=2017
-    # for y in ingT.keys():
+
     print(len(ingT[y]),'patients had admissions in ',y)
-    # print(ingT[y].describe()) 121662-18447-32046
     for c in ingT[y]:
         print(c, sum(ingT[y][c]),len(set(ingT[y]['PATIENT_ID'].loc[ingT[y][c]>=1])))
     print('constant cols:',[c for c in ingT[y].loc[:,~(ingT[y] != ingT[y].iloc[0]).any()].columns])
     print('\n')
-
-    D=ingT[y]
-    urg=(D.urg>=1)
-    urgcms=(D.urgcms>=1)
-    nbinjurg=(D.nbinj_urg==1)
-    nbinjurgcms=(D.nbinj_urgcms==1)
-    hdiaurg=(D.hdia_urg>=1)
-    hdiaurgcms=(D.hdia_urgcms>=1)
-    
-    events={'urg':urg,'urgmcs':urgcms,'nbinjurg':nbinjurg}
-    
-    for k,v in events.items():
-        print(k, sum(v))

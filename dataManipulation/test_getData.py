@@ -8,9 +8,9 @@ Created on Wed Jan 12 11:19:22 2022
 """
 from dataManipulation.dataPreparation import getData
 import pandas as pd
-_,y=getData(2016,oldbase=False)
-outcome=list(y.columns)
-outcome.remove('PATIENT_ID')
+_,y=getData(2016,columns=['urg'],exclude=[],oldbase=False)
+outcome=['urg']
+# outcome.remove('PATIENT_ID')
 
 _,yOLD=getData(2016,oldbase=True)
 
