@@ -9,11 +9,10 @@ Created on Tue Dec  7 13:41:00 2021
 from sklearn import linear_model
 class SafeLogisticRegression(linear_model.LogisticRegression):
     def __init__(self,penalty,max_iter,verbose):
-        print('init')
         super().__init__(penalty=penalty,max_iter=max_iter,verbose=verbose) 
     def set_columns(self,columns):
         self.columns=columns
-    def safeFit(self, X, y):#FIXME dataconversionwarning
+    def safeFit(self, X, y):#FIXME KERNEL BREAKS!!! dataconversionwarning
         self.columns = X.columns
         print(self.columns)
         return self.fit( X, y)
