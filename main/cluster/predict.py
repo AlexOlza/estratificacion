@@ -6,11 +6,18 @@ Created on Thu Nov 25 09:59:25 2021
 @author: aolza
 """
 import sys
+try:
+    model_name=sys.argv[1]
+    year=int(sys.argv[2])
+except:
+    model_name=input('MODEL NAME (example: logistic20220118_132612): ')
+    year=int(input('YEAR YOU WANT TO PREDICT:'))
+
 sys.path.append('/home/aolza/Desktop/estratificacion/')
 from python_settings import settings as config
 from configurations.utility import configure
 import joblib as job
-configname='/home/aolza/Desktop/estratificacion/configurations/used/randomForest20211231_172918.json'
+configname='/home/aolza/Desktop/estratificacion/configurations/used/{0}.json'.format(model_name)
 configuration=configure(configname,TRACEBACK=False, VERBOSE=True)
 
 def performance(logistic,dat,predictors,probs=None,key='algunIngresoProg',file=None,mode='a',header='',AUC=True,**kwargs):
@@ -65,18 +72,14 @@ if __name__=='__main__':
         
     # FIXME STRUCT KEYS TO INT, FIX GENERARTABLASVARIABLES.RETRIEVE INDICE
     
-    modelfilename='/home/aolza/Desktop/estratificacion/models/urgcms_excl_hdia_nbinj/randomForest20211231_172918.joblib'
+    modelfilename='/home/aolza/Desktop/estratificacion/models/urgcms_excl_hdia_nbinj/{0}.joblib'.format(model_name)
 
     model=job.load(modelfilename)
 
-    Xx,Yy=getData(2017)
+    Xx,Yy=getData(year-1)
 
-    predict_save(2018, model, Xx, Yy, verbose=False)
-    probs=pd.read_csv(config.PREDFILES[2017])
+    predict_save(year, model, Xx, Yy, verbose=False)
+    probs=pd.read_csv(config.PREDFILES[year-1])
     print(probs.head())
 
     print('auc ',roc_auc_score(np.where(probs.OBS>=1,1,0), probs.PRED)) 
-    # oldprobs=pd.read_csv('untracked/predecirIngresos/logistica/urgSinPrevio18.csv')
-    # oldauc=roc_auc_score(np.where(y.ingresoUrg>=1,1,0), oldprobs.PROB_ING)
-
-    # print(model.score(Xx.drop('PATIENT_ID',axis=1),Yy.drop('PATIENT_ID',axis=1))) 
