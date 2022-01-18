@@ -13,3 +13,5 @@ predictions/
 *.txt
 *untitled*
 configurations/*/used
+main/SafeLogisticRegression.py
+
