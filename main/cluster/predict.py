@@ -19,7 +19,12 @@ from configurations.utility import configure
 import joblib as job
 configname='/home/aolza/Desktop/estratificacion/configurations/used/{0}.json'.format(model_name)
 configuration=configure(configname,TRACEBACK=False, VERBOSE=True)
+try:
+    experiment_name=config.EXPERIMENT
+except:
+    experiment_name=input('EXPERIMENT NAME (example: urgcms_excl_nbinj): ')
 
+    
 def performance(logistic,dat,predictors,probs=None,key='algunIngresoProg',file=None,mode='a',header='',AUC=True,**kwargs):
     global config
     if not config.configured:
@@ -72,7 +77,7 @@ if __name__=='__main__':
         
     # FIXME STRUCT KEYS TO INT, FIX GENERARTABLASVARIABLES.RETRIEVE INDICE
     
-    modelfilename='/home/aolza/Desktop/estratificacion/models/urgcms_excl_hdia_nbinj/{0}.joblib'.format(model_name)
+    modelfilename='/home/aolza/Desktop/estratificacion/models/{1}/{0}.joblib'.format(model_name,experiment_name)
 
     model=job.load(modelfilename)
 
