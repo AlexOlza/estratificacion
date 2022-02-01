@@ -41,7 +41,7 @@ def performance(logistic,dat,predictors,probs=None,key='algunIngresoProg',file=N
         auc=roc_auc_score(dat[key], probs)
         print('AUC=',auc,file=file)
     return(probs)
-def predict_save(yr,model,X,y,**kwargs):
+def predict_save(yr,model,model_name,X,y,**kwargs):
     columns=kwargs.get('columns',config.COLUMNS[0])
     verbose=kwargs.get('verbose',config.VERBOSE)
     from more_itertools import sliced
@@ -50,7 +50,8 @@ def predict_save(yr,model,X,y,**kwargs):
     index_slices = sliced(range(len(X)), CHUNK_SIZE)
     i=0
     n=len(X)/CHUNK_SIZE
-    with open(config.PREDFILES[yr-1],'w') as predFile:
+    filename=config.PREDPATH+'/{0}__{1}.csv'.format(model_name,yr)
+    with open(filename,'w') as predFile:
         csv_out=csv.writer(predFile)
         csv_out.writerow(['PATIENT_ID','PRED','OBS'])
         for index_slice in index_slices:
@@ -63,7 +64,8 @@ def predict_save(yr,model,X,y,**kwargs):
             for element in zip(chunk['PATIENT_ID'],ychunk['PATIENT_ID'],predictions,ychunk[columns]):
                 csv_out.writerow(element)
                 del element
-    print('saved',config.PREDFILES[yr-1]) 
+    print('saved',filename) 
+    return filename
  
     #%%
 import csv
@@ -83,8 +85,8 @@ if __name__=='__main__':
 
     Xx,Yy=getData(year-1)
 
-    predict_save(year, model, Xx, Yy, verbose=False)
-    probs=pd.read_csv(config.PREDFILES[year-1])
+    predFilename=predict_save(year, model,model_name, Xx, Yy, verbose=False)
+    probs=pd.read_csv(predFilename)
     print(probs.head())
 
     print('auc ',roc_auc_score(np.where(probs.OBS>=1,1,0), probs.PRED)) 
