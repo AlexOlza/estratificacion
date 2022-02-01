@@ -248,11 +248,18 @@ def retrieveIndicePrivacion(save=True,verbose=config.VERBOSE,yrs=[2016,2017,2018
     if len(keep):
         return([dfs[yr] for yr in keep])
     
-def prepare(df16,yr,predictors=False,indicePrivacion=False,verbose=config.VERBOSE):
+def prepare(df16,yr,predictors=False,indicePrivacion=False,verbose=config.VERBOSE,
+            excludeOSI=config.EXCLUDEOSI):
     if indicePrivacion:
         acg16=retrieveIndicePrivacion(yrs=[yr],keep=yr,verbose=verbose,predictors=predictors)[0]
     else:
         acg16=load(filename=config.ACGFILES[yr],predictors=predictors)
+    len1=len(acg16)   
+    if excludeOSI:
+        excludeOSI=[excludeOSI] if isinstance(excludeOSI,str) else excludeOSI
+        assert 'osi' in acg16.columns, 'No "osi" column in config.ACGFILES, can not exclude patients from {0} :('.format(excludeOSI)
+        acg16=acg16[~acg16['osi'].isin(excludeOSI)] #TODO test this!!!
+        config.vprint('Excluded {0} patients from OSIs {1}'.format(len1-len(acg16),exclcudeOSI))
     #delete year reference from variable names for consistency
     newnames={col:re.sub('[1|2][0-9]$','',col) for col in df16}
     newnames['id']='PATIENT_ID'

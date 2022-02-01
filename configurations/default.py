@@ -25,6 +25,7 @@ ACGFILES={2016:'ing2016-2017Activos.csv',
 ACGINDPRIVFILES={2016:'ing2016-2017ActivosIndPriv.csv',
                   2017:'ing2017-2018ActivosIndPriv.csv',
                   2018:'ing2018-2019ActivosIndPriv.csv'}
+EXCLUDEOSI=['OS16']
 
 """VERBOSITY SETTINGS"""
 VERBOSE=True 
