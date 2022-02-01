@@ -32,6 +32,7 @@ PROBLEMAS:
 """
 from python_settings import settings as config
 import configurations.utility as util
+configuration=util.configure()
 import pandas as pd
 import os
 import re
@@ -259,7 +260,7 @@ def prepare(df16,yr,predictors=False,indicePrivacion=False,verbose=config.VERBOS
         excludeOSI=[excludeOSI] if isinstance(excludeOSI,str) else excludeOSI
         assert 'osi' in acg16.columns, 'No "osi" column in config.ACGFILES, can not exclude patients from {0} :('.format(excludeOSI)
         acg16=acg16[~acg16['osi'].isin(excludeOSI)] #TODO test this!!!
-        config.vprint('Excluded {0} patients from OSIs {1}'.format(len1-len(acg16),exclcudeOSI))
+        util.vprint('Excluded {0} patients from OSIs {1}'.format(len1-len(acg16),excludeOSI))
     #delete year reference from variable names for consistency
     newnames={col:re.sub('[1|2][0-9]$','',col) for col in df16}
     newnames['id']='PATIENT_ID'
