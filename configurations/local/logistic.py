@@ -12,9 +12,10 @@ import importlib
 import sys
 try:
     chosen_config=sys.argv[1]
-    experiment='configurations.'+sys.argv[2]
+    experiment=sys.argv[2]
 except:
-    experiment=input('EXPERIMENT NAME: ')#example urgcms_excl_hdia_nbinj
+    experiment=input('EXPERIMENT NAME (for example urgcms_excl_hdia_nbinj): ')
+experiment='configurations.'+experiment
 
 """THIS EMULATES 'from experiment import *' USING IMPORTLIB 
 info: 
