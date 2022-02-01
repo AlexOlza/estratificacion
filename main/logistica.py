@@ -22,7 +22,7 @@ util.makeAllPaths()
 
 from dataManipulation.dataPreparation import getData
 import numpy as np
-from main.SafeLogisticRegression import SafeLogisticRegression
+from sklearn.linear_model import LogisticRegression
 
 #%%
 np.random.seed(config.SEED)
@@ -32,10 +32,10 @@ X,y=getData(2016,oldbase=False)#new data
 
 y=np.where(y[config.COLUMNS]>=1,1,0)
 y=y.ravel()
-print('Sample size ',len(X))
-assert False
+print('Sample size ',len(X), 'positive: ',sum(y))
+# assert False
 #%%
-logistic=SafeLogisticRegression(penalty='none',max_iter=1000,verbose=0)
+logistic=LogisticRegression(penalty='none',max_iter=1000,verbose=0)
 
 to_drop=['PATIENT_ID','ingresoUrg']
 for c in to_drop:
@@ -47,7 +47,7 @@ for c in to_drop:
         util.vprint('pass')
 from time import time
 t0=time()
-fit=logistic.safeFit(X, y)
+fit=logistic.fit(X, y)
 print('fitting time: ',time()-t0)
 #%%
 util.savemodel(config, fit)
