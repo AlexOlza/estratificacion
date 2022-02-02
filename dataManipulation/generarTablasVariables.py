@@ -143,7 +143,6 @@ def resourceUsageDataFrames(years=[2016,2017],exploratory=False):
 
 def load_predictors(path,predictors=None):
     df=pd.read_csv(path,nrows=5)
-    # print(df)
     if predictors: #nonempty list or str, True boolean, nonzero number 
         if isinstance(predictors,list):
             pass
@@ -153,14 +152,13 @@ def load_predictors(path,predictors=None):
         else:
             predictors=[p for p in 
                     np.array(df.filter(regex=config.PREDICTORREGEX).columns)]
-            # predictors.insert(0,'FEMALE')
     else:
         predictors=[col for col in df]
     if not 'PATIENT_ID' in predictors:
         predictors.insert(0,'PATIENT_ID')
         
     util.vprint('predictors: ',predictors)
-    # config.PREDICTORS=predictors #NOT SURE IF THIS IS A GOOD IDEA
+
     return predictors
 
 def load(filename,directory=config.DATAPATH,predictors=None):
@@ -169,7 +167,6 @@ def load(filename,directory=config.DATAPATH,predictors=None):
 
 	for path in Path(directory).rglob(filename):
 		predictors=load_predictors(path,predictors)
-		# predictors.insert(-1,'ingresoUrg')
 		print('Loading ',path)
 		for chunk in pd.read_csv(path, chunksize=100000,usecols=predictors):
 			d = dict.fromkeys(chunk.select_dtypes(np.int64).columns, np.int8)
@@ -178,7 +175,6 @@ def load(filename,directory=config.DATAPATH,predictors=None):
 			for k in d.keys():
 				if any(np.isnan(chunk[k].values)):
 					ignore.append(k)
- 			# print(ignore)
 			for k in ignore:
 				d.pop(k)
 			chunk= chunk.astype(d)
@@ -192,9 +188,6 @@ def load(filename,directory=config.DATAPATH,predictors=None):
 	except KeyError:
 		print('not dropping cols')
 		pass
-	# constant=[c for c in acg.loc[:,~(acg != acg.iloc[0]).any()].columns]
-	# print('Dropping constant columns:',constant)
-	# acg.drop(constant,axis=1)
 	return(acg)
 def retrieveIndicePrivacion(save=True,verbose=config.VERBOSE,yrs=[2016,2017,2018],keep=None,predictors=False):
     keep=list(yrs) if keep is None else ([keep] if isinstance(keep,int) else keep)
@@ -218,7 +211,6 @@ def retrieveIndicePrivacion(save=True,verbose=config.VERBOSE,yrs=[2016,2017,2018
             util.vprint('found ',f)
             if yr in keep:
                 dfs[yr]=load(f.split('/')[-1],predictors=predictors)
-                # print(dfs[yr].columns)
                 util.vprint(len(dfs[yr][dfs[yr].INDICE_PRIVACION.isnull()]), 'null values for INDICE_PRIVACION')
             continue
         t1=time.time()
@@ -236,7 +228,6 @@ def retrieveIndicePrivacion(save=True,verbose=config.VERBOSE,yrs=[2016,2017,2018
         newacg=pd.merge(indice,acg,on='PATIENT_ID')
         if yr in keep:
             dfs[yr]=newacg
-        # indice.INDICE_PRIVACION.isnull().any()
         util.vprint(len(newacg[newacg.INDICE_PRIVACION.isnull()]), 'null values for INDICE_PRIVACION')
         if save:
             t3=time.time()
@@ -244,7 +235,6 @@ def retrieveIndicePrivacion(save=True,verbose=config.VERBOSE,yrs=[2016,2017,2018
                 newacg.drop('# PATIENT_ID',index=1,inplace=True)
             newacg.to_csv(f,index=False)
             print('Saved ',f,time.time()-t3)
-        # break
     util.vprint('time elapsed: ',time.time()-t0)
     if len(keep):
         return([dfs[yr] for yr in keep])
@@ -259,7 +249,7 @@ def prepare(df16,yr,predictors=False,indicePrivacion=False,verbose=config.VERBOS
     if excludeOSI:
         excludeOSI=[excludeOSI] if isinstance(excludeOSI,str) else excludeOSI
         assert 'osi' in acg16.columns, 'No "osi" column in config.ACGFILES, can not exclude patients from {0} :('.format(excludeOSI)
-        acg16=acg16[~acg16['osi'].isin(excludeOSI)] #TODO test this!!!
+        acg16=acg16[~acg16['osi'].isin(excludeOSI)] 
         util.vprint('Excluded {0} patients from OSIs {1}'.format(len1-len(acg16),excludeOSI))
     #delete year reference from variable names for consistency
     newnames={col:re.sub('[1|2][0-9]$','',col) for col in df16}
