@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH--time=80:00:00
-#SBATCH--job-name="rfgd"
+#SBATCH--job-name="test"
 #SBATCH --mem-per-cpu=26G
 #SBATCH--partition="large"
 #SBATCH--output=/home/aolza/Desktop/estratificacion/main/cluster/output/oHGB.txt
@@ -19,7 +19,10 @@ module load Python/3.8.6-GCCcore-10.2.0
 module load python-settings/0.2.2-GCCcore-10.2.0-Python-3.8.6
 module load SciPy-bundle
 
-srun python hgb.py configHGB urgcms_excl_hdia_nbinj
+srun python logistic.py logistic urgcms_excl_hdia_nbinj &
+srun python randomForest.py configRandomForest urgcms_excl_hdia_nbinj &
+srun python hgb.py configHGB urgcms_excl_hdia_nbinj & 
+wait
 
 sleep 2
 echo "-------" 
