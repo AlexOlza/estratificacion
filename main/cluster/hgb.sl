@@ -19,9 +19,9 @@ module load Python/3.8.6-GCCcore-10.2.0
 module load python-settings/0.2.2-GCCcore-10.2.0-Python-3.8.6
 module load SciPy-bundle
 
-srun python logistic.py logistic urgcms_excl_hdia_nbinj &
-srun python randomForest.py configRandomForest urgcms_excl_hdia_nbinj &
-srun python hgb.py configHGB urgcms_excl_hdia_nbinj & 
+srun --overlap python logistic.py logistic urgcms_excl_hdia_nbinj &
+srun --overlap python randomForest.py configRandomForest urgcms_excl_hdia_nbinj &
+srun --overlap python hgb.py configHGB urgcms_excl_hdia_nbinj & 
 wait
 
 sleep 2
