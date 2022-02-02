@@ -3,8 +3,8 @@
 #SBATCH--job-name="unt"
 #SBATCH --mem-per-cpu=16G
 #SBATCH--partition="medium"
-#SBATCH--output=/home/aolza/Desktop/estratificacion/main/cluster/oRFunt.txt
-#SBATCH--error=/home/aolza/Desktop/estratificacion/main/cluster/eRFunt.txt
+#SBATCH--output=/home/aolza/Desktop/estratificacion/main/cluster/output/oRFunt.txt
+#SBATCH--error=/home/aolza/Desktop/estratificacion/main/cluster/output/eRFunt.txt
 echo "-------" 
 echo "Copying input files to temporary run dir" 
 cp *.py -v $SCRATCH_JOB

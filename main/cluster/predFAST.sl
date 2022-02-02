@@ -3,8 +3,8 @@
 #SBATCH--job-name="pred"
 #SBATCH --mem-per-cpu=16G
 #SBATCH--partition="medium"
-#SBATCH--output=/home/aolza/Desktop/estratificacion/main/cluster/opredFAST.txt
-#SBATCH--error=/home/aolza/Desktop/estratificacion/main/cluster/epredFAST.txt
+#SBATCH--output=/home/aolza/Desktop/estratificacion/main/cluster/output/opredFAST.txt
+#SBATCH--error=/home/aolza/Desktop/estratificacion/main/cluster/output/epredFAST.txt
 echo "-------" 
 echo "predFAST.sl"
 echo "Copying input files to temporary run dir" 

@@ -3,8 +3,8 @@
 #SBATCH--job-name="hgb_keephdia"
 #SBATCH --mem-per-cpu=26G
 #SBATCH--partition="large"
-#SBATCH--output=/home/aolza/Desktop/estratificacion/main/cluster/oHGBhdia.txt
-#SBATCH--error=/home/aolza/Desktop/estratificacion/main/cluster/eHGBhdia.txt
+#SBATCH--output=/home/aolza/Desktop/estratificacion/main/cluster/output/oHGBhdia.txt
+#SBATCH--error=/home/aolza/Desktop/estratificacion/main/cluster/output/eHGBhdia.txt
 echo "hgb.sl- srun python hgb.py configHGB urgcms_excl_nbinj"
 echo "-------" 
 echo "Copying input files to temporary run dir" 

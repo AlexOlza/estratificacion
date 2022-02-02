@@ -3,8 +3,8 @@
 #SBATCH--job-name="rfkeephdia"
 #SBATCH --mem-per-cpu=26G
 #SBATCH--partition="large"
-#SBATCH--output=/home/aolza/Desktop/estratificacion/main/cluster/oRFhdia.txt
-#SBATCH--error=/home/aolza/Desktop/estratificacion/main/cluster/eRFhdia.txt
+#SBATCH--output=/home/aolza/Desktop/estratificacion/main/cluster/output/oRFhdia.txt
+#SBATCH--error=/home/aolza/Desktop/estratificacion/main/cluster/output/eRFhdia.txt
 echo "-------" 
 echo "Copying input files to temporary run dir" 
 cp *.py -v $SCRATCH_JOB

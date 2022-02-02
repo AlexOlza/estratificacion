@@ -1,7 +1,6 @@
 *untracked/
 *obsolete*
 models/
-modelEvaluation/
 configurations/used/
 predictions/
 *__pycache__*

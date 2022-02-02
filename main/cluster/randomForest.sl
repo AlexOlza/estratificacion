@@ -3,8 +3,8 @@
 #SBATCH--job-name="rfgd"
 #SBATCH --mem-per-cpu=26G
 #SBATCH--partition="large"
-#SBATCH--output=/home/aolza/Desktop/estratificacion/main/cluster/oRFgood.txt
-#SBATCH--error=/home/aolza/Desktop/estratificacion/main/cluster/eeRFgood.txt
+#SBATCH--output=/home/aolza/Desktop/estratificacion/main/cluster/output/oRFgood.txt
+#SBATCH--error=/home/aolza/Desktop/estratificacion/main/cluster/output/eeRFgood.txt
 echo "-------" 
 echo "Copying input files to temporary run dir" 
 cp *.py -v $SCRATCH_JOB

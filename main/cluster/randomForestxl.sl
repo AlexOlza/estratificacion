@@ -2,8 +2,8 @@
 #SBATCH--time=100:00:00
 #SBATH--name=forestURG
 #SBATCH--partition="xlarge"
-#SBATCH--output=/home/aolza/Desktop/estratificacion/main/cluster/outRFxl.txt
-#SBATCH--error=/home/aolza/Desktop/estratificacion/main/cluster/errRFxl.txt
+#SBATCH--output=/home/aolza/Desktop/estratificacion/main/cluster/output/outRFxl.txt
+#SBATCH--error=/home/aolza/Desktop/estratificacion/main/cluster/output/errRFxl.txt
 echo "-------" 
 echo "Copying input files to temporary run dir" 
 cp *.py -v $SCRATCH_JOB

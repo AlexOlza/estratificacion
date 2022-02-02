@@ -3,8 +3,8 @@
 #SBATCH--job-name="pred"
 #SBATCH --mem-per-cpu=16G
 #SBATCH--partition="medium"
-#SBATCH--output=/home/aolza/Desktop/estratificacion/main/cluster/outpred.txt
-#SBATCH--error=/home/aolza/Desktop/estratificacion/main/cluster/errpred.txt
+#SBATCH--output=/home/aolza/Desktop/estratificacion/main/cluster/output/outpred.txt
+#SBATCH--error=/home/aolza/Desktop/estratificacion/main/cluster/output/errpred.txt
 echo "-------" 
 echo "predict.sl"
 echo "Copying input files to temporary run dir" 
