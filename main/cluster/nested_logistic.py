@@ -58,6 +58,6 @@ for i in range(1,len(variable_groups)+1):
     fit=logistic.fit(Xx, y)
     print('fitting time: ',time()-t0)
     #%%
-    util.savemodel(config, fit)
+    util.savemodel(config, fit, name='nested_log{0}')
 
 
