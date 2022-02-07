@@ -25,22 +25,6 @@ except:
     experiment_name=input('EXPERIMENT NAME (example: urgcms_excl_nbinj): ')
 
     
-def performance(logistic,dat,predictors,probs=None,key='algunIngresoProg',file=None,mode='a',header='',AUC=True,**kwargs):
-    global config
-    if not config.configured:
-        configuration,config=configure()
-    N=kwargs.get('N',0)
-    
-    if file is not None:
-        file = open(file, mode)
-    if probs is None:
-        probs=logistic.predict_proba(dat[predictors])[:,1] #Probab de ingreso
-    print('N=',N,file=file)
-    print('Numb unique probs ',len(np.unique(probs)),file=file)
-    if AUC:
-        auc=roc_auc_score(dat[key], probs)
-        print('AUC=',auc,file=file)
-    return(probs)
 def predict_save(yr,model,model_name,X,y,**kwargs):
     columns=kwargs.get('columns',config.COLUMNS[0])
     verbose=kwargs.get('verbose',config.VERBOSE)
