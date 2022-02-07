@@ -3,6 +3,7 @@
 #SBATCH--time=80:00:00
 #SBATCH--job-name="noname"
 #SBATCH--partition="large"
+#SBATCH--mem-per-cpu=26G
 
 ######################################################################
 #                            USAGE                                   #
