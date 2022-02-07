@@ -21,12 +21,8 @@ date +"%F %T"
 module load Python/3.8.6-GCCcore-10.2.0
 module load python-settings/0.2.2-GCCcore-10.2.0-Python-3.8.6
 module load SciPy-bundle
-if [[ -f "$ALGORITHM.py" ]]; then
-    srun python $ALGORITHM.py $ALGORITHM $EXPERIMENT
-else
-    echo "$ALGORITHM.py algorithm file not found :("
-    exit 1 
-fi
+
+srun python $ALGORITHM.py $ALGORITHM $EXPERIMENT
 
 sleep 1
 echo "-------" 
