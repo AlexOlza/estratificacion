@@ -27,9 +27,20 @@ do
    c=",${vars[i]}.json"
    models="${models}${m}" 
    configs="${configs}${c}"
+   echo models $models
+   echo conf $configs
 done
-echo "Transferring config"
-scp -P 6556 $CLUSTER:$configpath/\{$configs\} $configpath;
-echo "Transferring model"
-scp -P 6556 $CLUSTER:$modelpath/\{$models\} $modelpath;
+
+if [ ${#vars[@]} -eq 1 ]
+then
+  echo "Transferring ${#vars[@]} config file"
+  scp -P 6556 $CLUSTER:$configpath/$configs $configpath;
+  echo "Transferring ${#vars[@]} model"
+  scp -P 6556 $CLUSTER:$modelpath/$models $modelpath;
+else
+  echo "Transferring ${#vars[@]} config files"
+  scp -P 6556 $CLUSTER:$configpath/\{$configs\} $configpath;
+  echo "Transferring ${#vars[@]} models"
+  scp -P 6556 $CLUSTER:$modelpath/\{$models\} $modelpath;
+fi
 

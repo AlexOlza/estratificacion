@@ -17,4 +17,7 @@ INDICEPRIVACION=False
 COLUMNS=['urgcms']#variable respuesta
 PREVIOUSHOSP=[]
 EXCLUDE=['hdia','nbinj']
+#Exclude patients from Tolosaldea and Errioxa because they receive
+#most of their care outside of Osakidetza.
+EXCLUDEOSI=['OS16','OS22'] 
 RESOURCEUSAGE=False

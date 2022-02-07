@@ -11,7 +11,7 @@ import os
 import importlib
 import sys
 try:
-    chosen_config=sys.argv[1] #NOT OBSOLETE argument!!! needed to import THIS script
+    chosen_config=sys.argv[1]
     experiment='configurations.'+sys.argv[2]
 except:
     experiment=input('EXPERIMENT NAME: ')#example urgcms_excl_hdia_nbinj
