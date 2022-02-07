@@ -12,7 +12,7 @@
 
 echo "-------" 
 echo "Copying input files to temporary run dir" 
-cp ../*.py *.py -v $SCRATCH_JOB
+cp *.py -v $SCRATCH_JOB
 
 cd $SCRATCH_JOB
 echo "-------" 
