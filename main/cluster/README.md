@@ -23,3 +23,8 @@ Let exp be an experiment and alg an algorithm. You need to provide:
    - `main/cluster/alg.py` 
    - `configurations/cluster/alg.py` 
 
+2. If running locally: ADD EXPLANATION
+
+
+
+
