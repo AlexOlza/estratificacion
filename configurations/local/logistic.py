@@ -11,7 +11,7 @@ import os
 import importlib
 import sys
 try:
-    chosen_config=sys.argv[1]
+    chosen_config=sys.argv[1] #OBSOLETE
     experiment='configurations.'+sys.argv[2]
 except:
     experiment=input('EXPERIMENT NAME: ')#example urgcms_excl_hdia_nbinj
