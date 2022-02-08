@@ -24,10 +24,11 @@ try:
 except:
     experiment_name=input('EXPERIMENT NAME (example: urgcms_excl_nbinj): ')
 
-    
+#%%    
 def predict_save(yr,model,model_name,X,y,**kwargs):
     columns=kwargs.get('columns',config.COLUMNS[0])
     verbose=kwargs.get('verbose',config.VERBOSE)
+    predictors=kwargs.get('predictors',config.PREDICTORREGEX)
     from more_itertools import sliced
     CHUNK_SIZE = 50000 #TODO experiment with this to try to speed up prediction
     
@@ -50,7 +51,20 @@ def predict_save(yr,model,model_name,X,y,**kwargs):
                 del element
     print('saved',filename) 
     return filename
- 
+#%%
+def predict(model_name,experiment_name,year,**kwargs):
+    predictors=kwargs.get('predictors',config.PREDICTORREGEX)
+    modelfilename='/home/aolza/Desktop/estratificacion/models/{1}/{0}.joblib'.format(model_name,experiment_name)
+
+    model=job.load(modelfilename)
+
+    Xx,Yy=getData(year-1,predictors=predictors)
+
+    predFilename=predict_save(year, model,model_name, Xx, Yy, predictors=predictors, verbose=False)
+    probs=pd.read_csv(predFilename)
+    print(probs.head())
+
+    print('auc ',roc_auc_score(np.where(probs.OBS>=1,1,0), probs.PRED)) 
     #%%
 import csv
 import pandas as pd
@@ -62,15 +76,4 @@ import numpy as np
 if __name__=='__main__':
         
     # FIXME STRUCT KEYS TO INT, FIX GENERARTABLASVARIABLES.RETRIEVE INDICE
-    
-    modelfilename='/home/aolza/Desktop/estratificacion/models/{1}/{0}.joblib'.format(model_name,experiment_name)
-
-    model=job.load(modelfilename)
-
-    Xx,Yy=getData(year-1)
-
-    predFilename=predict_save(year, model,model_name, Xx, Yy, verbose=False)
-    probs=pd.read_csv(predFilename)
-    print(probs.head())
-
-    print('auc ',roc_auc_score(np.where(probs.OBS>=1,1,0), probs.PRED)) 
+    predict(model_name,experiment_name,year)       
