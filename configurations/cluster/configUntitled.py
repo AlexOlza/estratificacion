@@ -27,7 +27,6 @@ MODELPATH=MODELSPATH+EXPERIMENT+'/'
 ALGORITHM='untitled'
 CONFIGNAME='configRandomForest.py'
 PREDPATH=os.path.join(OUTPATH,EXPERIMENT)
-PREDFILES={yr: os.path.join(PREDPATH,'{1}{0}.csv'.format(yr,ALGORITHM)) for yr in [2016,2017,2018]}
 TRACEBACK=False
 
 """ SETTINGS FOR THE RANDOM FOREST """

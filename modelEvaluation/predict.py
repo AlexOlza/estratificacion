@@ -5,12 +5,13 @@ Created on Thu Nov 25 09:59:25 2021
 
 @author: aolza
 """
+from pathlib import Path
 import sys
 try:
     model_name=sys.argv[1]
     year=int(sys.argv[2])
 except:
-    model_name=input('MODEL NAME (example: logistic20220118_132612): ')
+    model_name=input('MODEL NAME for configuration purposes (example: logistic20220118_132612): ')
     year=int(input('YEAR YOU WANT TO PREDICT:'))
 
 sys.path.append('/home/aolza/Desktop/estratificacion/')
@@ -23,34 +24,29 @@ try:
     experiment_name=config.EXPERIMENT
 except:
     experiment_name=input('EXPERIMENT NAME (example: urgcms_excl_nbinj): ')
+import csv
+import pandas as pd
+from dataManipulation.dataPreparation import getData
+from sklearn.metrics import roc_auc_score
+import numpy as np
 
-    
-def performance(logistic,dat,predictors,probs=None,key='algunIngresoProg',file=None,mode='a',header='',AUC=True,**kwargs):
-    global config
-    if not config.configured:
-        configuration,config=configure()
-    N=kwargs.get('N',0)
-    
-    if file is not None:
-        file = open(file, mode)
-    if probs is None:
-        probs=logistic.predict_proba(dat[predictors])[:,1] #Probab de ingreso
-    print('N=',N,file=file)
-    print('Numb unique probs ',len(np.unique(probs)),file=file)
-    if AUC:
-        auc=roc_auc_score(dat[key], probs)
-        print('AUC=',auc,file=file)
-    return(probs)
-def predict_save(yr,model,X,y,**kwargs):
+#%%    
+def generate_filename(model_name,yr):
+    return config.PREDPATH+'/{0}__{1}.csv'.format(model_name,yr)
+def predict_save(yr,model,model_name,X,y,**kwargs):
     columns=kwargs.get('columns',config.COLUMNS[0])
     verbose=kwargs.get('verbose',config.VERBOSE)
+    predictors=kwargs.get('predictors',config.PREDICTORREGEX)
+    X=X.filter(regex=predictors)
+    print(predictors, len(X.columns))
     from more_itertools import sliced
     CHUNK_SIZE = 50000 #TODO experiment with this to try to speed up prediction
     
     index_slices = sliced(range(len(X)), CHUNK_SIZE)
     i=0
     n=len(X)/CHUNK_SIZE
-    with open(config.PREDFILES[yr-1],'w') as predFile:
+    filename=generate_filename(model_name,yr)
+    with open(filename,'w') as predFile:
         csv_out=csv.writer(predFile)
         csv_out.writerow(['PATIENT_ID','PRED','OBS'])
         for index_slice in index_slices:
@@ -63,28 +59,28 @@ def predict_save(yr,model,X,y,**kwargs):
             for element in zip(chunk['PATIENT_ID'],ychunk['PATIENT_ID'],predictions,ychunk[columns]):
                 csv_out.writerow(element)
                 del element
-    print('saved',config.PREDFILES[yr-1]) 
- 
-    #%%
-import csv
-import pandas as pd
-from dataManipulation.dataPreparation import getData
-from sklearn.metrics import roc_auc_score
-import numpy as np
+    print('saved',filename) 
 
+#%%
+def predict(model_name,experiment_name,year,**kwargs):
+    predictors=kwargs.get('predictors',config.PREDICTORREGEX)
+    modelfilename='/home/aolza/Desktop/estratificacion/models/{1}/{0}.joblib'.format(model_name,experiment_name)
+    print('loading model ',model_name)
+    model=job.load(modelfilename)
+    Xx=kwargs.get('X',None)
+    Yy=kwargs.get('y',None)
+    if (not isinstance(Xx,pd.DataFrame)) or (not isinstance(Yy,pd.DataFrame)):
+        Xx,Yy=getData(year-1,predictors=predictors)
+    predFilename=generate_filename(model_name,year)
+    if not predFilename in Path(config.PREDPATH).glob('**/*'):
+        predict_save(year, model,model_name, Xx, Yy, predictors=predictors, verbose=False)
+    probs=pd.read_csv(predFilename)
+    print(probs.head())
+    auc=roc_auc_score(np.where(probs.OBS>=1,1,0), probs.PRED)
+    print('auc ',auc) 
+    return (probs,auc)
 #%%
 if __name__=='__main__':
         
     # FIXME STRUCT KEYS TO INT, FIX GENERARTABLASVARIABLES.RETRIEVE INDICE
-    
-    modelfilename='/home/aolza/Desktop/estratificacion/models/{1}/{0}.joblib'.format(model_name,experiment_name)
-
-    model=job.load(modelfilename)
-
-    Xx,Yy=getData(year-1)
-
-    predict_save(year, model, Xx, Yy, verbose=False)
-    probs=pd.read_csv(config.PREDFILES[year-1])
-    print(probs.head())
-
-    print('auc ',roc_auc_score(np.where(probs.OBS>=1,1,0), probs.PRED)) 
+    predict(model_name,experiment_name,year)       
