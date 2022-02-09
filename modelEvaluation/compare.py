@@ -30,6 +30,22 @@ util.configure('configurations.local.logistic')
 
 from dataManipulation.dataPreparation import getData
 
+
+def update_all_preds(all_predictions):
+    #Save if necessary
+    all_preds='{0}/all_preds.csv'.format(config.PREDPATH) #Filename
+    if Path('{0}/all_preds.csv'.format(config.PREDPATH)).is_file():
+        print('all_preds.csv located')
+        saved=pd.read_csv(all_preds,nrows=3)
+        if not set(saved.columns)==set(all_predictions.columns):
+            print('Adding new columns')
+            saved=saved=pd.read_csv(all_preds)
+            all_predictions=pd.merge(all_predictions,saved,on=['PATIENT_ID','OBS'],how='inner')
+            all_predictions.to_csv('{0}/all_preds.csv'.format(config.PREDPATH),index=False)
+    else:
+        all_predictions.to_csv('{0}/all_preds.csv'.format(config.PREDPATH),index=False)
+        print('Saved ' '{0}/all_preds.csv'.format(config.PREDPATH))
+
 year=int(input('YEAR YOU WANT TO PREDICT: '))
 assert year in [2017,2018,2019], 'No data available!'
 
@@ -61,17 +77,3 @@ pd.set_option('display.max_columns',len(selected)+2) #show all columns
 print('AUCS ',aucs)
 print('Predictions')
 print(all_predictions.head())
-
-#Save if necessary
-all_preds='{0}/all_preds.csv'.format(config.PREDPATH) #Filename
-if Path('{0}/all_preds.csv'.format(config.PREDPATH)).is_file():
-    print('all_preds.csv located')
-    saved=pd.read_csv(all_preds,nrows=3)
-    if not set(saved.columns)==set(all_predictions.columns):
-        print('Adding new columns')
-        saved=saved=pd.read_csv(all_preds)
-        all_predictions=pd.merge(all_predictions,saved,on=['PATIENT_ID','OBS'],how='inner')
-        all_predictions.to_csv('{0}/all_preds.csv'.format(config.PREDPATH),index=False)
-else:
-    all_predictions.to_csv('{0}/all_preds.csv'.format(config.PREDPATH),index=False)
-    print('Saved ' '{0}/all_preds.csv'.format(config.PREDPATH))
