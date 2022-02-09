@@ -105,7 +105,7 @@ def savemodel(config,model,**kwargs):
     NOW = re.sub(r'[\s]','_', timestamp)
     if not os.path.exists(config.MODELPATH):
         os.mkdir(config.MODELPATH)
-    modelname=config.ALGORITHM+NOW
+    modelname=kwargs.get('name',config.ALGORITHM+NOW)
     modelfilename=modelname+'.joblib'
     configname=config.USEDCONFIGPATH+modelname+'.json'
     print('configname',configname)

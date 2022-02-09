@@ -11,19 +11,10 @@ import os
 import importlib
 import sys
 try:
-<<<<<<< HEAD
-    chosen_config=sys.argv[1]
-    experiment=sys.argv[2]
-||||||| merged common ancestors
     chosen_config=sys.argv[1]
     experiment='configurations.'+sys.argv[2]
-=======
-    chosen_config=sys.argv[1] #NOT OBSOLETE argument!!! needed to import THIS script
-    experiment='configurations.'+sys.argv[2]
->>>>>>> main
 except:
-    experiment=input('EXPERIMENT NAME (for example urgcms_excl_hdia_nbinj): ')
-experiment='configurations.'+experiment
+    experiment=input('EXPERIMENT NAME: ')#example urgcms_excl_hdia_nbinj
 
 """THIS EMULATES 'from experiment import *' USING IMPORTLIB 
 info: 
@@ -44,5 +35,7 @@ CONFIGNAME='logistic.py'
 
 MODELPATH=MODELSPATH+EXPERIMENT+'/'
 PREDPATH=os.path.join(OUTPATH,EXPERIMENT)
+PREDFILES={yr: os.path.join(PREDPATH,'{1}{0}.csv'.format(yr,ALGORITHM)) for yr in [2016,2017,2018]}
+
 
 

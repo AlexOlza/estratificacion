@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-assert False, "Mischievous filename! Review naming policy"
 """
 Created on Thu Nov 25 16:23:21 2021
 

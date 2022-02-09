@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Thu Nov 25 16:33:56 2021
+Created on Mon Feb  7 12:55:17 2022
 
 @author: aolza
 """
@@ -11,19 +11,10 @@ import os
 import importlib
 import sys
 try:
-<<<<<<< HEAD
-    chosen_config=sys.argv[1]
-    experiment=sys.argv[2]
-||||||| merged common ancestors
     chosen_config=sys.argv[1]
     experiment='configurations.'+sys.argv[2]
-=======
-    chosen_config=sys.argv[1] #NOT OBSOLETE argument!!! needed to import THIS script
-    experiment='configurations.'+sys.argv[2]
->>>>>>> main
 except:
-    experiment=input('EXPERIMENT NAME (for example urgcms_excl_hdia_nbinj): ')
-experiment='configurations.'+experiment
+    experiment=input('EXPERIMENT NAME: ')#example urgcms_excl_hdia_nbinj
 
 """THIS EMULATES 'from experiment import *' USING IMPORTLIB 
 info: 
@@ -39,10 +30,12 @@ else:
 globals().update({k: getattr(mdl, k) for k in names}) #brings everthing into namespace
 # print(names)
 
-ALGORITHM='logistic'
-CONFIGNAME='logistic.py'
+ALGORITHM='nested_logistic'
+CONFIGNAME='nested_logistic.py'
 
 MODELPATH=MODELSPATH+EXPERIMENT+'/'
 PREDPATH=os.path.join(OUTPATH,EXPERIMENT)
+PREDFILES={yr: os.path.join(PREDPATH,'{1}{0}.csv'.format(yr,ALGORITHM)) for yr in [2016,2017,2018]}
+
 
 
