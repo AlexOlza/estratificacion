@@ -48,6 +48,7 @@ def load_latest(available_models):
 
 def compare_nested(available_models,X,y,year):
     available_models=[m for m in available_models if ('nested' in m)]
+    available_models.sort()
     variable_groups=[r'PATIENT_ID|FEMALE|AGE_[0-9]+$','EDC_','RXMG_','ACG']
     predictors={}
     for i in range(1,len(variable_groups)+1):
@@ -67,7 +68,7 @@ def compare(selected,X,y,year,experiment_name=Path(config.MODELPATH).parts[-1],*
             all_predictions=probs
         all_predictions.rename(columns={'PRED': 'PRED_{0}'.format(m)}, inplace=True)
     return(all_predictions)
-def update_all_preds(all_predictions):
+def update_all_preds(all_predictions,selected):
     #Save if necessary
     all_preds='{0}/all_preds.csv'.format(config.PREDPATH) #Filename
     if Path('{0}/all_preds.csv'.format(config.PREDPATH)).is_file():
@@ -75,7 +76,7 @@ def update_all_preds(all_predictions):
         saved=pd.read_csv(all_preds,nrows=3)
         if not set(saved.columns)==set(all_predictions.columns):
             print('Adding new columns')
-            saved=saved=pd.read_csv(all_preds)
+            saved=pd.read_csv(all_preds)
             all_predictions=pd.merge(all_predictions,saved,on=['PATIENT_ID','OBS'],how='inner')
             all_predictions.to_csv('{0}/all_preds.csv'.format(config.PREDPATH),index=False)
     else:
@@ -93,10 +94,11 @@ def main(year=2018,nested=False):
     available_models=detect_models()
     if nested:
         all_predictions=compare_nested(available_models,X,y,year)
+        selected=available_models
     else:
         selected=load_latest(available_models)
         all_predictions=compare(selected,X,y,year)
-    update_all_preds(all_predictions)
+    update_all_preds(all_predictions,selected)
         
 if __name__=='__main__':
     main(nested=True)

@@ -38,6 +38,7 @@ def predict_save(yr,model,model_name,X,y,**kwargs):
     verbose=kwargs.get('verbose',config.VERBOSE)
     predictors=kwargs.get('predictors',config.PREDICTORREGEX)
     X=X.filter(regex=predictors)
+    print(predictors, len(X.columns))
     from more_itertools import sliced
     CHUNK_SIZE = 50000 #TODO experiment with this to try to speed up prediction
     
@@ -64,7 +65,7 @@ def predict_save(yr,model,model_name,X,y,**kwargs):
 def predict(model_name,experiment_name,year,**kwargs):
     predictors=kwargs.get('predictors',config.PREDICTORREGEX)
     modelfilename='/home/aolza/Desktop/estratificacion/models/{1}/{0}.joblib'.format(model_name,experiment_name)
-
+    print('loading model ',model_name)
     model=job.load(modelfilename)
     Xx=kwargs.get('X',None)
     Yy=kwargs.get('y',None)
