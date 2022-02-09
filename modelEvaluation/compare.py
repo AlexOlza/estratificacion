@@ -48,7 +48,7 @@ def load_latest(available_models):
 
 def compare_nested(available_models,X,y,year):
     available_models=[m for m in available_models if ('nested' in m)]
-    variable_groups=[r'FEMALE|AGE_[0-9]+$','EDC_','RXMG_','ACG']
+    variable_groups=[r'PATIENT_ID|FEMALE|AGE_[0-9]+$','EDC_','RXMG_','ACG']
     predictors={}
     for i in range(1,len(variable_groups)+1):
         predictors[available_models[i-1]]=r'|'.join(variable_groups[:i])
