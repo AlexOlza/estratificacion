@@ -46,5 +46,18 @@ selected=df.loc[df.algorithm!='nested_log'].groupby(['algorithm']).apply(lambda 
 selected=[available_models[i] for i in selected]
 print(selected)
 X,y=getData(year-1)
+aucs=[]
+all_predictions=pd.DataFrame()
 for m in selected:
-    predict(m,experiment_name,year,X=X,y=y)
+    probs,auc=predict(m,experiment_name,year,X=X,y=y)
+    aucs.append(auc)
+    try:
+        all_predictions=pd.merge(all_predictions,probs,on=['PATIENT_ID','OBS'],how='inner')
+    except:
+        all_predictions=probs
+    all_predictions.rename(columns={'PRED': 'PRED_{0}'.format(m)}, inplace=True)
+
+pd.set_option('display.max_columns',len(selected)+2) #show all columns
+print('AUCS ',aucs)
+print('Predictions')
+print(all_predictions.head())

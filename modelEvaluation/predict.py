@@ -67,16 +67,16 @@ def predict(model_name,experiment_name,year,**kwargs):
     model=job.load(modelfilename)
     Xx=kwargs.get('X',None)
     Yy=kwargs.get('y',None)
-    if not (Xx and Yy):
+    if (not isinstance(Xx,pd.DataFrame)) or (not isinstance(Yy,pd.DataFrame)):
         Xx,Yy=getData(year-1,predictors=predictors)
     predFilename=generate_filename(model_name,year)
     if not predFilename in Path(config.PREDPATH).glob('**/*'):
         predict_save(year, model,model_name, Xx, Yy, predictors=predictors, verbose=False)
     probs=pd.read_csv(predFilename)
     print(probs.head())
-
-    print('auc ',roc_auc_score(np.where(probs.OBS>=1,1,0), probs.PRED)) 
-
+    auc=roc_auc_score(np.where(probs.OBS>=1,1,0), probs.PRED)
+    print('auc ',auc) 
+    return (probs,auc)
 #%%
 if __name__=='__main__':
         
