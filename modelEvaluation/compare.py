@@ -30,7 +30,43 @@ util.configure('configurations.local.logistic')
 
 from dataManipulation.dataPreparation import getData
 
+def detect_models():
+    available_models=[x.stem for x in Path(config.MODELPATH).glob('**/*') if x.is_file()]
+    print('Available models are:')
+    print(available_models)
+    return(available_models)
 
+def load_latest(available_models):      
+    print('Loading latest models per algorithm:')
+    ids = [int(''.join(re.findall('\d+',model))) for model in available_models]
+    algorithms=['_'.join(re.findall('[^\d+_\d+]+',model)) for model in available_models]
+    df=pd.DataFrame(list(zip(algorithms,ids,[i for i in range(len(ids))])),columns=['algorithm','id','i'])
+    selected=df.loc[df.algorithm!='nested_log'].groupby(['algorithm']).apply(lambda x: x.loc[x.id == x.id.max()].i).to_numpy()
+    selected=[available_models[i] for i in selected]
+    print(selected)
+    return(selected)
+
+def compare_nested(available_models,X,y,year):
+    available_models=[m for m in available_models if ('nested' in m)]
+    variable_groups=[r'FEMALE|AGE_[0-9]+$','EDC_','RXMG_','ACG']
+    predictors={}
+    for i in range(1,len(variable_groups)+1):
+        predictors[available_models[i-1]]=r'|'.join(variable_groups[:i])
+    return(compare(available_models,X,y,year,predictors=predictors))
+
+def compare(selected,X,y,year,experiment_name=Path(config.MODELPATH).parts[-1],**kwargs):
+    predictors=kwargs.get('predictors',{m:config.PREDICTORREGEX for m in selected})
+    aucs=[]
+    all_predictions=pd.DataFrame()
+    for m in selected:
+        probs,auc=predict(m,experiment_name,year,X=X,y=y,predictors=predictors[m])
+        aucs.append(auc)
+        try:
+            all_predictions=pd.merge(all_predictions,probs,on=['PATIENT_ID','OBS'],how='inner')
+        except:
+            all_predictions=probs
+        all_predictions.rename(columns={'PRED': 'PRED_{0}'.format(m)}, inplace=True)
+    return(all_predictions)
 def update_all_preds(all_predictions):
     #Save if necessary
     all_preds='{0}/all_preds.csv'.format(config.PREDPATH) #Filename
@@ -46,34 +82,23 @@ def update_all_preds(all_predictions):
         all_predictions.to_csv('{0}/all_preds.csv'.format(config.PREDPATH),index=False)
         print('Saved ' '{0}/all_preds.csv'.format(config.PREDPATH))
 
-year=int(input('YEAR YOU WANT TO PREDICT: '))
-assert year in [2017,2018,2019], 'No data available!'
 
-available_models=[x.stem for x in Path(config.MODELPATH).glob('**/*') if x.is_file()]
-experiment_name=Path(config.MODELPATH).parts[-1]
-print('Available models are:')
-print(available_models)
+    pd.set_option('display.max_columns',len(selected)+2) #show all columns
+    print('AUCS ',aucs)
+    print('Predictions')
+    print(all_predictions.head())
 
-print('Loading latest models per algorithm:')
-ids = [int(''.join(re.findall('\d+',model))) for model in available_models]
-algorithms=['_'.join(re.findall('[^\d+_\d+]+',model)) for model in available_models]
-df=pd.DataFrame(list(zip(algorithms,ids,[i for i in range(len(ids))])),columns=['algorithm','id','i'])
-selected=df.loc[df.algorithm!='nested_log'].groupby(['algorithm']).apply(lambda x: x.loc[x.id == x.id.max()].i).to_numpy()
-selected=[available_models[i] for i in selected]
-print(selected)
-X,y=getData(year-1)
-aucs=[]
-all_predictions=pd.DataFrame()
-for m in selected:
-    probs,auc=predict(m,experiment_name,year,X=X,y=y)
-    aucs.append(auc)
-    try:
-        all_predictions=pd.merge(all_predictions,probs,on=['PATIENT_ID','OBS'],how='inner')
-    except:
-        all_predictions=probs
-    all_predictions.rename(columns={'PRED': 'PRED_{0}'.format(m)}, inplace=True)
+def main(year=2018,nested=False):
+    X,y=getData(year-1)
+    available_models=detect_models()
+    if nested:
+        all_predictions=compare_nested(available_models,X,y,year)
+    else:
+        selected=load_latest(available_models)
+        all_predictions=compare(selected,X,y,year)
+    update_all_preds(all_predictions)
+        
+if __name__=='__main__':
+    main(nested=True)
 
-pd.set_option('display.max_columns',len(selected)+2) #show all columns
-print('AUCS ',aucs)
-print('Predictions')
-print(all_predictions.head())
+

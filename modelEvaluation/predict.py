@@ -37,6 +37,7 @@ def predict_save(yr,model,model_name,X,y,**kwargs):
     columns=kwargs.get('columns',config.COLUMNS[0])
     verbose=kwargs.get('verbose',config.VERBOSE)
     predictors=kwargs.get('predictors',config.PREDICTORREGEX)
+    X=X.filter(regex=predictors)
     from more_itertools import sliced
     CHUNK_SIZE = 50000 #TODO experiment with this to try to speed up prediction
     
