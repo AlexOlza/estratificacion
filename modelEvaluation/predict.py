@@ -5,32 +5,37 @@ Created on Thu Nov 25 09:59:25 2021
 
 @author: aolza
 """
+#%%
+#EXTERNAL LIBRARIES
 from pathlib import Path
+import joblib as job
 import sys
+from sklearn.metrics import roc_auc_score, r2_score
+import numpy as np
+import csv
+import pandas as pd
+#%%
 try:
     model_name=sys.argv[1]
     year=int(sys.argv[2])
 except:
     model_name=input('MODEL NAME for configuration purposes (example: logistic20220118_132612): ')
-    year=int(input('YEAR YOU WANT TO PREDICT:'))
+    
 
 sys.path.append('/home/aolza/Desktop/estratificacion/')
 from python_settings import settings as config
 from configurations.utility import configure
-import joblib as job
+
 configname='/home/aolza/Desktop/estratificacion/configurations/used/{0}.json'.format(model_name)
 configuration=configure(configname,TRACEBACK=False, VERBOSE=True)
 try:
     experiment_name=config.EXPERIMENT
 except:
     experiment_name=input('EXPERIMENT NAME (example: urgcms_excl_nbinj): ')
-import csv
-import pandas as pd
-from dataManipulation.dataPreparation import getData
-from sklearn.metrics import roc_auc_score
-import numpy as np
 
-#%%    
+from dataManipulation.dataPreparation import getData
+
+#%%     FUNCTIONS
 def generate_filename(model_name,yr):
     return config.PREDPATH+'/{0}__{1}.csv'.format(model_name,yr)
 def predict_save(yr,model,model_name,X,y,**kwargs):
@@ -46,6 +51,7 @@ def predict_save(yr,model,model_name,X,y,**kwargs):
     i=0
     n=len(X)/CHUNK_SIZE
     filename=generate_filename(model_name,yr)
+    print('predfilename ',filename)
     with open(filename,'w') as predFile:
         csv_out=csv.writer(predFile)
         csv_out.writerow(['PATIENT_ID','PRED','OBS'])
@@ -55,13 +61,16 @@ def predict_save(yr,model,model_name,X,y,**kwargs):
                 print(i,'/',n)
             chunk = X.iloc[index_slice] # your dataframe chunk ready for use
             ychunk=y.iloc[index_slice]
-            predictions=model.predict_proba(chunk.drop('PATIENT_ID',axis=1))[:,1] #Probab of being top1
+            if config.EXPERIMENT=='cost':
+                predictions=model.predict(chunk.drop('PATIENT_ID',axis=1)) # predicted cost
+            else:
+                predictions=model.predict_proba(chunk.drop('PATIENT_ID',axis=1))[:,1] #Probab of hospitalization
             for element in zip(chunk['PATIENT_ID'],ychunk['PATIENT_ID'],predictions,ychunk[columns]):
                 csv_out.writerow(element)
                 del element
+
     print('saved',filename) 
 
-#%%
 def predict(model_name,experiment_name,year,**kwargs):
     predictors=kwargs.get('predictors',config.PREDICTORREGEX)
     modelfilename='/home/aolza/Desktop/estratificacion/models/{1}/{0}.joblib'.format(model_name,experiment_name)
@@ -72,15 +81,18 @@ def predict(model_name,experiment_name,year,**kwargs):
     if (not isinstance(Xx,pd.DataFrame)) or (not isinstance(Yy,pd.DataFrame)):
         Xx,Yy=getData(year-1,predictors=predictors)
     predFilename=generate_filename(model_name,year)
-    if not predFilename in Path(config.PREDPATH).glob('**/*'):
+    if not Path(predFilename).is_file():
         predict_save(year, model,model_name, Xx, Yy, predictors=predictors, verbose=False)
     probs=pd.read_csv(predFilename)
     print(probs.head())
-    auc=roc_auc_score(np.where(probs.OBS>=1,1,0), probs.PRED)
-    print('auc ',auc) 
-    return (probs,auc)
+    if config.EXPERIMENT=='cost':
+        score=r2_score(probs.OBS, probs.PRED)
+    else:
+        score=roc_auc_score(np.where(probs.OBS>=1,1,0), probs.PRED)
+    print('score ',score) 
+    return (probs,score)
 #%%
 if __name__=='__main__':
         
-    # FIXME STRUCT KEYS TO INT, FIX GENERARTABLASVARIABLES.RETRIEVE INDICE
+    year=int(input('YEAR YOU WANT TO PREDICT:'))
     predict(model_name,experiment_name,year)       
