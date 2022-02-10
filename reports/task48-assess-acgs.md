@@ -43,5 +43,4 @@ In `almeria`, we define unplanned admissions with administrative criteria, and w
 | Model                            |           Predictors         |    Score |   Recall\_20000 |   PPV\_20000 |
 |:---------------------------------|:-----------------------------|---------:|---------------:|------------:|
 | logistic20220207\_122835          | +HOSDOM+FRAILTY+INGRED\_14GT  | 0.798511 |      0.0775502 |      0.4932 |
-|:---------------------------------|:-----------------------------|---------:|---------------:|------------:|
 | logistic20220210\_165040 (almeria)| +HOSDOM+FRAILTY+INGRED\_14GT  |  0.80507 |        0.10144 |      0.5175 |
