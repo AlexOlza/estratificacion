@@ -36,7 +36,10 @@ def detect_models():
     print(available_models)
     return(available_models)
 
-def load_latest(available_models):      
+def load_latest(available_models): 
+    if len(available_models)==1:
+        print('There is only one model')
+        return(available_models)
     print('Loading latest models per algorithm:')
     ids = [int(''.join(re.findall('\d+',model))) for model in available_models]
     algorithms=['_'.join(re.findall('[^\d+_\d+]+',model)) for model in available_models]
@@ -95,9 +98,9 @@ def update_all_preds(all_predictions,selected):
         all_predictions.to_csv('{0}/all_preds.csv'.format(config.PREDPATH),index=False)
         print('Saved ' '{0}/all_preds.csv'.format(config.PREDPATH))
     return(all_predictions)
-
+import numpy as np
+from sklearn.metrics import confusion_matrix
 def performance(pred,obs,K): 
-    from sklearn.metrics import confusion_matrix
     orderedPred=sorted(pred,reverse=True)
     orderedObs=sorted(obs,reverse=True)
     cutoff=orderedPred[K-1]
@@ -108,8 +111,9 @@ def performance(pred,obs,K):
     if config.EXPERIMENT=='cost': #maybe better: not all([int(i)==i for i in obs])
         newobs=obs>=orderedObs[K-1]
     else:
-        newobs=obs
+        newobs=np.where(obs>=1,1,0) #Whether the patient had ANY admission 
     c=confusion_matrix(y_true=newobs, y_pred=newpred)
+    print(c)
     tn, fp, fn, tp =c.ravel()
     print(' tn, fp, fn, tp =',tn, fp, fn, tp)
     recall=c[1][1]/(c[1][0]+c[1][1])
@@ -120,12 +124,12 @@ def performance(pred,obs,K):
  
 if __name__=='__main__':
     year=2018
-    nested=True
+    nested=False
     X,y=getData(year-1)
     available_models=detect_models()
     if nested:
         all_predictions,metrics=compare_nested(available_models,X,y,year)
-        selected=available_models
+        selected=sorted([m for m in available_models if ('nested' in m)])
     else:
         selected=load_latest(available_models)
         all_predictions,metrics=compare(selected,X,y,year)
@@ -133,5 +137,9 @@ if __name__=='__main__':
 
     if nested:
         variable_groups=[r'SEX+ AGE','+ EDC_','+ RXMG_','+ ACG']
+        score,recall,ppv=[list(array.values()) for array in list(metrics.values())]
+        print(pd.DataFrame(list(zip(selected,variable_groups,score,recall,ppv)),columns=['Model','Predictors']+list(metrics.keys())).to_markdown(index=False))
+    else:
+        variable_groups=['','','','']
         score,recall,ppv=[list(array.values()) for array in list(metrics.values())]
         print(pd.DataFrame(list(zip(selected,variable_groups,score,recall,ppv)),columns=['Model','Predictors']+list(metrics.keys())).to_markdown(index=False))
