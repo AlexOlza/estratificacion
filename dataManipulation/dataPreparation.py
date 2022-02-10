@@ -50,12 +50,16 @@ def getData(yr,columns=config.COLUMNS,previousHosp=config.PREVIOUSHOSP,predictor
             resourceUsage=config.RESOURCEUSAGE,
             **kwargs):
     oldbase = kwargs.get('oldbase','OLDBASE' in config.CONFIGNAME)
-    if oldbase:
-        if 'ingresoUrg' not in predictors:
+    if oldbase or ('COSTE_TOTAL_ANO2' in columns):
+        if 'ingresoUrg' not in predictors and not ('COSTE_TOTAL_ANO2' in columns):
             predictors=predictors+'|ingresoUrg'
+            response='ingresoUrg'
+        elif ('COSTE_TOTAL_ANO2' in columns):
+            predictors=predictors+'|COSTE_TOTAL_ANO2'
+            response='COSTE_TOTAL_ANO2'
         acg=load(filename=config.ACGFILES[yr],predictors=predictors)
         print('not opening allhospfile')
-        return (acg.drop('ingresoUrg',axis=1),acg[['PATIENT_ID','ingresoUrg']])
+        return (acg.drop(response,axis=1),acg[['PATIENT_ID',response]])
 
     cols=columns.copy() #FIXME find better approach
     t0=time.time()
