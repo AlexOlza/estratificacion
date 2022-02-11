@@ -123,8 +123,8 @@ def performance(pred,obs,K):
 #%%
  
 if __name__=='__main__':
-    year=2018
-    nested=False
+    year=int(input('YEAR TO PREDICT: '))
+    nested=bool(input('NESTED MODEL COMPARISON? (True/False) '))
     X,y=getData(year-1)
     available_models=detect_models()
     if nested:
