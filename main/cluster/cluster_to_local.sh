@@ -14,33 +14,45 @@ IFSsave="$IFS"
 IFS=,
 #Split var into list of variables: "x,y,z" -> ("x","y","z")
 vars=( $2 )
-
+j=${#vars[@]} #Number of models to transfer
 #Revert IFS change
 IFS="$IFSsave"
 #Print each element in a line
 models="${vars[0]}.joblib"
 configs="${vars[0]}.json"
+
 #Add extensions and construct set of filenames to be transferred
+#Avoid transferring files more than once
+if [ -f "${modelpath}/${vars[0]}.joblib" -a -f "${configpath}/${vars[0]}.json" ]; then
+       echo "${vars[i]} is already in local computer"
+       j=$(($j-1)) #This model should not be transferred because it's already there
+fi
+
 for((i=1;i<${#vars[@]};i++))
 do
    m=",${vars[i]}.joblib"
    c=",${vars[i]}.json"
-   models="${models}${m}" 
-   configs="${configs}${c}"
-   echo models $models
-   echo conf $configs
+   if [ -f "${modelpath}/${vars[i]}.joblib" -a -f "${configpath}/${vars[i]}.json" ]; then 
+       echo "${vars[i]} is already in local computer"
+       j=$(($j-1)) #This model should not be transferred because it's already there
+   else
+      models="${models}${m}" 
+      configs="${configs}${c}"
+   fi
 done
 
-if [ ${#vars[@]} -eq 1 ]
+if [ $j -eq 1 ]
 then
   echo "Transferring ${#vars[@]} config file"
   scp -P 6556 $CLUSTER:$configpath/$configs $configpath;
   echo "Transferring ${#vars[@]} model"
   scp -P 6556 $CLUSTER:$modelpath/$models $modelpath;
-else
+elif [ $j -gt 1 ] ; then
   echo "Transferring ${#vars[@]} config files"
   scp -P 6556 $CLUSTER:$configpath/\{$configs\} $configpath;
   echo "Transferring ${#vars[@]} models"
   scp -P 6556 $CLUSTER:$modelpath/\{$models\} $modelpath;
+else 
+  echo "No files to be transferred (j=${j})"
 fi
 
