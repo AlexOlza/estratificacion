@@ -11,16 +11,8 @@ import os
 import importlib
 import sys
 try:
-<<<<<<< HEAD
-    chosen_config=sys.argv[1]
-    experiment=sys.argv[2]
-||||||| merged common ancestors
-    chosen_config=sys.argv[1]
-    experiment='configurations.'+sys.argv[2]
-=======
     chosen_config=sys.argv[1] #NOT OBSOLETE argument!!! needed to import THIS script
-    experiment='configurations.'+sys.argv[2]
->>>>>>> main
+    experiment=sys.argv[2]
 except:
     experiment=input('EXPERIMENT NAME (for example urgcms_excl_hdia_nbinj): ')
 experiment='configurations.'+experiment
