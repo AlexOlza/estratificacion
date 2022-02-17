@@ -1,5 +1,6 @@
 # IMPORTS FROM EXTERNAL LIBRARIES
 import os
+from pathlib import Path
 import numpy as np
 import csv
 import matplotlib.pyplot as plt
@@ -41,6 +42,11 @@ def sample(data,uncal):
     return(idx,unique)
 
 def calibrate(model_name,yr,**kwargs):
+    calibFilename=generate_filename(model_name,yr, calibrated=True)
+    if Path(calibFilename).is_file():
+        util.vprint('Calibrated predictions found; loading')
+        p_calibrated=pd.read_csv(calibFilename)
+        return(p_calibrated)
     pastX=kwargs.get('pastX',None)
     pastY=kwargs.get('pastY',None)
     presentX=kwargs.get('presentX',None)
@@ -50,39 +56,36 @@ def calibrate(model_name,yr,**kwargs):
     if (not isinstance(presentX,pd.DataFrame)) or (not isinstance(presentY,pd.DataFrame)):
         presentX,presentY=getData(yr-1)
 
-    pastPredFile=generate_filename(model_name,yr-1)
-    predFile=generate_filename(model_name,yr)
-    
     #This reads the prediction files, or creates them if not present
-    pastPred, _= predict(model_name,config.EXPERIMENT,yr, X=pastX, y=pastY)
+    pastPred, _= predict(model_name,config.EXPERIMENT,yr-1, X=pastX, y=pastY)
     pred, _= predict(model_name,config.EXPERIMENT,yr, X=presentX, y=presentY)
     
     pastPred.sort_values(by='PATIENT_ID',inplace=True)
     pastPred.reset_index(drop=True,inplace=True)
     print(pastPred.columns)
     
-    p_train, p_test, y_train, y_test = train_test_split(pastPred[pastPred.columns[1]], pastY[config.COLUMNS],
-                                                      test_size=0.33, random_state=42)
-    assert False
+    p_train, _ , y_train, _ = train_test_split(pastPred.PRED.values, np.where(pastY[config.COLUMNS]>=1,1,0).ravel(),
+                                                        test_size=0.33, random_state=config.SEED)
+    
     ir = IsotonicRegression( out_of_bounds = 'clip' )	
     ir.fit( p_train, y_train )
-    print('fitted ir')
+    util.vprint('Fitted isotonic regression')
 
     pred.sort_values(by='PATIENT_ID',inplace=True)
     pred.reset_index(drop=True,inplace=True)
-    p_uncal=pred[pred.columns[1]]
+    p_uncal=pred.PRED
     p_calibrated_iso = ir.transform( p_uncal )
-    print('num unique probs ',len(set(p_calibrated_iso )))
-    print('ir transformed')
+    util.vprint('Number of unique probabilities after isotonic regression: ',len(set(p_calibrated_iso )))
+    
     idx,p_sample=sample(p_calibrated_iso,p_uncal)
-    print('sample drawn')
-    y_test=presentY[config.COLUMNS]
-    y_sample=y_test[list(idx)]
     p_uncal_sample=p_uncal[idx]
-    print(len(p_sample),len(y_sample))
+
+    util.vprint('Smoothing with PCHIP interpolator and saving')
     pchip=PchipInterpolator(p_uncal_sample.values, p_sample, axis=0, extrapolate=True) 
     p_calibrated=pchip(p_uncal)
-    return(p_calibrated)#OR MAYBE NO RETURN
+    pred['PRED']=p_calibrated
+    pred.to_csv(calibFilename)
+    return(pred)
 
 def plot():
     pass
