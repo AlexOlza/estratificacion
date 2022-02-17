@@ -14,7 +14,7 @@ from scipy.interpolate import PchipInterpolator
 from python_settings import settings as config
 import configurations.utility as util
 from modelEvaluation.predict import predict, generate_filename
-from modelEvaluation.compare import detect_models 
+from modelEvaluation.compare import detect_models, detect_latest
 util.configure('configurations.local.logistic')
 from dataManipulation.dataPreparation import getData
 from modelEvaluation.reliableDiagram import reliabilityConsistency
@@ -62,15 +62,13 @@ def calibrate(model_name,yr,**kwargs):
     
     pastPred.sort_values(by='PATIENT_ID',inplace=True)
     pastPred.reset_index(drop=True,inplace=True)
-    print(pastPred.columns)
     
     p_train, _ , y_train, _ = train_test_split(pastPred.PRED.values, np.where(pastY[config.COLUMNS]>=1,1,0).ravel(),
                                                         test_size=0.33, random_state=config.SEED)
     
     ir = IsotonicRegression( out_of_bounds = 'clip' )	
     ir.fit( p_train, y_train )
-    util.vprint('Fitted isotonic regression')
-
+    
     pred.sort_values(by='PATIENT_ID',inplace=True)
     pred.reset_index(drop=True,inplace=True)
     p_uncal=pred.PRED
@@ -80,11 +78,12 @@ def calibrate(model_name,yr,**kwargs):
     idx,p_sample=sample(p_calibrated_iso,p_uncal)
     p_uncal_sample=p_uncal[idx]
 
-    util.vprint('Smoothing with PCHIP interpolator and saving')
     pchip=PchipInterpolator(p_uncal_sample.values, p_sample, axis=0, extrapolate=True) 
     p_calibrated=pchip(p_uncal)
     pred['PRED']=p_calibrated
+    util.vprint('Number of unique probabilities after PCHIP: ',len(set(p_calibrated)))
     pred.to_csv(calibFilename)
+    util.vprint('Saved ',calibFilename)
     return(pred)
 
 def plot():
@@ -155,8 +154,12 @@ if __name__=='__main__':
     year=int(input('YEAR YOU WANT TO CALIBRATE:'))
     model_name=input('MODEL NAME (example: logistic20220118_132612): ')
     
-    p=calibrate(model_name,year)
-    # detect all pastPrediction filenames for this experiment
-    # detect all calibrated pastPrediction filenames for this experiment
-    # calibrate those that are missing
+    pastX,pastY=getData(year-2)
+    presentX,presentY=getData(year-1)
+    models=detect_latest(detect_models())
+    p={}
+    for model_name in models:
+        p[model_name]=calibrate(model_name,year,
+                pastX=pastX,pastY=pastY,presentX=presentX,presentY=presentY)
+ 
     # plot

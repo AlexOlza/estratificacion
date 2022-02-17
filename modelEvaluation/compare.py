@@ -36,15 +36,15 @@ def detect_models():
     print(available_models)
     return(available_models)
 
-def load_latest(available_models): 
+def detect_latest(available_models): 
     if len(available_models)==1:
         print('There is only one model')
         return(available_models)
-    print('Loading latest models per algorithm:')
+    print('Selecting latest models per algorithm:')
     ids = [int(''.join(re.findall('\d+',model))) for model in available_models]
     algorithms=['_'.join(re.findall('[^\d+_\d+]+',model)) for model in available_models]
     df=pd.DataFrame(list(zip(algorithms,ids,[i for i in range(len(ids))])),columns=['algorithm','id','i'])
-    selected=df.loc[df.algorithm!='nested_log'].groupby(['algorithm']).apply(lambda x: x.loc[x.id == x.id.max()].i).to_numpy()
+    selected=df.loc[~(df.algorithm.str.startswith('nested'))].groupby(['algorithm']).apply(lambda x: x.loc[x.id == x.id.max()].i).to_numpy()
     selected=[available_models[i] for i in selected]
     print(selected)
     return(selected)
@@ -131,7 +131,7 @@ if __name__=='__main__':
         all_predictions,metrics=compare_nested(available_models,X,y,year)
         selected=sorted([m for m in available_models if ('nested' in m)])
     else:
-        selected=load_latest(available_models)
+        selected=detect_latest(available_models)
         all_predictions,metrics=compare(selected,X,y,year)
     all_predictions=update_all_preds(all_predictions,selected)
 
