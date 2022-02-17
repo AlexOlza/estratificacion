@@ -106,62 +106,58 @@ def plot(p):
         obs=np.where(preds.OBS>=1,1,0).ravel()
         for probs,name in zip([preds.PRED,preds.PREDCAL],[model_name,model_name+' Calibrated']):
             fraction_of_positives, mean_pastPredicted_value = \
-                    calibration_curve(obs, probs, n_bins=10,normalize=False)
+                    calibration_curve(obs, probs, n_bins=30,normalize=False)
             
-            if 'Calibrated' in name:
-                unique=len(np.unique(probs))
-           
-                bintot=bin_total(obs, probs, n_bins=10)
-                label=brier_score_loss(obs, probs)
-                notempty=[i for i in range(len(mean_pastPredicted_value)) if bintot[i] != 0]
-                mean_pastPredicted_valuex=[mean_pastPredicted_value[i] for i in notempty]
-                fraction_of_positivesx=[fraction_of_positives[i] for i in notempty]
-                ax1.plot(mean_pastPredicted_valuex, fraction_of_positivesx, "s-",color=col,
-                      label="%s" % (name, ))
-                for i, txt in zip(range(len(mean_pastPredicted_value)),bintot):
-                        if i>len(mean_pastPredicted_value)-3 and txt!=0:
-                            ax1.annotate(txt, (mean_pastPredicted_value[i], fraction_of_positives[i]),fontsize=medium)
-                            print(i,txt)
-                df=pd.DataFrame()
-                df['Fracción positivos']=fraction_of_positives
-                df['pastPredicción media']=mean_pastPredicted_value
-                df['N']=bintot[bintot!=0]
-                print('\n')
-                # print(df.to_latex(float_format="%.3f",index=False,caption='Tabla de calibrado para {0} con regresión isotónica y PCHIP'.format(n)))
-                # print('\n')
-                # reliabilityConsistency(probs, obs, nbins=10, nboot=100, ax=ax1, seed=42,color=col)
-                
-                # ax2.hist(p, range=(0, 1), bins=10, label=n,
-                #             histtype="step", lw=2)
-                
-                # print('unique ',unique)
-                ax3.hist(probs, range=(0, 1), bins=unique,
-                        histtype="step", lw=2,color=col)
-    #     # else:
-    #     #     print('unique ',unique)
-    #     #     ax2.plot(mean_pastPredicted_value, fraction_of_positives, "s-",color=col,
-    #     #           label="%s" % (name, ))
-    #     #     ax4.hist(p, range=(0, 1), bins=unique, label=n,
-    #     #             histtype="step", lw=2,color=col)
-    ax1.set_ylabel("Fraction of positives",fontsize=medium)
-    ax1.set_xlabel("Mean predicted value",fontsize=medium)
-    ax1.set_ylim([-0.05, 1.10])
-    ax1.legend(loc="upper center", ncol=2,fontsize=medium,title='Brier score')
-    ax1.set_title('After calibration',fontsize=large)
-    ax1.get_legend().get_title().set_fontsize(medium)
-    # ax2.set_xlabel("Mean predicted value")
-    ax2.legend(loc="upper center", ncol=2,fontsize=medium,title='Brier score')
-    ax2.set_title('Before Calibration',fontsize=large)
-    ax2.get_legend().get_title().set_fontsize(medium)
-    ax3.set_ylabel("Count",fontsize=medium)
-    ax3.set_xlabel("Predicted probability",fontsize=medium)
+            if 'Calibrated' not in name:
+                axTop=ax1
+                axHist=ax3
+            else:
+                axTop=ax2
+                axHist=ax4
+            unique=len(np.unique(probs))
+       
+            bintot=bin_total(obs, probs, n_bins=30)
+            label=brier_score_loss(obs, probs)
+            print('brier ',label)
+            notempty=[i for i in range(len(mean_pastPredicted_value)) if bintot[i] != 0]
+            mean_pastPredicted_valuex=[mean_pastPredicted_value[i] for i in notempty]
+            fraction_of_positivesx=[fraction_of_positives[i] for i in notempty]
+            axTop.plot(mean_pastPredicted_valuex, fraction_of_positivesx, "s-",color=col,
+                  label="%s" % (label, ))
+            for i, txt in zip(range(len(mean_pastPredicted_value)),bintot):
+                    if i>len(mean_pastPredicted_value)-3 and txt!=0:
+                        axTop.annotate(txt, (mean_pastPredicted_value[i], fraction_of_positives[i]),fontsize=medium)
+                        print(i,txt)
+            df=pd.DataFrame()
+            df['Fracción positivos']=fraction_of_positives
+            df['pastPredicción media']=mean_pastPredicted_value
+            df['N']=bintot[bintot!=0]
+            print('\n')
+            # print(df.to_latex(float_format="%.3f",index=False,caption='Tabla de calibrado para {0} con regresión isotónica y PCHIP'.format(n)))
+            # print('\n')
+            # reliabilityConsistency(probs, obs, nbins=10, nboot=100, ax=ax1, seed=42,color=col)
+            
+            # ax2.hist(p, range=(0, 1), bins=10, label=n,
+            #             histtype="step", lw=2)
+            
+            # print('unique ',unique)
+            axHist.hist(probs, range=(0, 1), bins=unique,
+                    histtype="step", lw=2,color=col)
 
-    # ax3.legend(loc='upper center', bbox_to_anchor=(1.0, -0.05),
-    #           fancybox=True, shadow=True, ncol=6)
+            axTop.set_ylabel("Fraction of positives",fontsize=medium)
+            axTop.set_xlabel("Mean predicted value",fontsize=medium)
+            axTop.set_ylim([-0.05, 1.10])
+            axTop.legend(loc="upper center", ncol=2,fontsize=medium,title='Brier score')
+            axTop.get_legend().get_title().set_fontsize(medium)
+            axHist.set_ylabel("Count",fontsize=medium)
+            axHist.set_xlabel("Predicted probability",fontsize=medium)
+    ax1.set_title('Before calibration',fontsize=large)
+    ax2.set_title('After Calibration',fontsize=large)
+    
     handles, labels = ax2.get_legend_handles_labels()
-    # for f in [fig,fig2]:
-    #     f.figlegend(handles, ['Perfectamente calibrado']+names,shadow=True, loc='lower center',ncol=3,fontsize=medium,bbox_to_anchor=(0.5,-0.06))
-        # f.tight_layout(rect=[0, 1, 1, 0.95],w_pad=4.0)
+    for f in [fig,fig2]:
+        f.legend(handles, ['Perfectamente calibrado']+names,shadow=True, loc='lower center',ncol=3,fontsize=medium,bbox_to_anchor=(0.5,-0.06))
+        f.tight_layout(rect=[0, 1, 1, 0.95],w_pad=4.0)
     gs.tight_layout(fig)
     gs2.tight_layout(fig2)
     plt.show()
@@ -177,7 +173,8 @@ if __name__=='__main__':
     models=detect_latest(detect_models())
     p={}
     for model_name in models:
+        print(model_name)
         p[model_name]=calibrate(model_name,year,
                 pastX=pastX,pastY=pastY,presentX=presentX,presentY=presentY)
- 
+        print(p[model_name].describe())
     plot(p)
