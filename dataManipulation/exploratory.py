@@ -7,7 +7,8 @@ Created on Fri Feb 18 11:33:56 2022
 """
 
 import pandas as pd
-# import time
+import time
+import re
 import numpy as np
 # from python_settings import settings as config
 
@@ -30,9 +31,11 @@ ACGINDPRIVFILES={2016:'ing2016-2017ActivosIndPriv.csv',
                   2018:'ing2018-2019ActivosIndPriv.csv'}
 ALLEDCFILES={2016:'additional_edcs2016.csv',
              2017:'additional_edcs2017.csv'}
+FULLACGFILES={2016:'fullacgs2016.csv',
+             2017:'fullacgs2017.csv'}
 PREDICTORREGEX=r'PATIENT_ID|FEMALE|AGE_[0-9]+$|ACG|EDC_|HOSDOM|FRAILTY|RXMG_|INGRED_14GT'
 year=2016
-import time
+
 from pathlib import Path
 def load_predictors(path,predictors=None):
     df=pd.read_csv(path,nrows=5)
@@ -40,18 +43,22 @@ def load_predictors(path,predictors=None):
         if isinstance(predictors,list):
             pass
         elif isinstance(predictors,str):
-            predictors=[p for p in 
-                    np.array(df.filter(regex=predictors).columns)]
+            print('hello!', predictors)
+            predictors=[col for col in 
+                    df if bool(re.match(predictors,col))]
+            # return df
         else:
+            print('str')
             predictors=[p for p in 
                     np.array(df.filter(regex=PREDICTORREGEX).columns)]
     else:
+        print('false')
         predictors=[col for col in df]
     if not 'PATIENT_ID' in predictors:
         predictors.insert(0,'PATIENT_ID')
         
-    # print('predictors: ',predictors)
-
+    print('predictors: ',predictors)
+    # assert False
     return predictors
 
 def load(filename,directory=DATAPATH,predictors=None, all_EDCs=True):
@@ -59,15 +66,17 @@ def load(filename,directory=DATAPATH,predictors=None, all_EDCs=True):
     t0=time.time()
     
     for path in Path(directory).rglob(filename):
-        predictors=load_predictors(path,predictors)
+        
         if all_EDCs:
+            p=re.sub('\|\|','|',re.sub(r'EDC_|RXMG_|','',predictors))
+            print(p)
             edc_data=pd.read_csv(INDISPENSABLEDATAPATH+ALLEDCFILES[year],
             usecols=['patient_id', 'edc_codes', 'rxmg_codes'],
             delimiter=';')
             edc_data.rename(columns={'patient_id':'PATIENT_ID'},inplace=True)
-            
+        pred=load_predictors(path,p) 
         print('Loading ',path)
-        for chunk in pd.read_csv(path, chunksize=100000,usecols=predictors):
+        for chunk in pd.read_csv(path, chunksize=100000,usecols=pred):
             d = dict.fromkeys(chunk.select_dtypes(np.int64).columns, np.int8)
             d['PATIENT_ID']=np.int64
             ignore=[]
@@ -99,4 +108,5 @@ def load(filename,directory=DATAPATH,predictors=None, all_EDCs=True):
 
 year=2016
 filename=ALLEDCFILES[year]
-acgs=load(ACGFILES[2016],directory=DATAPATH,predictors=True, all_EDCs=True)
+acgs=load(ACGFILES[2016],directory=DATAPATH,predictors=PREDICTORREGEX, all_EDCs=True)
+acgs.to_csv(FULLACGFILES[2016])
