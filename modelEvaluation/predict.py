@@ -36,8 +36,12 @@ except:
 from dataManipulation.dataPreparation import getData
 
 #%%     FUNCTIONS
-def generate_filename(model_name,yr):
-    return config.PREDPATH+'/{0}__{1}.csv'.format(model_name,yr)
+def generate_filename(model_name,yr, calibrated=False):
+    if calibrated:
+        fname=config.PREDPATH+'/{0}_calibrated_{1}.csv'.format(model_name,yr)
+    else: 
+        fname=config.PREDPATH+'/{0}__{1}.csv'.format(model_name,yr)
+    return fname
 def predict_save(yr,model,model_name,X,y,**kwargs):
     columns=kwargs.get('columns',config.COLUMNS[0])
     verbose=kwargs.get('verbose',config.VERBOSE)

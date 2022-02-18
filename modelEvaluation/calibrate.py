@@ -1,21 +1,28 @@
-#CONFIGURE
+
+# IMPORTS FROM EXTERNAL LIBRARIES
 import os
+from pathlib import Path
 import numpy as np
-from predecirIngresos.calibradoIntervalos import reliabilityConsistency
-np.random.seed(0)
-import csv
 import matplotlib.pyplot as plt
 import pandas as pd
 from sklearn.calibration import calibration_curve
 from sklearn.isotonic import IsotonicRegression
 from sklearn.model_selection import train_test_split
 from scipy.interpolate import PchipInterpolator
-
-REQUEST INPUT: yr
-datos17, datos18 = getData(yr-1), getData(yr)
-
+from sklearn.metrics import brier_score_loss
+#%%
+#IMPORTS FROM THIS PROJECT
+from python_settings import settings as config
+import configurations.utility as util
+from modelEvaluation.predict import predict, generate_filename
+from modelEvaluation.compare import detect_models, detect_latest
+util.configure('configurations.local.logistic')
+from dataManipulation.dataPreparation import getData
+from modelEvaluation.reliableDiagram import reliabilityConsistency
+np.random.seed(config.SEED)
 
 #%%    
+#FUNCTIONS
 def bin_total(y_true, y_prob, n_bins):
     bins = np.linspace(0., 1. + 1e-8, n_bins + 1)
 
@@ -35,95 +42,141 @@ def sample(data,uncal):
     idx.append(np.argmax(uncal))
     return(idx,unique)
 
-for f17,f18,n,col in zip(files17,files18,names,colors):
-    # if n!= 'AdaBoost Trees':
-    #     continue
-    print(n)
-    pred=pd.read_csv(f17)
-    pred.sort_values(by='PATIENT_ID',inplace=True)
-    pred.reset_index(drop=True,inplace=True)
+
+def calibrate(model_name,yr,**kwargs):
+    calibFilename=generate_filename(model_name,yr, calibrated=True)
+    if Path(calibFilename).is_file():
+        util.vprint('Calibrated predictions found; loading')
+        p_calibrated=pd.read_csv(calibFilename)
+        return(p_calibrated)
+    pastX=kwargs.get('pastX',None)
+    pastY=kwargs.get('pastY',None)
+    presentX=kwargs.get('presentX',None)
+    presentY=kwargs.get('presentY',None)
+    if (not isinstance(pastX,pd.DataFrame)) or (not isinstance(pastY,pd.DataFrame)):
+        pastX,pastY=getData(yr-2)
+    if (not isinstance(presentX,pd.DataFrame)) or (not isinstance(presentY,pd.DataFrame)):
+        presentX,presentY=getData(yr-1)
+
+    #This reads the prediction files, or creates them if not present
+    pastPred, _= predict(model_name,config.EXPERIMENT,yr-1, X=pastX, y=pastY)
+    pred, _= predict(model_name,config.EXPERIMENT,yr, X=presentX, y=presentY)
     
-    p_train, p_test, y_train, y_test = train_test_split(pred[pred.columns[1]], datos17['algunIngresoUrg'],
-                                                      test_size=0.33, random_state=42)
+    pastPred.sort_values(by='PATIENT_ID',inplace=True)
+    pastPred.reset_index(drop=True,inplace=True)
+    
+    p_train, _ , y_train, _ = train_test_split(pastPred.PRED.values, np.where(pastY[config.COLUMNS]>=1,1,0).ravel(),
+                                                        test_size=0.33, random_state=config.SEED)
     
     ir = IsotonicRegression( out_of_bounds = 'clip' )	
     ir.fit( p_train, y_train )
-    print('fitted ir')
-    pred18=pd.read_csv(f18)
-    pred18.sort_values(by='PATIENT_ID',inplace=True)
-    pred18.reset_index(drop=True,inplace=True)
-    p_uncal=pred18[pred18.columns[1]]
+    
+    pred.sort_values(by='PATIENT_ID',inplace=True)
+    pred.reset_index(drop=True,inplace=True)
+    p_uncal=pred.PRED
     p_calibrated_iso = ir.transform( p_uncal )
-    print('num unique probs ',len(set(p_calibrated_iso )))
-    print('ir transformed')
+    util.vprint('Number of unique probabilities after isotonic regression: ',len(set(p_calibrated_iso )))
+    
     idx,p_sample=sample(p_calibrated_iso,p_uncal)
-    print('sample drawn')
-    y_test=datos18.algunIngresoUrg
-    y_sample=y_test[list(idx)]
     p_uncal_sample=p_uncal[idx]
-    print(len(p_sample),len(y_sample))
-    # p_sampletrans=ir.transform( p_sample)
+
     pchip=PchipInterpolator(p_uncal_sample.values, p_sample, axis=0, extrapolate=True) 
     p_calibrated=pchip(p_uncal)
-    # print('number of probabilities out of range=',len(p_calibrated[p_calibrated<0])+len(p_calibrated[p_calibrated>1]))
+    pred['PREDCAL']=p_calibrated
+    util.vprint('Number of unique probabilities after PCHIP: ',len(set(p_calibrated)))
+    pred.to_csv(calibFilename,index=False)
+    util.vprint('Saved ',calibFilename)
+    return(pred)
 
-    for p,name in zip([p_uncal,p_calibrated],[n+'',n+' Calibrated']):
-        fraction_of_positives, mean_predicted_value = \
-                calibration_curve(y_test, p, n_bins=10,normalize=False)
-        
-        
+def plot(p):
+    from matplotlib.gridspec import GridSpec
+    names=list(p.keys())
+    fig=plt.figure(1,figsize=(15, 10))
+    fig2=plt.figure(2,figsize=(15, 10))
+    gs = GridSpec(2, 1, figure=fig, height_ratios=[4, 1])
+    gs2 = GridSpec(2, 1,figure=fig2,height_ratios=[4, 1])
+    ax2 = fig2.add_subplot(gs2[0])
+    ax1 = fig.add_subplot(gs[0])
+    ax4 = fig2.add_subplot(gs2[1])
+    ax3 = fig.add_subplot(gs[1])
+    ax1.plot([0, 1], [0, 1], "k:", label=0)
+    ax2.plot([0, 1], [0, 1], "k:", label=0)
+    colors=['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728','#9467bd']#, '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
+    large=27
+    medium=18
+    for model_name, preds, col in zip(p.keys(),p.values(),colors):
+        obs=np.where(preds.OBS>=1,1,0).ravel()
+        for probs,name in zip([preds.PRED,preds.PREDCAL],[model_name,model_name+' Calibrated']):
+            fraction_of_positives, mean_pastPredicted_value = \
+                    calibration_curve(obs, probs, n_bins=30,normalize=False)
+            
+            if 'Calibrated' not in name:
+                axTop=ax1
+                axHist=ax3
+            else:
+                axTop=ax2
+                axHist=ax4
+            unique=len(np.unique(probs))
        
-        if name==n+' Calibrated':
-            unique=len(np.unique(p_calibrated))
-            
-            
-            bintot=bin_total(y_test, p_calibrated, n_bins=10)
-            notempty=[i for i in range(len(mean_predicted_value)) if bintot[i] != 0]
-            mean_predicted_valuex=[mean_predicted_value[i] for i in notempty]
+            bintot=bin_total(obs, probs, n_bins=30)
+            label=brier_score_loss(obs, probs)
+            print('brier ',label)
+            notempty=[i for i in range(len(mean_pastPredicted_value)) if bintot[i] != 0]
+            mean_pastPredicted_valuex=[mean_pastPredicted_value[i] for i in notempty]
             fraction_of_positivesx=[fraction_of_positives[i] for i in notempty]
-            ax1.plot(mean_predicted_valuex, fraction_of_positivesx, "s-",color=col,
-                  label="%s" % (name, ))
-            for i, txt in zip(range(len(mean_predicted_value)),bintot):
-                    if i>len(mean_predicted_value)-3 and txt!=0:
-                        ax1.annotate(txt, (mean_predicted_value[i], fraction_of_positives[i]),fontsize=medium)
+            axTop.plot(mean_pastPredicted_valuex, fraction_of_positivesx, "s-",color=col,
+                  label="%s" % (label, ))
+            for i, txt in zip(range(len(mean_pastPredicted_value)),bintot):
+                    if i>len(mean_pastPredicted_value)-3 and txt!=0:
+                        axTop.annotate(txt, (mean_pastPredicted_value[i], fraction_of_positives[i]),fontsize=medium)
                         print(i,txt)
             df=pd.DataFrame()
             df['Fracción positivos']=fraction_of_positives
-            df['Predicción media']=mean_predicted_value
+            df['pastPredicción media']=mean_pastPredicted_value
             df['N']=bintot[bintot!=0]
             print('\n')
             # print(df.to_latex(float_format="%.3f",index=False,caption='Tabla de calibrado para {0} con regresión isotónica y PCHIP'.format(n)))
             # print('\n')
-            # reliabilityConsistency(p_calibrated, y_test, nbins=10, nboot=100, ax=ax1, seed=42,color=col)
+            # reliabilityConsistency(probs, obs, nbins=10, nboot=100, ax=ax1, seed=42,color=col)
             
             # ax2.hist(p, range=(0, 1), bins=10, label=n,
             #             histtype="step", lw=2)
             
             # print('unique ',unique)
-            ax3.hist(p, range=(0, 1), bins=unique,
+            axHist.hist(probs, range=(0, 1), bins=unique,
                     histtype="step", lw=2,color=col)
-        # else:
-        #     print('unique ',unique)
-        #     ax2.plot(mean_predicted_value, fraction_of_positives, "s-",color=col,
-        #           label="%s" % (name, ))
-        #     ax4.hist(p, range=(0, 1), bins=unique, label=n,
-        #             histtype="step", lw=2,color=col)
-# ax1.annotate('123',(0.6,0.6),fontsize=medium)
-ax1.set_ylabel("Fraction of positives")
-ax1.set_xlabel("Mean predicted value")
-ax1.set_ylim([-0.05, 1.05])
-ax1.legend(loc="upper center", ncol=2)
-# ax1.set_title('Reliability diagram after calibration')
 
-# ax2.set_xlabel("Mean predicted value")
-# ax2.legend(loc="upper center", ncol=2)
-# ax2.set_title('Before Calibration')
-
-ax3.set_ylabel("Count")
-ax3.set_xlabel("Predicted probability")
-ax3.ticklabel_format(style='sci',axis='both')
-plt.tight_layout()
-# plt.savefig('predecirIngresos/reliabilityConsistency/{0}IsoPCHIP.eps'.format(n),format='eps')
-plt.show()
-
+            axTop.set_ylabel("Fraction of positives",fontsize=medium)
+            axTop.set_xlabel("Mean predicted value",fontsize=medium)
+            axTop.set_ylim([-0.05, 1.10])
+            axTop.legend(loc="upper center", ncol=2,fontsize=medium,title='Brier score')
+            axTop.get_legend().get_title().set_fontsize(medium)
+            axHist.set_ylabel("Count",fontsize=medium)
+            axHist.set_xlabel("Predicted probability",fontsize=medium)
+    ax1.set_title('Before calibration',fontsize=large)
+    ax2.set_title('After Calibration',fontsize=large)
     
+    handles, labels = ax2.get_legend_handles_labels()
+    for f in [fig,fig2]:
+        f.legend(handles, ['Perfectamente calibrado']+names,shadow=True, loc='lower center',ncol=3,fontsize=medium,bbox_to_anchor=(0.5,-0.06))
+        f.tight_layout(rect=[0, 1, 1, 0.95],w_pad=4.0)
+    gs.tight_layout(fig)
+    gs2.tight_layout(fig2)
+    plt.show()
+
+#%%
+if __name__=='__main__':
+        
+    year=int(input('YEAR YOU WANT TO CALIBRATE:'))
+    model_name=input('MODEL NAME (example: logistic20220118_132612): ')
+    
+    pastX,pastY=getData(year-2)
+    presentX,presentY=getData(year-1)
+    models=detect_latest(detect_models())
+    p={}
+    for model_name in models:
+        print(model_name)
+        p[model_name]=calibrate(model_name,year,
+                pastX=pastX,pastY=pastY,presentX=presentX,presentY=presentY)
+        print(p[model_name].describe())
+    plot(p)
