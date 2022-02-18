@@ -1,3 +1,4 @@
+
 # IMPORTS FROM EXTERNAL LIBRARIES
 import os
 from pathlib import Path
@@ -40,6 +41,7 @@ def sample(data,uncal):
     idx.insert(0,np.argmin(uncal))
     idx.append(np.argmax(uncal))
     return(idx,unique)
+
 
 def calibrate(model_name,yr,**kwargs):
     calibFilename=generate_filename(model_name,yr, calibrated=True)

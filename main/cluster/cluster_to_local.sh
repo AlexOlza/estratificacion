@@ -8,6 +8,9 @@
 echo "Usage: ./cluster_to_local.sh experiment_name model1,model2,...,modeln. I will ask for your passsword twice."
 modelpath=$ESTRATIFICACION_PATH/models/$1
 configpath=$ESTRATIFICACION_PATH/configurations/used
+
+mkdir -p $modelpath; echo Making modelpath
+mkdir -p $configpath; echo Making configpath
 #Save current value of Internal Field Separator (IFS)
 IFSsave="$IFS"
 #Change IFS to comma

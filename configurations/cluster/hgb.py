@@ -33,29 +33,7 @@ import numpy as np
 from sklearn.experimental import enable_hist_gradient_boosting 
 from sklearn.ensemble import HistGradientBoostingClassifier
 IMPORTS=[]
-# def agrupar(datos):
-#     edad=[p for p in np.array(datos.filter(regex=r'AGE').columns)]
-#     edad.append('AGE_85GT')
-#     datos['AGE_85GT']=0
-#     datos.iloc[datos[edad].max(1)==0, datos.columns.get_loc('AGE_85GT')]=1
-#     datos['edad']=datos[edad].idxmax(1)
-#     datos['edad']=datos.edad.astype("category").cat.codes
-    
-#     ACG=[p for p in np.array(datos.filter(regex=r'ACG_').columns)]
-#     ACG.append('NINGUNO')
-#     datos['NINGUNO']=0
-#     datos.iloc[datos[ACG].max(1)==0, datos.columns.get_loc('NINGUNO')]=1
-#     datos['ACG']=datos[ACG].idxmax(1)
-#     datos.ACG=datos.ACG.astype("category").cat.codes
-#     return(datos)
-# binaryPredictors=[p for p in 
-#             np.array(datos.filter(regex=r'FEMALE|ACGRUB|EDC_|HOSDOM|FRAILTY|RXMG').columns)]
 
-
-# predictors=binaryPredictors+['edad','ACG']
-# """AGRUPO LAS VARIABLES CATEGORICAS- EDAD Y ACG"""
-
-# datos=agrupar(datos)
 FOREST=HistGradientBoostingClassifier(loss='auto', max_bins=255,
                                    # categorical_features=cat,
                                    monotonic_cst=None,

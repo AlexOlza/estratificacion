@@ -15,7 +15,7 @@ try:
     experiment='configurations.'+sys.argv[2]
 except:
     experiment=input('EXPERIMENT NAME: ')#example urgcms_excl_hdia_nbinj
-
+    experiment='configurations.'+experiment
 """THIS EMULATES 'from experiment import *' USING IMPORTLIB 
 info: 
     https://stackoverflow.com/questions/43059267/how-to-do-from-module-import-using-importlib
@@ -35,7 +35,7 @@ CONFIGNAME='logistic.py'
 
 MODELPATH=MODELSPATH+EXPERIMENT+'/'
 PREDPATH=os.path.join(OUTPATH,EXPERIMENT)
-PREDFILES={yr: os.path.join(PREDPATH,'{1}{0}.csv'.format(yr,ALGORITHM)) for yr in [2016,2017,2018]}
+# PREDFILES={yr: os.path.join(PREDPATH,'{1}{0}.csv'.format(yr,ALGORITHM)) for yr in [2016,2017,2018]} obsolete
 
 
 
