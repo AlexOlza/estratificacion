@@ -135,12 +135,8 @@ def plot(p):
             print('\n')
             # print(df.to_latex(float_format="%.3f",index=False,caption='Tabla de calibrado para {0} con regresión isotónica y PCHIP'.format(n)))
             # print('\n')
-            # reliabilityConsistency(probs, obs, nbins=10, nboot=100, ax=ax1, seed=42,color=col)
+            reliabilityConsistency(probs, obs, nbins=30, nboot=100, ax=axTop, seed=config.SEED,color=col)
             
-            # ax2.hist(p, range=(0, 1), bins=10, label=n,
-            #             histtype="step", lw=2)
-            
-            # print('unique ',unique)
             axHist.hist(probs, range=(0, 1), bins=unique,
                     histtype="step", lw=2,color=col)
 
@@ -156,7 +152,7 @@ def plot(p):
     
     handles, labels = ax2.get_legend_handles_labels()
     for f in [fig,fig2]:
-        f.legend(handles, ['Perfectamente calibrado']+names,shadow=True, loc='lower center',ncol=3,fontsize=medium,bbox_to_anchor=(0.5,-0.06))
+        f.legend(handles, ['Perfectly calibrated']+names,shadow=True, loc='lower center',ncol=3,fontsize=medium,bbox_to_anchor=(0.5,-0.06))
         f.tight_layout(rect=[0, 1, 1, 0.95],w_pad=4.0)
     gs.tight_layout(fig)
     gs2.tight_layout(fig2)
