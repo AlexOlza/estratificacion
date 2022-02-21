@@ -74,6 +74,9 @@ def load(filename,directory=DATAPATH,predictors=None, all_EDCs=True):
             usecols=['patient_id', 'edc_codes', 'rxmg_codes'],
             delimiter=';')
             edc_data.rename(columns={'patient_id':'PATIENT_ID'},inplace=True)
+            types={c:np.int8 for c in edc_data}
+            types['PATIENT_ID']=np.int64
+            edc_data=edc_data.astype(types)
         pred=load_predictors(path,p) 
         print('Loading ',path)
         for chunk in pd.read_csv(path, chunksize=100000,usecols=pred):
