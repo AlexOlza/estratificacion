@@ -74,9 +74,7 @@ def load(filename,directory=DATAPATH,predictors=None, all_EDCs=True):
             usecols=['patient_id', 'edc_codes', 'rxmg_codes'],
             delimiter=';')
             edc_data.rename(columns={'patient_id':'PATIENT_ID'},inplace=True)
-            types={c:np.int8 for c in edc_data}
-            types['PATIENT_ID']=np.int64
-            edc_data=edc_data.astype(types)
+            
         pred=load_predictors(path,p) 
         print('Loading ',path)
         for chunk in pd.read_csv(path, chunksize=100000,usecols=pred):
@@ -96,7 +94,7 @@ def load(filename,directory=DATAPATH,predictors=None, all_EDCs=True):
                     all_codes=[v.split(' ') for v in data[column].values]
                     all_codes=[item for sublist in all_codes for item in sublist if item!=''] #flatten list
                     for code in set(all_codes):
-                        acg[prefix+code]=np.where(code in data[column],1,0)
+                        acg[prefix+code]=np.where(code in data[column],np.int8(1),np.int8(0))
                     print('added ',len(set(all_codes)), 'codes')
         break 
     print('Loaded in ',time.time()-t0,' seconds')
