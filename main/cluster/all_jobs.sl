@@ -1,7 +1,7 @@
 #!/bin/bash
 
 mkdir -p output
-experiments=(almeria urgcms_excl_hdia_nbinj urgcms_excl_nbinj)
+experiments=(urgcms_excl_nbinj_fulledcs)
 algorithms=(logistic randomForest hgb)
 
 for e in "${!experiments[@]}" ### loop through index
