@@ -29,7 +29,7 @@ from sklearn.model_selection import RandomizedSearchCV
 from sklearn.ensemble import RandomForestClassifier
 np.random.seed(config.SEED)
 
-pred16,y17=getData(2016,predictors=True)
+pred16,y17=getData(2016)
 assert len(config.COLUMNS)==1, 'This model is built for a single response variable! Modify config.COLUMNS'
 print('Sample size ',len(pred16))
 
