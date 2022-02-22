@@ -6,7 +6,8 @@ Created on Mon Jan 31 2022
 @author: aolza
 """
 
-EXPERIMENT='cost'
+EXPERIMENT='cost_fulledcs'
+FULLEDCS=True
 
 """PREDICTORS: They will be different for each script."""
 PREDICTORREGEX=r'PATIENT_ID|FEMALE|AGE_[0-9]+$|ACG|EDC_|HOSDOM|FRAILTY|RXMG_|INGRED_14GT'

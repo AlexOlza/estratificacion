@@ -42,14 +42,18 @@ def excludeHosp(df,filtros,criterio):#FIXME the bug is here
 
     
 # TODO MOVE ASSERTIONS BEFORE LOADING BIG FILES!!!!
-# TODO TEST NEW DEFAULT predictors=config.PREDICTORREGEX INSTEAD OF predictors=config.PREDICTORS
-# config.PREDICTORS may be currently unused, consider removing it
 #OLDBASE IS OBSOLETE
-def getData(yr,columns=config.COLUMNS,previousHosp=config.PREVIOUSHOSP,predictors=config.PREDICTORREGEX,
+def getData(yr,columns=config.COLUMNS,previousHosp=config.PREVIOUSHOSP,
+            predictors=config.PREDICTORREGEX,
             exclude=config.EXCLUDE,
             resourceUsage=config.RESOURCEUSAGE,
             **kwargs):
-    oldbase = kwargs.get('oldbase','OLDBASE' in config.CONFIGNAME)
+    has_fullEDCs_attr=hasattr(config,'FULLEDCS')
+    try:
+        fullEDCs = kwargs.get('fullEDCs', config.FULLEDCS)
+    except AttributeError:
+        fullEDCs = False
+    oldbase = kwargs.get('oldbase', False)
     if oldbase or ('COSTE_TOTAL_ANO2' in columns):
         if 'ingresoUrg' not in predictors and not ('COSTE_TOTAL_ANO2' in columns):
             predictors=predictors+'|ingresoUrg'

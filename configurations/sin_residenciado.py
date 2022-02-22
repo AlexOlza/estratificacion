@@ -9,7 +9,6 @@ EXPERIMENT='sin_residenciado'
 
 """PREDICTORS: They will be different for each script."""
 PREDICTORREGEX=r'PATIENT_ID|FEMALE|AGE_[0-9]+$|ACG|EDC_|HOSDOM|FRAILTY|RXMG_|INGRED_14GT'
-PREDICTORS=True #FIXME may be obsolete
 INDICEPRIVACION=False
 COLUMNS=['urgcms']
 PREVIOUSHOSP=[]

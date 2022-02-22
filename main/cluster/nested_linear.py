@@ -7,9 +7,12 @@ Created on Thu Nov 25 16:23:21 2021
 """
 import sys
 sys.path.append('/home/aolza/Desktop/estratificacion/')#necessary in cluster
-
-chosen_config='configurations.cluster.logistic'
-experiment='configurations.cost'
+try: 
+    chosen_config='configurations.cluster.'+sys.argv[1]
+    experiment='configurations.'+sys.argv[2]
+except ValueError:
+    chosen_config='configurations.cluster.logistic'
+    experiment='configurations.cost'
 import importlib
 importlib.invalidate_caches()
 from python_settings import settings as config
