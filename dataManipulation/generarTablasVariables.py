@@ -236,13 +236,74 @@ def retrieveIndicePrivacion(save=True,verbose=config.VERBOSE,yrs=[2016,2017,2018
     util.vprint('time elapsed: ',time.time()-t0)
     if len(keep):
         return([dfs[yr] for yr in keep])
-    
-def prepare(df16,yr,predictors=False,indicePrivacion=False,verbose=config.VERBOSE,
+
+def create_fullacgfiles(filename,year,directory=config.DATAPATH,
+                        predictors=None, all_EDCs=True,overwrite=False):
+    if Path(config.DATAPATH+config.FULLACGFILES[year]).is_file():
+        if overwrite:
+            print(config.FULLACGFILES[year], ' found: Overwriting (may take a while)...')
+        else: 
+            print(config.FULLACGFILES[year], ' found: Loading...')
+            return load(filename=config.FULLACGFILES[year],predictors=predictors)
+    acg=pd.DataFrame()
+    t0=time.time()
+    for path in Path(directory).rglob(filename):
+        p=re.sub('\|\|','|',re.sub(r'EDC_|RXMG_|','',predictors))
+        print(p)
+        edc_data=pd.read_csv(config.INDISPENSABLEDATAPATH+config.ALLEDCFILES[year],
+        usecols=['patient_id', 'edc_codes', 'rxmg_codes'],
+        delimiter=';')
+        edc_data.rename(columns={'patient_id':'PATIENT_ID'},inplace=True)
+        edc_data['all_codes']=edc_data['edc_codes']+' '+edc_data['rxmg_codes']
+        
+        codes=[]
+        for column,prefix in zip(['edc_codes', 'rxmg_codes'],['EDC_','RXMG_']):
+            all_codes=[v.split(' ') for v in edc_data[column].values]
+            codes+=list(set([prefix+item for sublist in all_codes for item in sublist if item!=''])) #flatten list
+        edc_data.drop(columns=['edc_codes', 'rxmg_codes'],axis=1,inplace=True)
+        pred=load_predictors(path,p) 
+        print('Loading ',path)
+        for chunk in pd.read_csv(path, chunksize=100000,usecols=pred):
+            d = dict.fromkeys(chunk.select_dtypes(np.int64).columns, np.int8)
+            d['PATIENT_ID']=np.int64
+            ignore=[]
+            for k in d.keys():
+                if any(np.isnan(chunk[k].values)):
+                    ignore.append(k)
+                for k in ignore:
+                    d.pop(k)
+            chunk= chunk.astype(d)
+            data=edc_data.loc[edc_data.PATIENT_ID.isin(chunk.PATIENT_ID.values)]
+            
+            for code in codes:
+                chunk[code]=[int(re.sub('EDC_|RXMG_','',code) in v) for v in data['all_codes'].values]
+                chunk[code]=chunk[code].astype(np.int8)
+                # print('sum',sum(acg[code].values))
+            print('added ',len(codes), 'codes')
+        acg = pd.concat([acg, chunk], ignore_index=True)
+        break 
+    print('Loaded in ',time.time()-t0,' seconds')
+    try:    
+        acg=acg.drop(labels=['EDC_NUR11','EDC_RES10','RXMG_ZZZX000',
+        'ACG_5320','ACG_5330','ACG_5340'],axis=1)
+        print('dropped')
+    except KeyError:
+        print('not dropping cols')
+        pass
+    acg[sorted(acg, key = lambda x: x not in acg.filter(like="PATIENT_ID").columns)].to_csv(directory+config.FULLACGFILES[year])
+    return(acg)
+def prepare(df16,yr,predictors=None,indicePrivacion=False,fullEDCs=False,verbose=config.VERBOSE,
             excludeOSI=config.EXCLUDEOSI):
-    if indicePrivacion:
+    if indicePrivacion and (not fullEDCs):
         acg16=retrieveIndicePrivacion(yrs=[yr],keep=yr,verbose=verbose,predictors=predictors)[0]
-    else:
+    elif (not indicePrivacion) and (not fullEDCs):
         acg16=load(filename=config.ACGFILES[yr],predictors=predictors)
+    elif (not indicePrivacion) and (fullEDCs):
+        acg16=create_fullacgfiles(config.FULLACGFILES[yr],yr,directory=config.DATAPATH,
+                    predictors=predictors)
+    else:
+        assert False, 'NOT IMPLEMENTED: indicePrivacion and fullEDCs'
+    
     len1=len(acg16)   
     if excludeOSI:
         excludeOSI=[excludeOSI] if isinstance(excludeOSI,str) else excludeOSI
@@ -265,6 +326,6 @@ if __name__=="__main__":
     d=resourceUsageDataFrames(2017)
     for k in d.keys():
         print(d[k])
-        full17=prepare(d[k],2016)
+        full17=prepare(d[k],2016,fullEDCs=(True))
 
 
