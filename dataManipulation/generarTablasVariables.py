@@ -140,24 +140,22 @@ def resourceUsageDataFrames(years=[2016,2017],exploratory=False):
         JUNTAR CON LOS ACGS
         
 """''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
 def load_predictors(path,predictors=None):
     df=pd.read_csv(path,nrows=5)
-    if predictors: #nonempty list or str, True boolean, nonzero number 
-        if isinstance(predictors,list):
+    if predictors: #nonempty list or str
+        is_list=isinstance(predictors,list)
+        is_str=isinstance(predictors,str)
+        assert (is_str or is_list), "Wrong data type of arg predictors. USAGE: load_predictors(path: str or Path, predictors=None: None, str or list)"
+        if is_list:
             pass
-        elif isinstance(predictors,str):
-            predictors=[p for p in 
-                    np.array(df.filter(regex=predictors).columns)]
-        else:
-            predictors=[p for p in 
-                    np.array(df.filter(regex=config.PREDICTORREGEX).columns)]
+        elif is_str:
+            predictors=[col for col in 
+                    df if bool(re.match(predictors,col))]
     else:
+        print('Will load full dataset')
         predictors=[col for col in df]
     if not 'PATIENT_ID' in predictors:
         predictors.insert(0,'PATIENT_ID')
-        
-    util.vprint('predictors: ',predictors)
 
     return predictors
 

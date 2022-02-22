@@ -42,8 +42,6 @@ def excludeHosp(df,filtros,criterio):#FIXME the bug is here
 
     
 # TODO MOVE ASSERTIONS BEFORE LOADING BIG FILES!!!!
-# TODO TEST NEW DEFAULT predictors=config.PREDICTORREGEX INSTEAD OF predictors=config.PREDICTORS
-# config.PREDICTORS may be currently unused, consider removing it
 #OLDBASE IS OBSOLETE
 def getData(yr,columns=config.COLUMNS,previousHosp=config.PREVIOUSHOSP,predictors=config.PREDICTORREGEX,
             exclude=config.EXCLUDE,
