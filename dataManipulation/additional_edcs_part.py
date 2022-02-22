@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Fri Feb 18 11:33:56 2022
+Created on Mon 21 Feb 2022
 
 @author: aolza
 """
@@ -10,13 +10,7 @@ import pandas as pd
 import time
 import re
 import numpy as np
-# from python_settings import settings as config
-
-# import configurations.utility as util
-# configuration=util.configure()
-# from dataManipulation.generarTablasIngresos import createYearlyDataFrames, loadIng,assertMissingCols, report_transform
-# from dataManipulation.generarTablasVariables import prepare,resourceUsageDataFrames,load
-# from matplotlib_venn import venn2
+import csv
 
 DATAPATH='/home/aolza/Desktop/estratificacionDatos/'
 INDISPENSABLEDATAPATH=DATAPATH+'indispensable/'
@@ -74,10 +68,10 @@ def load(filename,directory=DATAPATH,predictors=None, all_EDCs=True):
             usecols=['patient_id', 'edc_codes', 'rxmg_codes'],
             delimiter=';')
             edc_data.rename(columns={'patient_id':'PATIENT_ID'},inplace=True)
-            
+
         pred=load_predictors(path,p) 
         print('Loading ',path)
-        for chunk in pd.read_csv(path, chunksize=100000,usecols=pred):
+        for chunk, edcchunk in pd.read_csv(path, chunksize=100000,usecols=pred):
             d = dict.fromkeys(chunk.select_dtypes(np.int64).columns, np.int8)
             d['PATIENT_ID']=np.int64
             ignore=[]
@@ -94,7 +88,7 @@ def load(filename,directory=DATAPATH,predictors=None, all_EDCs=True):
                     all_codes=[v.split(' ') for v in data[column].values]
                     all_codes=[item for sublist in all_codes for item in sublist if item!=''] #flatten list
                     for code in set(all_codes):
-                        acg[prefix+code]=np.where(code in data[column],np.int8(1),np.int8(0))
+                        acg[prefix+code]=np.where(code in data[column],1,0)
                     print('added ',len(set(all_codes)), 'codes')
         break 
     print('Loaded in ',time.time()-t0,' seconds')

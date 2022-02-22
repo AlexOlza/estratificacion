@@ -27,6 +27,9 @@ ACGINDPRIVFILES={2016:'ing2016-2017ActivosIndPriv.csv',
 ALLEDCFILES={2016:'additional_edcs2016.csv',
              2017:'additional_edcs2017.csv'}
 
+FULLACGFILES={2016:'fullacgs2016.csv',
+             2017:'fullacgs2017.csv'}
+
 """VERBOSITY SETTINGS"""
 VERBOSE=True 
 TRACEBACK=False #EXTREME VERBOSITY 
