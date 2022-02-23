@@ -20,6 +20,11 @@ from python_settings import settings as config
 def configure(configname=None,**kwargs):
     if config.configured and (not configname):
         print('Already configured with configname ',config.CONFIGNAME)
+        TRACEBACK=kwargs.get('TRACEBACK', config.TRACEBACK)
+        if TRACEBACK:
+            import sys
+            sys.setprofile(tracefunc)
+        makeAllPaths()
         return None
     if not configname:
         configname=input('Enter configuration json file path: ')
@@ -35,6 +40,9 @@ def configure(configname=None,**kwargs):
         conf=Struct(**configuration)
         conf.TRACEBACK=kwargs.get('TRACEBACK', conf.TRACEBACK)
         conf.VERBOSE=kwargs.get('VERBOSE',conf.VERBOSE)
+        if conf.TRACEBACK:
+            import sys
+            sys.setprofile(tracefunc)
     else:
         import importlib
         importlib.invalidate_caches()
@@ -45,9 +53,7 @@ def configure(configname=None,**kwargs):
     if not config.configured:
         config.configure(conf) # configure() receives a python module
     assert config.configured
-    if config.TRACEBACK:
-        import sys
-        sys.setprofile(tracefunc)
+    makeAllPaths()
     return configuration
 
 # configuration=configure()
