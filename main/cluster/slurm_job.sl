@@ -21,8 +21,7 @@ echo "START python"
 date +"%F %T" 
 module load Python/3.8.6-GCCcore-10.2.0
 module load python-settings/0.2.2-GCCcore-10.2.0-Python-3.8.6
-module load SciPy-bundle/2020.11-foss-2020b
-module load scikit-learn/0.23.2-foss-2020b
+module load SciPy-bundle/2020.11-foss-2020b-skrebate #INCLUDES scikit-learn 0.24
 
 srun python $SCRIPT.py $ALGORITHM $EXPERIMENT
 
