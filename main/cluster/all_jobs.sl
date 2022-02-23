@@ -6,6 +6,7 @@ read -a experiments
 echo "Type algorithm names separated by a blank space"
 read -a algorithms
 echo $experiments
+echo $algorithms
 for e in "${!experiments[@]}" ### loop through index
 do
    for a  in "${!algorithms[@]}" ### loop through index
@@ -13,7 +14,7 @@ do
         exp=${experiments[$e]} 
         alg=${algorithms[$a]}
 	scr=$alg
-        if [[ $alg==nested* ]]; then
+        if [[ "$alg" == *"nested"* ]]; then
 		alg="logistic"
 	fi
 
