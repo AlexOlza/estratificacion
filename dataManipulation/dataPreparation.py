@@ -24,7 +24,7 @@ from python_settings import settings as config
 import configurations.utility as util
 configuration=util.configure()
 from dataManipulation.generarTablasIngresos import createYearlyDataFrames, loadIng,assertMissingCols, report_transform
-from dataManipulation.generarTablasVariables import prepare,resourceUsageDataFrames,load
+from dataManipulation.generarTablasVariables import prepare,resourceUsageDataFrames,load, create_fullacgfiles
 # from matplotlib_venn import venn2
 def listIntersection(a,b): return list(set(a) & set(b))
 # FIXME not robust!!!
@@ -61,7 +61,13 @@ def getData(yr,columns=config.COLUMNS,previousHosp=config.PREVIOUSHOSP,
         elif ('COSTE_TOTAL_ANO2' in columns):
             predictors=predictors+'|COSTE_TOTAL_ANO2'
             response='COSTE_TOTAL_ANO2'
-        acg=load(filename=config.ACGFILES[yr],predictors=predictors)
+        if fullEDCs:
+            acg=create_fullacgfiles(config.FULLACGFILES[yr],yr,directory=config.DATAPATH,
+                    predictors=predictors)
+            coste=load(filename=config.ACGFILES[yr],predictors=r'PATIENT_ID|COSTE_TOTAL_ANO2')
+            acg=pd.merge(acg,coste,on='PATIENT_ID')
+        else:
+            acg=load(filename=config.ACGFILES[yr],predictors=predictors)
         print('not opening allhospfile')
         return (acg.drop(response,axis=1),acg[['PATIENT_ID',response]])
 
@@ -91,6 +97,9 @@ def getData(yr,columns=config.COLUMNS,previousHosp=config.PREVIOUSHOSP,
         df16=resourceUsageDataFrames(yr)[yr]
         full16=prepare(df16,indicePrivacion=config.INDICEPRIVACION,yr=yr,verbose=config.VERBOSE,predictors=predictors)
         del df16
+    elif fullEDCs:
+        full16=create_fullacgfiles(config.FULLACGFILES[yr],yr,directory=config.DATAPATH,
+                    predictors=predictors)
     else:
         full16=load(filename=config.ACGFILES[yr],predictors=predictors)
    
