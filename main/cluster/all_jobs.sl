@@ -23,7 +23,7 @@ do
         read -t 7 -n1 -p "Launch experiment  ${exp} with algorithm ${alg} and script ${scr}? [Y/n]" consent 
         [ -z "$consent" ] && consent="Y" #If no response, consent=Yes
         case "$consent" in 
-        [yY]) sbatch --output=$out --error=$err --job-name=$jobname --export=ALL, SCRIPT=$scr,ALGORITHM=$alg,EXPERIMENT=$exp slurm_job.sl ;;
+        [yY]) sbatch --output=$out --error=$err --job-name=$jobname --export=ALL,SCRIPT=$scr,ALGORITHM=$alg,EXPERIMENT=$exp slurm_job.sl ;;
 
         ?) echo "   ";;
         esac
