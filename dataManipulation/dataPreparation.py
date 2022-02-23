@@ -69,7 +69,8 @@ def getData(yr,columns=config.COLUMNS,previousHosp=config.PREVIOUSHOSP,
         else:
             acg=load(filename=config.ACGFILES[yr],predictors=predictors)
         print('not opening allhospfile')
-        return (acg.drop(response,axis=1),acg[['PATIENT_ID',response]])
+        X=acg.drop(response,axis=1)
+        return(X.reindex(sorted(X.columns), axis=1),acg[['PATIENT_ID',response]])#Prevents bug #1
 
     cols=columns.copy() #FIXME find better approach
     t0=time.time()
