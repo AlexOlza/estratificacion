@@ -25,8 +25,9 @@ import re
 
 from python_settings import settings as config
 import configurations.utility as util
+util.configure(TRACEBACK=True)
 from modelEvaluation.predict import predict, generate_filename
-util.configure('configurations.local.logistic')
+
 
 from dataManipulation.dataPreparation import getData
 #%%

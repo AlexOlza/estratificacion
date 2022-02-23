@@ -65,7 +65,7 @@ def predict_save(yr,model,model_name,X,y,**kwargs):
                 print(i,'/',n)
             chunk = X.iloc[index_slice] # your dataframe chunk ready for use
             ychunk=y.iloc[index_slice]
-            if config.EXPERIMENT=='cost':
+            if 'COSTE_TOTAL_ANO2' in config.COLUMNS:
                 predictions=model.predict(chunk.drop('PATIENT_ID',axis=1)) # predicted cost
             else:
                 predictions=model.predict_proba(chunk.drop('PATIENT_ID',axis=1))[:,1] #Probab of hospitalization
@@ -89,7 +89,7 @@ def predict(model_name,experiment_name,year,**kwargs):
         predict_save(year, model,model_name, Xx, Yy, predictors=predictors, verbose=False)
     probs=pd.read_csv(predFilename)
     print(probs.head())
-    if config.EXPERIMENT=='cost':
+    if 'COSTE_TOTAL_ANO2' in config.COLUMNS:
         score=r2_score(probs.OBS, probs.PRED)
     else:
         score=roc_auc_score(np.where(probs.OBS>=1,1,0), probs.PRED)
