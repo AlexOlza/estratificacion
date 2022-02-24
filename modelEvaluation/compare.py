@@ -25,8 +25,9 @@ import re
 
 from python_settings import settings as config
 import configurations.utility as util
+util.configure(TRACEBACK=True)
 from modelEvaluation.predict import predict, generate_filename
-util.configure('configurations.local.logistic')
+
 
 from dataManipulation.dataPreparation import getData
 #%%
@@ -45,7 +46,7 @@ def detect_latest(available_models):
     algorithms=['_'.join(re.findall('[^\d+_\d+]+',model)) for model in available_models]
     df=pd.DataFrame(list(zip(algorithms,ids,[i for i in range(len(ids))])),columns=['algorithm','id','i'])
     selected=df.loc[~(df.algorithm.str.startswith('nested'))].groupby(['algorithm']).apply(lambda x: x.loc[x.id == x.id.max()].i).to_numpy()
-    selected=[available_models[i] for i in selected]
+    selected=[available_models[i] for i in selected.ravel()]
     print(selected)
     return(selected)
 
@@ -108,7 +109,7 @@ def performance(pred,obs,K):
     print('Observed cutoff value ({0} values): {1}'.format(K, orderedObs[K-1]))
     newpred=pred>=cutoff
     print('Length of selected list ',sum(newpred))
-    if config.EXPERIMENT=='cost': #maybe better: not all([int(i)==i for i in obs])
+    if 'COSTE_TOTAL_ANO2' in config.COLUMNS: #maybe better: not all([int(i)==i for i in obs])
         newobs=obs>=orderedObs[K-1]
     else:
         newobs=np.where(obs>=1,1,0) #Whether the patient had ANY admission 
@@ -121,7 +122,6 @@ def performance(pred,obs,K):
     print('Recall, Positive Predictive Value = ',recall,ppv)
     return(recall,ppv)
 #%%
- 
 if __name__=='__main__':
     year=int(input('YEAR TO PREDICT: '))
     nested=eval(input('NESTED MODEL COMPARISON? (True/False) '))
@@ -142,4 +142,4 @@ if __name__=='__main__':
     else:
         variable_groups=['','','','']
         score,recall,ppv=[list(array.values()) for array in list(metrics.values())]
-        print(pd.DataFrame(list(zip(selected,variable_groups,score,recall,ppv)),columns=['Model','Predictors']+list(metrics.keys())).to_markdown(index=False))
+        print(pd.DataFrame(list(zip(selected,variable_groups,score,recall,ppv)),columns=['Model','Predictors']+list(metrics.keys())).to_markdown(index=False,))
