@@ -1,7 +1,21 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import sys
-experiment='configurations.'+sys.argv[2]
+import argparse
+
+parser = argparse.ArgumentParser(description='Train HGB algorithm and save model')
+parser.add_argument('chosen_config', type=str,
+                    help='The name of the config file (without .py), which must be located in configurations/cluster.')
+parser.add_argument('experiment',
+                    help='The name of the experiment config file (without .py), which must be located in configurations.')
+parser.add_argument('--seed', metavar='seed',type=int, default=argparse.SUPPRESS,
+                    help='Random seed')
+parser.add_argument('--model-name', metavar='model_name',type=str, default=argparse.SUPPRESS,
+                    help='Random seed')
+parser.add_argument('--n-iter', metavar='n_iter',type=int, default=argparse.SUPPRESS,
+                    help='Number of iterations for the random grid search (hyperparameter tuning)')
+args = parser.parse_args()
+experiment='configurations.'+args.experiment
 import importlib
 importlib.invalidate_caches()
 
@@ -32,6 +46,12 @@ TRACEBACK=False
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 IMPORTS=["from sklearn.ensemble import RandomForestClassifier","from sklearn.model_selection import RandomizedSearchCV"]
+
+if hasattr(args, 'seed'):
+    seed=args.seed
+else:
+    seed=SEED #imported from default configuration
+
 FOREST=RandomForestClassifier(criterion='gini',
                               min_weight_fraction_leaf=0.0, 
                               max_leaf_nodes=None, 
@@ -40,7 +60,7 @@ FOREST=RandomForestClassifier(criterion='gini',
                               bootstrap=True, 
                               oob_score=True, 
                               n_jobs=-1,
-                              random_state=SEED)
+                              random_state=seed)
 
 
 # Number of trees in random forest

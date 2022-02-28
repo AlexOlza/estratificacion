@@ -18,6 +18,8 @@ parser.add_argument('--seed', metavar='seed',type=int, default=argparse.SUPPRESS
                     help='Random seed')
 parser.add_argument('--model-name', metavar='model_name',type=str, default=argparse.SUPPRESS,
                     help='Custom model name to save (provide without extension nor directory)')
+parser.add_argument('--n-iter', metavar='n_iter',type=int, default=argparse.SUPPRESS,
+                    help='Number of iterations for the random grid search (hyperparameter tuning)')
 args = parser.parse_args()
 
 chosen_config='configurations.cluster.'+args.chosen_config
@@ -30,6 +32,8 @@ if not config.configured:
 assert config.configured 
 import configurations.utility as util
 util.makeAllPaths()
+seed= args.seed if hasattr(args, 'seed') else config.SEED
+n_iter= args.n_iter if hasattr(args, 'n_iter') else config.N_ITER
 #%%
 """ BEGGINNING """
 from dataManipulation.dataPreparation import getData
@@ -38,11 +42,6 @@ import pandas as pd
 import itertools
 from sklearn.model_selection import RandomizedSearchCV
 
-if hasattr(args, 'seed'):
-    seed=args.seed
-else:
-    seed=config.seed
-    
 np.random.seed(seed)
 
 pred16,y17=getData(2016)
@@ -61,6 +60,8 @@ random_indices = np.random.choice(noing_indices, half_sample_size,
 X=pd.concat([pred16.loc[random_indices],pred16.loc[ing_indices]])
 na_indices=X[X.isna().any(axis=1)].index
 X.drop(na_indices,axis=0,inplace=True)
+print('first IDs (X)')
+print(X.head().PATIENT_ID)
 try:
     X.drop('PATIENT_ID',axis=1,inplace=True)
 except:
@@ -68,6 +69,8 @@ except:
 
 y=pd.concat([y17.loc[random_indices],y17.loc[ing_indices]])
 y.drop(na_indices,axis=0,inplace=True)
+print('first IDs (y)')
+print(y.head().PATIENT_ID)
 y=np.where(y[config.COLUMNS]>=1,1,0)
 y=y.ravel()
 print('Dropping NA. Amount: ',len(na_indices))
@@ -76,7 +79,7 @@ print('Sample size ',len(X))
 
 forest = RandomizedSearchCV(estimator = config.FOREST, 
                                param_distributions = config.RANDOM_GRID,
-                               n_iter = config.N_ITER,
+                               n_iter = n_iter,
                                cv = config.CV, 
                                verbose=0,
                                random_state=seed,
@@ -85,7 +88,10 @@ forest.fit(X,y)
 
 #%%
 """ SAVE TRAINED MODEL """
-util.savemodel(config,forest.best_estimator_)
+if hasattr(args, 'model_name'):
+    util.savemodel(config,forest.best_estimator_,name=args.model_name)
+else:
+    util.savemodel(config,forest.best_estimator_) 
 
 """ PERFORMANCE """
 from sklearn.metrics import roc_auc_score

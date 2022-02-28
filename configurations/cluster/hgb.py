@@ -12,6 +12,8 @@ parser.add_argument('--seed', metavar='seed',type=int, default=argparse.SUPPRESS
                     help='Random seed')
 parser.add_argument('--model-name', metavar='model_name',type=str, default=argparse.SUPPRESS,
                     help='Random seed')
+parser.add_argument('--n-iter', metavar='n_iter',type=int, default=argparse.SUPPRESS,
+                    help='Number of iterations for the random grid search (hyperparameter tuning)')
 args = parser.parse_args()
 experiment='configurations.'+args.experiment
 import importlib
@@ -45,14 +47,18 @@ import numpy as np
 from sklearn.experimental import enable_hist_gradient_boosting 
 from sklearn.ensemble import HistGradientBoostingClassifier
 IMPORTS=[]
-
+if hasattr(args, 'seed'):
+    seed=args.seed
+else:
+    seed=SEED #imported from default configuration
+    
 FOREST=HistGradientBoostingClassifier(loss='auto', max_bins=255,
                                    # categorical_features=cat,
                                    monotonic_cst=None,
                                    warm_start=False, early_stopping=False,
                                    scoring='loss', validation_fraction=0.1,
                                    n_iter_no_change=10, tol=1e-07,
-                                   random_state=SEED)
+                                   random_state=seed)
 
 
 learning_rate=[0.01,0.1,0.3,0.5,0.5,1.0]
