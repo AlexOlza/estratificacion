@@ -1,16 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-ANOMALIAS: HAY PACIENTES QUE INGRESARON Y NO TIENEN ACGS
-
-len(set(full17.PATIENT_ID)-set(ingT[2017].PATIENT_ID))
-Out[78]: 2074286 personas NO ingresaron en 2017
-len(set(ingT[2017].PATIENT_ID))
-Out[81]: 187335 personas sí ingresaron en 2017
-
-len(set(ingT[2017].PATIENT_ID)-set(full17.PATIENT_ID))
-Out[80]: 20345 personas ingresaron pero no tenemos sus ACG!!!!!!
-
 Created on Wed Nov 17 11:20:27 2021
 
 @author: aolza

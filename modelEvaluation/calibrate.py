@@ -16,7 +16,7 @@ from python_settings import settings as config
 import configurations.utility as util
 from modelEvaluation.predict import predict, generate_filename
 from modelEvaluation.compare import detect_models, detect_latest
-util.configure('configurations.local.logistic')
+util.configure('configurations.cluster.logistic')
 from dataManipulation.dataPreparation import getData
 from modelEvaluation.reliableDiagram import reliabilityConsistency
 np.random.seed(config.SEED)
@@ -164,7 +164,7 @@ def plot(p):
 if __name__=='__main__':
         
     year=int(input('YEAR YOU WANT TO CALIBRATE:'))
-    model_name=input('MODEL NAME (example: logistic20220118_132612): ')
+    # model_name=input('MODEL NAME (example: logistic20220118_132612): ')
     
     pastX,pastY=getData(year-2)
     presentX,presentY=getData(year-1)

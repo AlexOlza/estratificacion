@@ -9,26 +9,6 @@ Created on Wed Nov 10 15:58:34 2021
 
 @author: aolza
 
-PROBLEMAS:
-    1) HAY 11868 PACIENTES SIN INFO DE DIAL-URGENCIAS-CONSULTAS EN 2016 Y 15919 EN 2017
-    intu16  has  759  new ids out of  1804
-    pxmayor16  has  5271  new ids out of  98070
-    cirmayor16  has  5645  new ids out of  108340
-    diurco16  has  0  new ids out of  2255111
-    cancer16  has  2794  new ids out of  41708
-    --------------------------
-    intu17  has  707  new ids out of  1640
-    pxmayor17  has  5297  new ids out of  99527
-    cirmayor17  has  5652  new ids out of  109412
-    diurco17  has  0  new ids out of  2256287
-    cancer17  has  3004  new ids out of  48043
-    
-    
-    ALL INTERSECTAR CON LOS ACG LOS NA DE DIURCO DESAPARECEN:
-        Significa que los datos de diurco fueron extraídos aprox en las mismas
-        fechas que los acgs, y el resto de variables más tarde, así que contienen
-        más pacientes que los que utilizabamos hasta ahora???
-
 """
 from python_settings import settings as config
 import configurations.utility as util
