@@ -7,7 +7,20 @@ Created on Fri Dec 31 12:55:09 2021
 """
 import sys
 sys.path.append('/home/aolza/Desktop/estratificacion/')
-chosen_config='configurations.cluster.'+sys.argv[1]
+import argparse
+
+parser = argparse.ArgumentParser(description='Train HGB algorithm and save model')
+parser.add_argument('chosen_config', type=str,
+                    help='The name of the config file (without .py), which must be located in configurations/cluster.')
+parser.add_argument('experiment',
+                    help='The name of the experiment config file (without .py), which must be located in configurations.')
+parser.add_argument('--seed', metavar='seed',type=int, default=argparse.SUPPRESS,
+                    help='Random seed')
+parser.add_argument('--model-name', metavar='model_name',type=str, default=argparse.SUPPRESS,
+                    help='Custom model name to save (provide without extension nor directory)')
+args = parser.parse_args()
+
+chosen_config='configurations.cluster.'+args.chosen_config
 import importlib
 importlib.invalidate_caches()
 from python_settings import settings as config
@@ -25,7 +38,12 @@ import pandas as pd
 import itertools
 from sklearn.model_selection import RandomizedSearchCV
 
-np.random.seed(config.SEED)
+if hasattr(args, 'seed'):
+    seed=args.seed
+else:
+    seed=config.seed
+    
+np.random.seed(seed)
 
 pred16,y17=getData(2016)
 assert len(config.COLUMNS)==1, 'This model is built for a single response variable! Modify config.COLUMNS'
@@ -61,7 +79,7 @@ forest = RandomizedSearchCV(estimator = config.FOREST,
                                n_iter = config.N_ITER,
                                cv = config.CV, 
                                verbose=0,
-                               random_state=config.SEED,
+                               random_state=seed,
                                n_jobs =-1)
 forest.fit(X,y)
 

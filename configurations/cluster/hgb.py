@@ -1,7 +1,19 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import sys
-experiment='configurations.'+sys.argv[2]
+import argparse
+
+parser = argparse.ArgumentParser(description='Train HGB algorithm and save model')
+parser.add_argument('chosen_config', type=str,
+                    help='The name of the config file (without .py), which must be located in configurations/cluster.')
+parser.add_argument('experiment',
+                    help='The name of the experiment config file (without .py), which must be located in configurations.')
+parser.add_argument('--seed', metavar='seed',type=int, default=argparse.SUPPRESS,
+                    help='Random seed')
+parser.add_argument('--model-name', metavar='model_name',type=str, default=argparse.SUPPRESS,
+                    help='Random seed')
+args = parser.parse_args()
+experiment='configurations.'+args.experiment
 import importlib
 importlib.invalidate_caches()
 
