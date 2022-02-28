@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-import sys
+import re
 import argparse
+import importlib
+import numpy as np
+import os
+from sklearn.experimental import enable_hist_gradient_boosting 
+from sklearn.ensemble import HistGradientBoostingClassifier
 
 parser = argparse.ArgumentParser(description='Train HGB algorithm and save model')
 parser.add_argument('chosen_config', type=str,
@@ -15,8 +20,8 @@ parser.add_argument('--model-name', metavar='model_name',type=str, default=argpa
 parser.add_argument('--n-iter', metavar='n_iter',type=int, default=argparse.SUPPRESS,
                     help='Number of iterations for the random grid search (hyperparameter tuning)')
 args = parser.parse_args()
-experiment='configurations.'+args.experiment
-import importlib
+experiment='configurations.'+re.sub('hyperparameter_variability_','',args.experiment)
+
 importlib.invalidate_caches()
 
 """THIS EMULATES 'from experiment import *' USING IMPORTLIB 
@@ -33,9 +38,9 @@ else:
 globals().update({k: getattr(mdl, k) for k in names}) #brings everything into namespace
 
 from configurations.default import *
-import os
-import sys
 
+if  args.experiment.startswith('hyperparameter_variability'):#required arg, will always be there
+    EXPERIMENT=args.experiment #OVERRIDE (this is the only variable from the imported experiment module that needs to be changed, because it creates model and prediction directories)
 MODELPATH=MODELSPATH+EXPERIMENT+'/'
 ALGORITHM='HGB'
 CONFIGNAME='configHGB.py'
@@ -43,14 +48,7 @@ PREDPATH=os.path.join(OUTPATH,EXPERIMENT)
 TRACEBACK=False
 
 """ SETTINGS FOR THE RANDOM FOREST """
-import numpy as np
-from sklearn.experimental import enable_hist_gradient_boosting 
-from sklearn.ensemble import HistGradientBoostingClassifier
-IMPORTS=[]
-if hasattr(args, 'seed'):
-    seed=args.seed
-else:
-    seed=SEED #imported from default configuration
+seed= args.seed if hasattr(args, 'seed') else SEED#imported from default configuration
     
 FOREST=HistGradientBoostingClassifier(loss='auto', max_bins=255,
                                    # categorical_features=cat,

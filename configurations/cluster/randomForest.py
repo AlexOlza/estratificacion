@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-import sys
+import re
 import argparse
+import importlib
+import numpy as np
+import os
+from sklearn.ensemble import RandomForestClassifier
 
 parser = argparse.ArgumentParser(description='Train HGB algorithm and save model')
 parser.add_argument('chosen_config', type=str,
@@ -11,12 +15,12 @@ parser.add_argument('experiment',
 parser.add_argument('--seed', metavar='seed',type=int, default=argparse.SUPPRESS,
                     help='Random seed')
 parser.add_argument('--model-name', metavar='model_name',type=str, default=argparse.SUPPRESS,
-                    help='Random seed')
+                    help='Custom model name to save (provide without extension nor directory)')
 parser.add_argument('--n-iter', metavar='n_iter',type=int, default=argparse.SUPPRESS,
                     help='Number of iterations for the random grid search (hyperparameter tuning)')
 args = parser.parse_args()
-experiment='configurations.'+args.experiment
-import importlib
+experiment='configurations.'+re.sub('hyperparameter_variability_','',args.experiment)
+
 importlib.invalidate_caches()
 
 """THIS EMULATES 'from experiment import *' USING IMPORTLIB 
@@ -33,9 +37,9 @@ else:
 globals().update({k: getattr(mdl, k) for k in names}) #brings everything into namespace
 
 from configurations.default import *
-import os
-import sys
 
+if  args.experiment.startswith('hyperparameter_variability'):#required arg
+    EXPERIMENT=args.experiment #OVERRIDE (this is the only variable from the imported experiment module that needs to be changed, because it creates moddel and prediction directories)
 MODELPATH=MODELSPATH+EXPERIMENT+'/'
 ALGORITHM='randomForest'
 CONFIGNAME='configRandomForest.py'
@@ -43,14 +47,9 @@ PREDPATH=os.path.join(OUTPATH,EXPERIMENT)
 TRACEBACK=False
 
 """ SETTINGS FOR THE RANDOM FOREST """
-import numpy as np
-from sklearn.ensemble import RandomForestClassifier
 IMPORTS=["from sklearn.ensemble import RandomForestClassifier","from sklearn.model_selection import RandomizedSearchCV"]
 
-if hasattr(args, 'seed'):
-    seed=args.seed
-else:
-    seed=SEED #imported from default configuration
+seed= args.seed if hasattr(args, 'seed') else SEED #imported from default configuration
 
 FOREST=RandomForestClassifier(criterion='gini',
                               min_weight_fraction_leaf=0.0, 
