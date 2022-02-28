@@ -18,6 +18,9 @@ parser.add_argument('--seed', metavar='seed',type=int, default=argparse.SUPPRESS
                     help='Random seed')
 parser.add_argument('--model-name', metavar='model_name',type=str, default=argparse.SUPPRESS,
                     help='Custom model name to save (provide without extension nor directory)')
+parser.add_argument('--n-iter', metavar='n_iter',type=int, default=argparse.SUPPRESS,
+                    help='Number of iterations for the random grid search (hyperparameter tuning)')
+
 args = parser.parse_args()
 
 chosen_config='configurations.cluster.'+args.chosen_config
