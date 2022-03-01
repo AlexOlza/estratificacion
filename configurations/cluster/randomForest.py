@@ -12,8 +12,10 @@ parser.add_argument('chosen_config', type=str,
                     help='The name of the config file (without .py), which must be located in configurations/cluster.')
 parser.add_argument('experiment',
                     help='The name of the experiment config file (without .py), which must be located in configurations.')
-parser.add_argument('--seed', metavar='seed',type=int, default=argparse.SUPPRESS,
-                    help='Random seed')
+parser.add_argument('--seed-hparam', metavar='seed_hparam',type=int, default=argparse.SUPPRESS,
+                    help='Random seed for hyperparameter tuning')
+parser.add_argument('--seed-sampling', metavar='seed_sampling',type=int, default=argparse.SUPPRESS,
+                    help='Random seed for undersampling')
 parser.add_argument('--model-name', metavar='model_name',type=str, default=argparse.SUPPRESS,
                     help='Custom model name to save (provide without extension nor directory)')
 parser.add_argument('--n-iter', metavar='n_iter',type=int, default=argparse.SUPPRESS,
@@ -49,7 +51,8 @@ TRACEBACK=False
 """ SETTINGS FOR THE RANDOM FOREST """
 IMPORTS=["from sklearn.ensemble import RandomForestClassifier","from sklearn.model_selection import RandomizedSearchCV"]
 
-seed= args.seed if hasattr(args, 'seed') else SEED #imported from default configuration
+seed_sampling= args.seed_sampling if hasattr(args, 'seed_sampling') else SEED #imported from default configuration
+seed_hparam= args.seed_hparam if hasattr(args, 'seed_hparam') else SEED
 
 FOREST=RandomForestClassifier(criterion='gini',
                               min_weight_fraction_leaf=0.0, 
@@ -59,7 +62,7 @@ FOREST=RandomForestClassifier(criterion='gini',
                               bootstrap=True, 
                               oob_score=True, 
                               n_jobs=-1,
-                              random_state=seed)
+                              random_state=seed_hparam)
 
 
 # Number of trees in random forest

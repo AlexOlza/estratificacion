@@ -14,8 +14,10 @@ parser.add_argument('chosen_config', type=str,
                     help='The name of the config file (without .py), which must be located in configurations/cluster.')
 parser.add_argument('experiment',
                     help='The name of the experiment config file (without .py), which must be located in configurations.')
-parser.add_argument('--seed', metavar='seed',type=int, default=argparse.SUPPRESS,
-                    help='Random seed')
+parser.add_argument('--seed-hparam', metavar='seed',type=int, default=argparse.SUPPRESS,
+                    help='Random seed for hyperparameter tuning')
+parser.add_argument('--seed-sampling', metavar='seed',type=int, default=argparse.SUPPRESS,
+                    help='Random seed for undersampling')
 parser.add_argument('--model-name', metavar='model_name',type=str, default=argparse.SUPPRESS,
                     help='Custom model name to save (provide without extension nor directory)')
 parser.add_argument('--n-iter', metavar='n_iter',type=int, default=argparse.SUPPRESS,
@@ -34,7 +36,9 @@ assert config.configured
 # from configurations.cluster import configRandomForest as randomForest_settings
 import configurations.utility as util
 util.makeAllPaths()
-seed= args.seed if hasattr(args, 'seed') else config.SEED
+
+seed_sampling= args.seed_sampling if hasattr(args, 'seed_sampling') else config.SEED #imported from default configuration
+seed_hparam= args.seed_hparam if hasattr(args, 'seed_hparam') else config.SEED
 n_iter= args.n_iter if hasattr(args, 'n_iter') else config.N_ITER
 #%%
 """ BEGGINNING """
@@ -46,7 +50,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.model_selection import RandomizedSearchCV
 from sklearn.ensemble import RandomForestClassifier
 
-np.random.seed(seed)
+np.random.seed(seed_sampling)
 
 pred16,y17=getData(2016)
 assert len(config.COLUMNS)==1, 'This model is built for a single response variable! Modify config.COLUMNS'
@@ -86,12 +90,13 @@ if not isinstance(config.FOREST,RandomForestClassifier):
 else:
     print('exec not needed')
     estimator=config.FOREST
+np.random.seed(seed_hparam)
 forest = RandomizedSearchCV(estimator = estimator, 
                                param_distributions = config.RANDOM_GRID,
                                n_iter = n_iter,
                                cv = config.CV, 
                                verbose=0,
-                               random_state=seed,
+                               random_state=seed_hparam,
                                n_jobs =-1)
 forest.fit(X,y)
 #%%
