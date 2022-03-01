@@ -101,5 +101,8 @@ forest = RandomizedSearchCV(estimator = estimator,
 forest.fit(X,y)
 #%%
 """ SAVE TRAINED MODEL """
-util.savemodel(config,forest.best_estimator_)
+if hasattr(args, 'model_name'):
+    util.savemodel(config,forest.best_estimator_,name=args.model_name)
+else:
+    util.savemodel(config,forest.best_estimator_) 
 #
