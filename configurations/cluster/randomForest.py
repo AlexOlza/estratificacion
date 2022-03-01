@@ -21,7 +21,7 @@ parser.add_argument('--model-name', metavar='model_name',type=str, default=argpa
 parser.add_argument('--n-iter', metavar='n_iter',type=int, default=argparse.SUPPRESS,
                     help='Number of iterations for the random grid search (hyperparameter tuning)')
 args = parser.parse_args()
-experiment='configurations.'+re.sub('hyperparameter_variability_','',args.experiment)
+experiment='configurations.'+re.sub('hyperparameter_|undersampling_|full_|variability_|fixsample_','',args.experiment)
 
 importlib.invalidate_caches()
 
@@ -40,7 +40,7 @@ globals().update({k: getattr(mdl, k) for k in names}) #brings everything into na
 
 from configurations.default import *
 
-if  args.experiment.startswith('hyperparameter_variability'):#required arg
+if  args.experiment!=experiment:#required arg
     EXPERIMENT=args.experiment #OVERRIDE (this is the only variable from the imported experiment module that needs to be changed, because it creates moddel and prediction directories)
 MODELPATH=MODELSPATH+EXPERIMENT+'/'
 ALGORITHM='randomForest'

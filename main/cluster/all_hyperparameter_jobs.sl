@@ -1,6 +1,6 @@
 #!/bin/bash
 
-mkdir -p output/hyperparameter-variability
+mkdir -p output/hyperparameter-variability-fixsample
 echo "Type experiment names separated by a blank space"
 read -a experiments
 echo "Type algorithm names separated by a blank space"
@@ -17,8 +17,8 @@ do
         exp=${experiments[$e]} 
         alg=${algorithms[$a]}
 	jobname=${alg:0:3}${s}
-        out=$(pwd)"/output/hyperparameter-variability/OUT${alg}_$s.txt"
-	err=$(pwd)"/output/hyperparameter-variability/ERR${alg}_$s.txt"
+        out=$(pwd)"/output/hyperparameter-variability-fixsample/OUT${alg}_$s.txt"
+	err=$(pwd)"/output/hyperparameter-variability-fixsample/ERR${alg}_$s.txt"
         sbatch --output=$out --error=$err --job-name=$jobname --export=ALL,ALGORITHM=$alg,EXPERIMENT=$exp,SEED=$s,SAMP_SEED=$sampling_seed,N_ITER=$n_iter hyperparameter_job.sl
    done
 echo ""
