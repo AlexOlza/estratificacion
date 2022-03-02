@@ -40,6 +40,8 @@ def configure(configname=None,**kwargs):
         conf=Struct(**configuration)
         conf.TRACEBACK=kwargs.get('TRACEBACK', conf.TRACEBACK)
         conf.VERBOSE=kwargs.get('VERBOSE',conf.VERBOSE)
+        if not config.configured:
+            config.configure(conf) # configure() receives a python module
         if conf.TRACEBACK:
             import sys
             sys.setprofile(tracefunc)
