@@ -125,11 +125,14 @@ def performance(pred,obs,K):
 if __name__=='__main__':
     year=int(input('YEAR TO PREDICT: '))
     nested=eval(input('NESTED MODEL COMPARISON? (True/False) '))
+    all_models=eval(input('COMPARE ALL MODELS? (True/False) '))
     X,y=getData(year-1)
     available_models=detect_models()
     if nested:
         all_predictions,metrics=compare_nested(available_models,X,y,year)
         selected=sorted([m for m in available_models if ('nested' in m)])
+    elif all_models:
+        all_predictions,metrics=compare(available_models,X,y,year)
     else:
         selected=detect_latest(available_models)
         all_predictions,metrics=compare(selected,X,y,year)
