@@ -25,9 +25,9 @@ except:
 sys.path.append('/home/aolza/Desktop/estratificacion/')
 from python_settings import settings as config
 from configurations.utility import configure
-
-configname='/home/aolza/Desktop/estratificacion/configurations/used/{0}.json'.format(model_name)
-configuration=configure(configname,TRACEBACK=False, VERBOSE=True)
+if not config.configured:
+    configname='/home/aolza/Desktop/estratificacion/configurations/used/{0}.json'.format(model_name)
+    configuration=configure(configname,TRACEBACK=False, VERBOSE=True)
 try:
     experiment_name=config.EXPERIMENT
 except:

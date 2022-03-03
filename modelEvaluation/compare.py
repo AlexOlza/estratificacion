@@ -22,6 +22,8 @@ Created on Tue Dec 14 16:13:19 2021
 import pandas as pd
 from pathlib import Path
 import re
+import joblib as job
+import json
 
 from python_settings import settings as config
 import configurations.utility as util
@@ -75,8 +77,8 @@ def compare(selected,X,y,year,experiment_name=Path(config.MODELPATH).parts[-1],*
         all_predictions.rename(columns={'PRED': 'PRED_{0}'.format(m)}, inplace=True)
         metrics['Recall_{0}'.format(K)][m],metrics['PPV_{0}'.format(K)][m]=performance(all_predictions['PRED_{0}'.format(m)],all_predictions.OBS,K)
         
-        selected=[m for m in available_models if ('nested' in m)]
-        selected.sort()
+        # selected=[m for m in available_models if ('nested' in m)]
+        # selected.sort()
     return(all_predictions,metrics)
 def update_all_preds(all_predictions,selected):
     #Save if necessary
@@ -121,6 +123,37 @@ def performance(pred,obs,K):
     ppv=c[1][1]/(c[0][1]+c[1][1])
     print('Recall, Positive Predictive Value = ',recall,ppv)
     return(recall,ppv)
+
+def parameter_distribution(models,**args):
+    model_dict,grid,params,times_selected={},{},{},{}
+    for m in models:
+        print(m)
+        try:
+            grid[m]=json.load(open(config.USEDCONFIGPATH+config.EXPERIMENT+'/hgb_19.json'))["RANDOM_GRID"]
+        except KeyError:
+            print('No RANDOM_GRID found in config :(')
+        try:
+            model_dict[m]=job.load(config.MODELPATH+m+'.joblib')
+            params[m]=model_dict[m].get_params()
+        except FileNotFoundError:
+            print('Model not found :(')
+    print(params)
+    print(model_dict)
+    for parameter,options in grid[m].items():
+        times_selected[parameter]={}
+        for m in models:
+            opt=params[m][parameter]
+            try:
+                times_selected[parameter][opt]+=1
+            except KeyError:
+                times_selected[parameter][opt]=1
+    for parameter in times_selected.keys():
+        times_selected[parameter]=pd.DataFrame(times_selected[parameter],
+                                                         index=[0]) #fixes ValueError: If using all scalar values, you must pass an index
+        plt.figure()
+        times_selected[parameter].plot(kind='bar',title=parameter, rot=0)
+def performance_distribution(models):
+    pass #TODO  write
 #%%
 if __name__=='__main__':
     year=int(input('YEAR TO PREDICT: '))
@@ -133,6 +166,7 @@ if __name__=='__main__':
         selected=sorted([m for m in available_models if ('nested' in m)])
     elif all_models:
         all_predictions,metrics=compare(available_models,X,y,year)
+        selected=available_models
     else:
         selected=detect_latest(available_models)
         all_predictions,metrics=compare(selected,X,y,year)
@@ -143,6 +177,17 @@ if __name__=='__main__':
         score,recall,ppv=[list(array.values()) for array in list(metrics.values())]
         print(pd.DataFrame(list(zip(selected,variable_groups,score,recall,ppv)),columns=['Model','Predictors']+list(metrics.keys())).to_markdown(index=False))
     else:
-        variable_groups=['','','','']
+        variable_groups=['']*len(selected)
         score,recall,ppv=[list(array.values()) for array in list(metrics.values())]
-        print(pd.DataFrame(list(zip(selected,variable_groups,score,recall,ppv)),columns=['Model','Predictors']+list(metrics.keys())).to_markdown(index=False,))
+        df=pd.DataFrame(list(zip(selected,variable_groups,score,recall,ppv)),columns=['Model','Predictors']+list(metrics.keys()))
+        print(df.to_markdown(index=False,))
+    ax=[0]*len(metrics)
+    for i,m in enumerate(list(metrics.keys())):
+        ax[i]=df[m].plot.box()
+        # print(i,m)
+    import matplotlib.pyplot as plt
+    
+    for column in df.select_dtypes(exclude=['object']):
+        plt.figure()
+        df.boxplot([column])
+    parameter_distribution(selected)
