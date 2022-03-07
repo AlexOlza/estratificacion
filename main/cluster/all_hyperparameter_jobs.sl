@@ -1,8 +1,10 @@
 #!/bin/bash
-
-mkdir -p output/hyperparameter-variability-fixsample
 echo "Type experiment names separated by a blank space"
 read -a experiments
+for exp in "${experiments[@]}" ### loop through values
+do
+mkdir -p output/$exp
+done
 echo "Type algorithm names separated by a blank space"
 read -a algorithms
 seeds=(2  3  5  7  11  13  17  19  23  29  31  37  41  43  47  53  59  61  67  71  73  79  83  89  97  101  103  107  109  113 127 131 137 139 149 151 157 163 167 173) ### the first 40 primes (arbitrarily chosen as the set of seeds)
@@ -17,8 +19,8 @@ do
         exp=${experiments[$e]} 
         alg=${algorithms[$a]}
 	jobname=${alg:0:3}${s}
-        out=$(pwd)"/output/hyperparameter-variability-fixsample/OUT${alg}_$s.txt"
-	err=$(pwd)"/output/hyperparameter-variability-fixsample/ERR${alg}_$s.txt"
+        out=$(pwd)"/output/$e/OUT${alg}_$s.txt"
+	err=$(pwd)"/output/$e/ERR${alg}_$s.txt"
         sbatch --output=$out --error=$err --job-name=$jobname --export=ALL,ALGORITHM=$alg,EXPERIMENT=$exp,SEED=$s,SAMP_SEED=$sampling_seed,N_ITER=$n_iter hyperparameter_job.sl
    done
 echo ""
