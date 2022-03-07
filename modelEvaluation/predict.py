@@ -78,8 +78,13 @@ def predict_save(yr,model,model_name,X,y,**kwargs):
 def predict(model_name,experiment_name,year,**kwargs):
     predictors=kwargs.get('predictors',config.PREDICTORREGEX)
     modelfilename='/home/aolza/Desktop/estratificacion/models/{1}/{0}.joblib'.format(model_name,experiment_name)
-    print('loading model ',model_name)
-    model=job.load(modelfilename)
+    if Path(modelfilename).is_file():
+        print('loading model ',model_name)
+        model=job.load(modelfilename)
+    else:
+        print('Model not found :(')
+        print('missing ',modelfilename)
+        return (None, None)
     Xx=kwargs.get('X',None)
     Yy=kwargs.get('y',None)
     if (not isinstance(Xx,pd.DataFrame)) or (not isinstance(Yy,pd.DataFrame)):
