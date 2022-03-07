@@ -1,8 +1,29 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-import sys
-experiment='configurations.'+sys.argv[2]
+import re
+import argparse
 import importlib
+import numpy as np
+import os
+from sklearn.experimental import enable_hist_gradient_boosting 
+from sklearn.ensemble import HistGradientBoostingClassifier
+
+parser = argparse.ArgumentParser(description='Train HGB algorithm and save model')
+parser.add_argument('chosen_config', type=str,
+                    help='The name of the config file (without .py), which must be located in configurations/cluster.')
+parser.add_argument('experiment',
+                    help='The name of the experiment config file (without .py), which must be located in configurations.')
+parser.add_argument('--seed-hparam', metavar='seed',type=int, default=argparse.SUPPRESS,
+                    help='Random seed for hyperparameter tuning')
+parser.add_argument('--seed-sampling', metavar='seed',type=int, default=argparse.SUPPRESS,
+                    help='Random seed for undersampling')
+parser.add_argument('--model-name', metavar='model_name',type=str, default=argparse.SUPPRESS,
+                    help='Custom model name to save (provide without extension nor directory)')
+parser.add_argument('--n-iter', metavar='n_iter',type=int, default=argparse.SUPPRESS,
+                    help='Number of iterations for the random grid search (hyperparameter tuning)')
+args = parser.parse_args()
+experiment='configurations.'+re.sub('hyperparameter_|undersampling_|full_|variability_|fixsample_','',args.experiment)
+
 importlib.invalidate_caches()
 
 """THIS EMULATES 'from experiment import *' USING IMPORTLIB 
@@ -19,28 +40,27 @@ else:
 globals().update({k: getattr(mdl, k) for k in names}) #brings everything into namespace
 
 from configurations.default import *
-import os
-import sys
 
+if  args.experiment!=experiment:#required arg, will always be there
+    EXPERIMENT=args.experiment #OVERRIDE (this is the only variable from the imported experiment module that needs to be changed, because it creates model and prediction directories)
 MODELPATH=MODELSPATH+EXPERIMENT+'/'
+USEDCONFIGPATH+=EXPERIMENT+'/'
 ALGORITHM='HGB'
 CONFIGNAME='configHGB.py'
 PREDPATH=os.path.join(OUTPATH,EXPERIMENT)
 TRACEBACK=False
 
 """ SETTINGS FOR THE RANDOM FOREST """
-import numpy as np
-from sklearn.experimental import enable_hist_gradient_boosting 
-from sklearn.ensemble import HistGradientBoostingClassifier
-IMPORTS=[]
-
+seed_sampling= args.seed_sampling if hasattr(args, 'seed_sampling') else SEED #imported from default configuration
+seed_hparam= args.seed_hparam if hasattr(args, 'seed_hparam') else SEED
+   
 FOREST=HistGradientBoostingClassifier(loss='auto', max_bins=255,
                                    # categorical_features=cat,
                                    monotonic_cst=None,
                                    warm_start=False, early_stopping=False,
                                    scoring='loss', validation_fraction=0.1,
                                    n_iter_no_change=10, tol=1e-07,
-                                   random_state=SEED)
+                                   random_state=seed_hparam)
 
 
 learning_rate=[0.01,0.1,0.3,0.5,0.5,1.0]

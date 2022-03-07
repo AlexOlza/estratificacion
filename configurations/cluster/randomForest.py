@@ -1,8 +1,28 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-import sys
-experiment='configurations.'+sys.argv[2]
+import re
+import argparse
 import importlib
+import numpy as np
+import os
+from sklearn.ensemble import RandomForestClassifier
+
+parser = argparse.ArgumentParser(description='Train HGB algorithm and save model')
+parser.add_argument('chosen_config', type=str,
+                    help='The name of the config file (without .py), which must be located in configurations/cluster.')
+parser.add_argument('experiment',
+                    help='The name of the experiment config file (without .py), which must be located in configurations.')
+parser.add_argument('--seed-hparam', metavar='seed_hparam',type=int, default=argparse.SUPPRESS,
+                    help='Random seed for hyperparameter tuning')
+parser.add_argument('--seed-sampling', metavar='seed_sampling',type=int, default=argparse.SUPPRESS,
+                    help='Random seed for undersampling')
+parser.add_argument('--model-name', metavar='model_name',type=str, default=argparse.SUPPRESS,
+                    help='Custom model name to save (provide without extension nor directory)')
+parser.add_argument('--n-iter', metavar='n_iter',type=int, default=argparse.SUPPRESS,
+                    help='Number of iterations for the random grid search (hyperparameter tuning)')
+args = parser.parse_args()
+experiment='configurations.'+re.sub('hyperparameter_|undersampling_|full_|variability_|fixsample_','',args.experiment)
+
 importlib.invalidate_caches()
 
 """THIS EMULATES 'from experiment import *' USING IMPORTLIB 
@@ -19,19 +39,22 @@ else:
 globals().update({k: getattr(mdl, k) for k in names}) #brings everything into namespace
 
 from configurations.default import *
-import os
-import sys
 
+if  args.experiment!=experiment:#required arg
+    EXPERIMENT=args.experiment #OVERRIDE (this is the only variable from the imported experiment module that needs to be changed, because it creates moddel and prediction directories)
 MODELPATH=MODELSPATH+EXPERIMENT+'/'
+USEDCONFIGPATH+=EXPERIMENT+'/'
 ALGORITHM='randomForest'
 CONFIGNAME='configRandomForest.py'
 PREDPATH=os.path.join(OUTPATH,EXPERIMENT)
 TRACEBACK=False
 
 """ SETTINGS FOR THE RANDOM FOREST """
-import numpy as np
-from sklearn.ensemble import RandomForestClassifier
 IMPORTS=["from sklearn.ensemble import RandomForestClassifier","from sklearn.model_selection import RandomizedSearchCV"]
+
+seed_sampling= args.seed_sampling if hasattr(args, 'seed_sampling') else SEED #imported from default configuration
+seed_hparam= args.seed_hparam if hasattr(args, 'seed_hparam') else SEED
+
 FOREST=RandomForestClassifier(criterion='gini',
                               min_weight_fraction_leaf=0.0, 
                               max_leaf_nodes=None, 
@@ -40,7 +63,7 @@ FOREST=RandomForestClassifier(criterion='gini',
                               bootstrap=True, 
                               oob_score=True, 
                               n_jobs=-1,
-                              random_state=SEED)
+                              random_state=seed_hparam)
 
 
 # Number of trees in random forest
