@@ -12,6 +12,10 @@ n_iter=30
 sampling_seed=42
 for s in "${seeds[@]}" ### loop through values
 do
+if [[ "$exp" != *"fixsample"* ]]; then
+echo "Variable sampling"
+sampling_seed=$s
+fi
 for e in "${!experiments[@]}" ### loop through index
 do
    for a  in "${!algorithms[@]}" ### loop through index
