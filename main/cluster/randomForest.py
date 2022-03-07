@@ -14,9 +14,9 @@ parser.add_argument('chosen_config', type=str,
                     help='The name of the config file (without .py), which must be located in configurations/cluster.')
 parser.add_argument('experiment',
                     help='The name of the experiment config file (without .py), which must be located in configurations.')
-parser.add_argument('--seed-hparam', metavar='seed',type=int, default=argparse.SUPPRESS,
+parser.add_argument('--seed-hparam', metavar='seed_hparam',type=int, default=argparse.SUPPRESS,
                     help='Random seed for hyperparameter tuning')
-parser.add_argument('--seed-sampling', metavar='seed',type=int, default=argparse.SUPPRESS,
+parser.add_argument('--seed-sampling', metavar='seed_sampling',type=int, default=argparse.SUPPRESS,
                     help='Random seed for undersampling')
 parser.add_argument('--model-name', metavar='model_name',type=str, default=argparse.SUPPRESS,
                     help='Custom model name to save (provide without extension nor directory)')
