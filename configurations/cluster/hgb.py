@@ -44,6 +44,7 @@ from configurations.default import *
 if  args.experiment!=experiment:#required arg, will always be there
     EXPERIMENT=args.experiment #OVERRIDE (this is the only variable from the imported experiment module that needs to be changed, because it creates model and prediction directories)
 MODELPATH=MODELSPATH+EXPERIMENT+'/'
+USEDCONFIGPATH+=EXPERIMENT+'/'
 ALGORITHM='HGB'
 CONFIGNAME='configHGB.py'
 PREDPATH=os.path.join(OUTPATH,EXPERIMENT)

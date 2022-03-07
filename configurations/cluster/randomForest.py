@@ -43,6 +43,7 @@ from configurations.default import *
 if  args.experiment!=experiment:#required arg
     EXPERIMENT=args.experiment #OVERRIDE (this is the only variable from the imported experiment module that needs to be changed, because it creates moddel and prediction directories)
 MODELPATH=MODELSPATH+EXPERIMENT+'/'
+USEDCONFIGPATH+=EXPERIMENT+'/'
 ALGORITHM='randomForest'
 CONFIGNAME='configRandomForest.py'
 PREDPATH=os.path.join(OUTPATH,EXPERIMENT)
