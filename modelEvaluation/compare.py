@@ -69,6 +69,8 @@ def compare(selected,X,y,year,experiment_name=Path(config.MODELPATH).parts[-1],*
     all_predictions=pd.DataFrame()
     for m in selected:
         probs,auc=predict(m,experiment_name,year,X=X,y=y,predictors=predictors[m])
+        if (probs is None) and (auc is None):#If model not found
+            continue
         metrics['Score'][m]=auc
         try:  
             all_predictions=pd.merge(all_predictions,probs,on=['PATIENT_ID','OBS'],how='inner')
@@ -189,5 +191,6 @@ if __name__=='__main__':
     
     for column in df.select_dtypes(exclude=['object']):
         plt.figure()
-        df.boxplot([column])
+        # df.boxplot([column])
+        df[column].plot(kind='box',title=' - '.join([config.ALGORITHM,config.EXPERIMENT,column]))
     parameter_distribution(selected)
