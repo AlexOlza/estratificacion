@@ -122,9 +122,9 @@ def build_model(units_0, n_hidden, units, lr, activ, cyclic, low, high, early, s
     else:
         model.compile(
         optimizer=keras.optimizers.Adam(learning_rate=lr), 
-           loss="binary_crossentropy", metrics=[keras.metrics.AUC(),
-                                                              keras.metrics.Recall(top_k=20000),
-                                                              keras.metrics.Precision(top_k=20000)])
+           loss="binary_crossentropy", metrics=[keras.metrics.AUC(),keras.metrics.BinaryCrossentropy(),
+                                                              keras.metrics.Recall(),
+                                                              keras.metrics.Precision()])
    
     
     return model
@@ -134,7 +134,8 @@ def keras_code(x_train, y_train, x_val, y_val, units_0, n_hidden, units, lr, act
     # Build model
     model = build_model(units_0, n_hidden, units, lr, activ, cyclic, low, high, early, shuffle, callbacks)
     # Train & eval model
-    model.fit(x_train, y_train, shuffle=shuffle, callbacks=callbacks)
+    print(len(x_train),len(y_train),len(x_val),len(y_val))
+    model.fit(x_train, y_train, shuffle=shuffle, callbacks=callbacks, validation_data=(x_val,y_val))
     # Save model
     model.save(saving_path)
 
