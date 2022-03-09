@@ -76,7 +76,7 @@ np.random.seed(seed_hparam)
 #     super(MyTuner, self).run_trial(*args, **kwargs, callbacks=callbacks)
 
 
-tuner = config.MyTuner(X_train, y_train,X_test, y_test,
+tuner = config.MyTuner(X_train, y_train.reshape(-1,1),X_test[:1000], y_test[:1000].reshape(-1,1),
                      objective='val_loss',
                      # max_epochs=10,
                      # factor=3,
@@ -85,21 +85,23 @@ tuner = config.MyTuner(X_train, y_train,X_test, y_test,
 
 tuner.search(epochs=10)
 
-# print('Best score obtained: {0}'.format(rs_keras.best_score_))
-# print('Parameters:')
-# for param, value in rs_keras.best_params_.items():
-#     print('\t{}: {}'.format(param, value))
 
 #%%
 """ SAVE TRAINED MODEL """
-# cv_results_df = pd.DataFrame(grid_result.cv_results_)
-# cv_results_df.to_csv('gridsearch.csv')
-# print(grid_result.best_params_)
-
-# hypermodel = config.HYPERMODEL()
+""" work in progress """
 # best_hp = tuner.get_best_hyperparameters()[0]
-# model = hypermodel.build(best_hp)
-# print('Fitting best model with the whole data-set')
-# hypermodel.fit(best_hp, model, X, y, epochs=1)
+# try:
+#     print('units: ',best_hp.values['units'])
+# except KeyError:
+#     best_hp.values['units']=[]
+# besthp=[best_hp[v] for v in best_hp.values]
+# callbacks = [keras.callbacks.EarlyStopping(monitor='val_loss',mode='min',
+#                                       patience=5,
+#                                       restore_best_weights=True)]
+# if best_hp.values['CyclicLR']:
+#     callbacks.append(config.clr(best_hp.values['low'], best_hp.values['high'], step=(len(y) // 1024)))
+
+
+# config.keras_code(X,y,X_train,y_train,*besthp, saving_path=model_name)
 
 # hypermodel.save(model_name)

@@ -117,8 +117,8 @@ def build_model(units_0, n_hidden, units, lr, activ, cyclic, low, high, early, s
         model.compile(
         optimizer=keras.optimizers.Adam(), 
            loss="binary_crossentropy", metrics=[keras.metrics.AUC(),
-                                                                  keras.metrics.Recall(top_k=20000),
-                                                                  keras.metrics.Precision(top_k=20000)])
+                                                                  keras.metrics.Recall(),
+                                                                  keras.metrics.Precision()])
     else:
         model.compile(
         optimizer=keras.optimizers.Adam(learning_rate=lr), 
@@ -143,7 +143,7 @@ def keras_code(x_train, y_train, x_val, y_val, units_0, n_hidden, units, lr, act
     # You may also return a dictionary
     # of {metric_name: metric_value}.
     y_pred = model.predict(x_val)
-    return np.mean(np.abs(y_pred - y_val))
+    return np.mean(np.abs(y_pred - y_val)) #FIXME CHANGE RETURN! RETURN VAL LOSS MAYBE
 
 class MyTuner(kt.RandomSearch):
     def __init__(self, x_train, y_train, x_val, y_val,*args,**kwargs):
@@ -166,12 +166,12 @@ class MyTuner(kt.RandomSearch):
         #learning rate
         lr=hp.Float("lr", min_value=1e-4, max_value=1e-2, sampling="log")
         #activation function
-        activ=hp.Choice('activation', ['relu','elu'])
+        activ=hp.Choice('activ', ['relu','elu'])
         #callbacks and training details
-        cyclic=hp.Boolean('CyclicLR')
+        cyclic=hp.Boolean('cyclic')
         low=hp.Float('low',min_value=1e-4,max_value=5e-3)
         high=hp.Float('high',min_value=1e-2,max_value=5e-2)
-        early=hp.Fixed('EarlyStopping', True)
+        early=hp.Fixed('early', True)
         shuffle=hp.Boolean("shuffle")
         
         callbacks = [keras.callbacks.EarlyStopping(monitor='val_loss',mode='min',
