@@ -51,7 +51,7 @@ model_name=config.ROOTPATH+'neuraltest'
 from dataManipulation.dataPreparation import getData
 np.random.seed(seed_sampling)
 
-X,y=getData(2016)
+X,y=getData(2016,predictors=r'FEMALE|AGE_')
 assert len(config.COLUMNS)==1, 'This model is built for a single response variable! Modify config.COLUMNS'
 y=np.where(y[config.COLUMNS]>=1,1,0)
 y=y.ravel()
@@ -73,14 +73,15 @@ np.random.seed(seed_hparam)
 #     callbacks = tf.keras.callbacks.ReduceLROnPlateau(patience=patience)
 #     super(MyTuner, self).run_trial(*args, **kwargs, callbacks=callbacks)
 
-tuner = kt.Hyperband(config.HYPERMODEL(),
+
+tuner = config.MyTuner(X_train, y_train,X_test, y_test,
                      objective='val_loss',
-                     max_epochs=10,
-                     factor=3,
+                     # max_epochs=10,
+                     # factor=3,
                      directory=config.ROOTPATH+'my_dir',
                      project_name='intro_to_kt')
 
-tuner.search(X_train, y_train, epochs=10, validation_data=(X_test, y_test))
+tuner.search(epochs=10)
 
 # print('Best score obtained: {0}'.format(rs_keras.best_score_))
 # print('Parameters:')
@@ -93,10 +94,10 @@ tuner.search(X_train, y_train, epochs=10, validation_data=(X_test, y_test))
 # cv_results_df.to_csv('gridsearch.csv')
 # print(grid_result.best_params_)
 
-hypermodel = config.HYPERMODEL()
-best_hp = tuner.get_best_hyperparameters()[0]
-model = hypermodel.build(best_hp)
-print('Fitting best model with the whole data-set')
-hypermodel.fit(best_hp, model, X, y, epochs=1)
+# hypermodel = config.HYPERMODEL()
+# best_hp = tuner.get_best_hyperparameters()[0]
+# model = hypermodel.build(best_hp)
+# print('Fitting best model with the whole data-set')
+# hypermodel.fit(best_hp, model, X, y, epochs=1)
 
-hypermodel.save(model_name)
+# hypermodel.save(model_name)

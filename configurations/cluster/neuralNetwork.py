@@ -84,80 +84,110 @@ seed_hparam= args.seed_hparam if hasattr(args, 'seed_hparam') else SEED
 
 from main.cluster.clr_callback import CyclicLR
 """ DEFINITION OF THE HYPERPARAMETER SPACE """
-def clr(RANDOM_GRID):
+def clr(low, high, step):
     	return CyclicLR(
     	mode='triangular',
-    	base_lr=RANDOM_GRID['low'],
-    	max_lr=RANDOM_GRID['high'],
-    	step_size=  RANDOM_GRID['step'])
+    	base_lr=low,
+    	max_lr=high,
+    	step_size= step)
 
-
-class HYPERMODEL( kt.HyperModel ):
-    # def __init__(self, grid):
-    #     self.RANDOM_GRID = grid
-    def build(self, RANDOM_GRID):
-        #neurons in input layer
-        RANDOM_GRID.Int("units_0", min_value=32, max_value=1024, step=32)
-        #number of hidden layers
-        RANDOM_GRID.Int('n_hidden', min_value=0, max_value=3, step=1)
-        #neurons in each hidden layer: inside build function
-        #learning rate
-        RANDOM_GRID.Float("lr", min_value=1e-4, max_value=1e-2, sampling="log")
-        #activation function
-        RANDOM_GRID.Choice('activation', ['relu','elu'])
-        #callbacks and training details
-        RANDOM_GRID.Boolean('CyclicLR')
-        RANDOM_GRID.Float('low',min_value=1e-4,max_value=5e-3)
-        RANDOM_GRID.Float('high',min_value=1e-2,max_value=5e-2)
-        RANDOM_GRID.Fixed('EarlyStopping', True)
-        RANDOM_GRID.Boolean("shuffle")
-        
-        self.CALLBACKS = [EarlyStopping(monitor='val_loss',mode='min',
-                                      patience=5,
-                                      restore_best_weights=True)]
-        if RANDOM_GRID['CyclicLR']:
-            self.CALLBACKS.append(clr(RANDOM_GRID))
-        # BUILD MODEL
-        model = keras.Sequential()
-        #input layer
-        model.add(
-            layers.Dense(
-                units=RANDOM_GRID['units_0'],
-                activation=RANDOM_GRID['activation'],
-            )
+def build_model(units_0, n_hidden, units, lr, activ, cyclic, low, high, early, shuffle, callbacks):
+    
+    # BUILD MODEL
+    model = keras.Sequential()
+    #input layer
+    model.add(
+        layers.Dense(
+            units=units_0,
+            activation=activ,
         )
-        #hidden layers
-        for i in range(1,RANDOM_GRID["n_hidden"]+1):
-            model.add(
-            layers.Dense(
-                # Tune number of units separately.
-                units=RANDOM_GRID.Int(f"units_{i}", min_value=32, max_value=1024, step=32),
-                activation=RANDOM_GRID['activation']))
-        #output layer
-        model.add(layers.Dense(1, activation='sigmoid',name='output',
-                kernel_initializer=initializers.he_uniform(seed=seed_hparam)))
+    )
+    #hidden layers
+    for i in range(1,n_hidden+1):
+        model.add(
+        layers.Dense(
+            # Tune number of units separately.
+            units=units[f"units_{i}"],
+            activation=activ))
+    #output layer
+    model.add(layers.Dense(1, activation='sigmoid',name='output',
+            kernel_initializer=initializers.he_uniform(seed=seed_hparam)))
 
-        if RANDOM_GRID['CyclicLR']:
-            model.compile(
-            optimizer=keras.optimizers.Adam(), 
-               loss="binary_crossentropy", metrics=[keras.metrics.AUC(),
-                                                                      keras.metrics.Recall(top_k=20000),
-                                                                      keras.metrics.Precision(top_k=20000)])
-        else:
-            model.compile(
-            optimizer=keras.optimizers.Adam(learning_rate=RANDOM_GRID['lr']), 
-               loss="binary_crossentropy", metrics=[keras.metrics.AUC(),
+    if cyclic:
+        model.compile(
+        optimizer=keras.optimizers.Adam(), 
+           loss="binary_crossentropy", metrics=[keras.metrics.AUC(),
                                                                   keras.metrics.Recall(top_k=20000),
                                                                   keras.metrics.Precision(top_k=20000)])
-       
-        return model
+    else:
+        model.compile(
+        optimizer=keras.optimizers.Adam(learning_rate=lr), 
+           loss="binary_crossentropy", metrics=[keras.metrics.AUC(),
+                                                              keras.metrics.Recall(top_k=20000),
+                                                              keras.metrics.Precision(top_k=20000)])
+   
+    
+    return model
 
-    def fit(self, model, *args, **kwargs):
-        return model.fit(
-            *args,
-            # Tune whether to shuffle the data in each epoch.
-            shuffle=self.RANDOM_GRID['shuffle'],
-            callbacks=self.CALLBACKS
-            **kwargs,
+def keras_code(x_train, y_train, x_val, y_val, units_0, n_hidden, units, lr, activ, cyclic, low, high, early, shuffle, callbacks,
+               saving_path):
+    # Build model
+    model = build_model(units_0, n_hidden, units, lr, activ, cyclic, low, high, early, shuffle, callbacks)
+    # Train & eval model
+    model.fit(x_train, y_train, shuffle=shuffle, callbacks=callbacks)
+    # Save model
+    model.save(saving_path)
+
+    # Return a single float as the objective value.
+    # You may also return a dictionary
+    # of {metric_name: metric_value}.
+    y_pred = model.predict(x_val)
+    return np.mean(np.abs(y_pred - y_val))
+
+class MyTuner(kt.RandomSearch):
+    def __init__(self, x_train, y_train, x_val, y_val,*args,**kwargs):
+        super().__init__(*args,seed=seed_hparam,**kwargs)
+        self.x_train=x_train
+        self.y_train=y_train
+        self.x_val=x_val
+        self.y_val=y_val
+        
+    def run_trial(self, trial, **kwargs):
+        hp = trial.hyperparameters
+        #neurons in input layer
+        units_0=hp.Int("units_0", min_value=32, max_value=1024, step=32)
+        #number of hidden layers
+        n_hidden=hp.Int('n_hidden', min_value=0, max_value=3, step=1)
+        units={}
+        for i in range(1,n_hidden+1):
+            # Tune number of units separately.
+            units[f"units_{i}"]=hp.Int(f"units_{i}", min_value=32, max_value=1024, step=32)
+        #learning rate
+        lr=hp.Float("lr", min_value=1e-4, max_value=1e-2, sampling="log")
+        #activation function
+        activ=hp.Choice('activation', ['relu','elu'])
+        #callbacks and training details
+        cyclic=hp.Boolean('CyclicLR')
+        low=hp.Float('low',min_value=1e-4,max_value=5e-3)
+        high=hp.Float('high',min_value=1e-2,max_value=5e-2)
+        early=hp.Fixed('EarlyStopping', True)
+        shuffle=hp.Boolean("shuffle")
+        
+        callbacks = [keras.callbacks.EarlyStopping(monitor='val_loss',mode='min',
+                                      patience=5,
+                                      restore_best_weights=True)]
+        if cyclic:
+            callbacks.append(clr(low, high, step=len(self.y_train // 1024)))
+        return keras_code(self.x_train, self.y_train, self.x_val, self.y_val,
+            units_0, n_hidden, units, lr, activ, cyclic, low, high, early, shuffle, callbacks,
+            saving_path=self.directory+'/'+trial.trial_id
         )
 
+
+# tuner = MyTuner(
+#     max_trials=3, overwrite=True, directory="my_dir", project_name="keep_code_separate",
+# )
+# tuner.search()
+# # Retraining the model
+# best_hp = tuner.get_best_hyperparameters()[0]
+# keras_code(**best_hp.values, saving_path="/tmp/best_model")
