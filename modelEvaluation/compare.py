@@ -158,9 +158,19 @@ def performance_distribution(models):
     pass #TODO  write
 #%%
 if __name__=='__main__':
-    year=int(input('YEAR TO PREDICT: '))
-    nested=eval(input('NESTED MODEL COMPARISON? (True/False) '))
-    all_models=eval(input('COMPARE ALL MODELS? (True/False) '))
+    import argparse
+    parser = argparse.ArgumentParser(description='Compare models')
+    parser.add_argument('--year', type=int,default=argparse.SUPPRESS,
+                        help='The year for which you want to compare the predictions.')
+    parser.add_argument('--nested', type=bool, default=argparse.SUPPRESS,
+                        help='Are you comparing nested models with the same algorithm?')
+    parser.add_argument('--all',type=bool, default=argparse.SUPPRESS,
+                        help='Compare all models with the same algorithm?')
+    
+    args = parser.parse_args()
+    year=int(input('YEAR TO PREDICT: ')) if not hasattr(args, 'year') else args.year
+    nested=eval(input('NESTED MODEL COMPARISON? (True/False) ')) if not hasattr(args, 'nested') else args.nested
+    all_models=eval(input('COMPARE ALL MODELS? (True/False) ')) if not hasattr(args, 'all') else args.all
     X,y=getData(year-1)
     available_models=detect_models()
     if nested:

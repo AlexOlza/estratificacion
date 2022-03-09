@@ -15,19 +15,27 @@ import numpy as np
 import csv
 import pandas as pd
 #%%
-try:
-    model_name=sys.argv[1]
-    year=int(sys.argv[2])
-except:
-    model_name=input('MODEL NAME for configuration purposes (example: logistic20220118_132612): ')
-    
+msg='MODEL NAME for configuration purposes (example: logistic20220118_132612): '
+msg2='Full path to configuration json file'
+import argparse
+parser = argparse.ArgumentParser(description='Predict')
+parser.add_argument('--year', type=int,default=argparse.SUPPRESS,
+                    help='The year for which you want to compare the predictions.')
+parser.add_argument('--config_used', type=str, default=argparse.SUPPRESS,
+                    help=msg2)
+
+
+args = parser.parse_args()
+config_used=Path(args.config_used) if hasattr(args, 'config_used') else input(msg)
+model_name=config_used.stem
+# year=args.year
+
 
 sys.path.append('/home/aolza/Desktop/estratificacion/')
 from python_settings import settings as config
 from configurations.utility import configure
-if not config.configured:
-    configname='/home/aolza/Desktop/estratificacion/configurations/used/{0}.json'.format(model_name)
-    configuration=configure(configname,TRACEBACK=False, VERBOSE=True)
+if not config.configured: 
+    configuration=configure(config_used,TRACEBACK=False, VERBOSE=True)
 try:
     experiment_name=config.EXPERIMENT
 except:
