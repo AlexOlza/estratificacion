@@ -30,9 +30,9 @@ import argparse
 parser = argparse.ArgumentParser(description='Compare models')
 parser.add_argument('--year', '-y', type=int,default=argparse.SUPPRESS,
                     help='The year for which you want to compare the predictions.')
-parser.add_argument('--nested','-n', type=bool, default=argparse.SUPPRESS,
+parser.add_argument('--nested','-n', dest='nested', action='store_true', default=False,
                     help='Are you comparing nested models with the same algorithm?')
-parser.add_argument('--all','-a',type=bool, default=argparse.SUPPRESS,
+parser.add_argument('--all','-a', dest='all', action='store_true', default=False,
                     help='Compare all models with the same algorithm?')
 parser.add_argument('--config_used', type=str, default=argparse.SUPPRESS,
                 help='Full path to configuration json file')
