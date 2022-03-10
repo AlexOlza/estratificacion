@@ -18,19 +18,35 @@ Created on Tue Dec 14 16:13:19 2021
     Compare
 
 """
-
+import sys
+sys.path.append('/home/aolza/Desktop/estratificacion/')
 import pandas as pd
 from pathlib import Path
 import re
 import joblib as job
 import json
+import argparse
+
+parser = argparse.ArgumentParser(description='Compare models')
+parser.add_argument('--year', '-y', type=int,default=argparse.SUPPRESS,
+                    help='The year for which you want to compare the predictions.')
+parser.add_argument('--nested','-n', type=bool, default=argparse.SUPPRESS,
+                    help='Are you comparing nested models with the same algorithm?')
+parser.add_argument('--all','-a',type=bool, default=argparse.SUPPRESS,
+                    help='Compare all models with the same algorithm?')
+parser.add_argument('--config_used', type=str, default=argparse.SUPPRESS,
+                help='Full path to configuration json file')
+
+args = parser.parse_args()
+print(vars(args))
+config_used=args.config_used if hasattr(args, 'config_used') else input('Full path to configuration json file')
 
 from python_settings import settings as config
 import configurations.utility as util
-util.configure(TRACEBACK=True)
+if not config.configured: 
+    configuration=util.configure(config_used,TRACEBACK=True, VERBOSE=True)
+
 from modelEvaluation.predict import predict, generate_filename
-
-
 from dataManipulation.dataPreparation import getData
 #%%
 def detect_models():
@@ -158,16 +174,6 @@ def performance_distribution(models):
     pass #TODO  write
 #%%
 if __name__=='__main__':
-    import argparse
-    parser = argparse.ArgumentParser(description='Compare models')
-    parser.add_argument('--year', type=int,default=argparse.SUPPRESS,
-                        help='The year for which you want to compare the predictions.')
-    parser.add_argument('--nested', type=bool, default=argparse.SUPPRESS,
-                        help='Are you comparing nested models with the same algorithm?')
-    parser.add_argument('--all',type=bool, default=argparse.SUPPRESS,
-                        help='Compare all models with the same algorithm?')
-    
-    args = parser.parse_args()
     year=int(input('YEAR TO PREDICT: ')) if not hasattr(args, 'year') else args.year
     nested=eval(input('NESTED MODEL COMPARISON? (True/False) ')) if not hasattr(args, 'nested') else args.nested
     all_models=eval(input('COMPARE ALL MODELS? (True/False) ')) if not hasattr(args, 'all') else args.all

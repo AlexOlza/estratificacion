@@ -15,14 +15,13 @@ import numpy as np
 import csv
 import pandas as pd
 #%%
-msg='MODEL NAME for configuration purposes (example: logistic20220118_132612): '
-msg2='Full path to configuration json file'
+msg='Full path to configuration json file'
 import argparse
 parser = argparse.ArgumentParser(description='Predict')
 parser.add_argument('--year', type=int,default=argparse.SUPPRESS,
                     help='The year for which you want to compare the predictions.')
 parser.add_argument('--config_used', type=str, default=argparse.SUPPRESS,
-                    help=msg2)
+                    help=msg)
 
 
 args = parser.parse_args()
