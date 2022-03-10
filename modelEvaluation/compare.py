@@ -38,7 +38,7 @@ parser.add_argument('--config_used', type=str, default=argparse.SUPPRESS,
                 help='Full path to configuration json file')
 
 args = parser.parse_args()
-print(vars(args))
+
 config_used=args.config_used if hasattr(args, 'config_used') else input('Full path to configuration json file')
 
 from python_settings import settings as config

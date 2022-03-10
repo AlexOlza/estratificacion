@@ -24,7 +24,7 @@ parser.add_argument('--config_used', type=str, default=argparse.SUPPRESS,
                     help=msg)
 
 
-args = parser.parse_args()
+args, unknown_args = parser.parse_known_args()
 config_used=Path(args.config_used) if hasattr(args, 'config_used') else input(msg)
 model_name=config_used.stem
 # year=args.year
