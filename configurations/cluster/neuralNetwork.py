@@ -91,8 +91,13 @@ def clr(low, high, step):
     	max_lr=high,
     	step_size= step)
 
-def build_model(units_0, n_hidden, units, lr, activ, cyclic, low, high, early, shuffle, callbacks):
-    
+def build_model(units_0, n_hidden, activ, cyclic, early, shuffle, **kwargs):
+    lr=kwargs.get('lr',None)
+    # low=kwargs.get('low',None)
+    # high=kwargs.get('high',None)
+    hidden_units=kwargs.get('hidden_units',{})
+    print(units_0, n_hidden, activ, cyclic, early, shuffle,
+            hidden_units, lr)
     # BUILD MODEL
     model = keras.Sequential()
     #input layer
@@ -107,7 +112,7 @@ def build_model(units_0, n_hidden, units, lr, activ, cyclic, low, high, early, s
         model.add(
         layers.Dense(
             # Tune number of units separately.
-            units=units[f"units_{i}"],
+            units=hidden_units[f"units_{i}"],
             activation=activ))
     #output layer
     model.add(layers.Dense(1, activation='sigmoid',name='output',
@@ -129,12 +134,19 @@ def build_model(units_0, n_hidden, units, lr, activ, cyclic, low, high, early, s
     
     return model
 
-def keras_code(x_train, y_train, x_val, y_val, units_0, n_hidden, units, lr, activ, cyclic, low, high, early, shuffle, callbacks,
-               saving_path):
+def keras_code(x_train, y_train, x_val, y_val,
+               units_0, n_hidden, activ, cyclic, early, shuffle, callbacks,
+               saving_path,
+               **kwargs
+               ):
+    lr=kwargs.get('lr',None)
+    hidden_units=kwargs.get('hidden_units',{})
+    print(units_0, n_hidden, activ, cyclic, early, shuffle, callbacks,
+            hidden_units, lr)
     # Build model
-    model = build_model(units_0, n_hidden, units, lr, activ, cyclic, low, high, early, shuffle, callbacks)
+    model = build_model(units_0, n_hidden, activ, cyclic, early, shuffle,
+                        lr=lr, hidden_units=hidden_units)
     # Train & eval model
-    print(len(x_train),len(y_train),len(x_val),len(y_val))
     model.fit(x_train, y_train, shuffle=shuffle, callbacks=callbacks, validation_data=(x_val,y_val))
     # Save model
     model.save(saving_path)
@@ -163,14 +175,18 @@ class MyTuner(kt.RandomSearch):
         for i in range(1,n_hidden+1):
             # Tune number of units separately.
             units[f"units_{i}"]=hp.Int(f"units_{i}", min_value=32, max_value=1024, step=32)
-        #learning rate
-        lr=hp.Float("lr", min_value=1e-4, max_value=1e-2, sampling="log")
+        cyclic=hp.Boolean('cyclic')
+        with hp.conditional_scope('cyclic', False):
+            #learning rate
+            lr=hp.Float("lr", min_value=1e-4, max_value=1e-2, sampling="log")
+        with hp.conditional_scope('cyclic', True):
+             low=hp.Float('low',min_value=1e-4,max_value=5e-3)
+             high=hp.Float('high',min_value=1e-2,max_value=5e-2)
         #activation function
         activ=hp.Choice('activ', ['relu','elu'])
         #callbacks and training details
-        cyclic=hp.Boolean('cyclic')
-        low=hp.Float('low',min_value=1e-4,max_value=5e-3)
-        high=hp.Float('high',min_value=1e-2,max_value=5e-2)
+        
+       
         early=hp.Fixed('early', True)
         shuffle=hp.Boolean("shuffle")
         
@@ -179,8 +195,11 @@ class MyTuner(kt.RandomSearch):
                                       restore_best_weights=True)]
         if cyclic:
             callbacks.append(clr(low, high, step=len(self.y_train // 1024)))
+        print(units_0, n_hidden, activ, cyclic, early, shuffle, callbacks,
+            units, lr)
         return keras_code(self.x_train, self.y_train, self.x_val, self.y_val,
-            units_0, n_hidden, units, lr, activ, cyclic, low, high, early, shuffle, callbacks,
+            units_0, n_hidden, activ, cyclic, early, shuffle, callbacks,
+            hidden_units=units, lr=lr,
             saving_path=self.directory+'/'+trial.trial_id
         )
 

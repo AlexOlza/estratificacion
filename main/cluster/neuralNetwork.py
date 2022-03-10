@@ -46,7 +46,6 @@ seed_sampling= args.seed_sampling if hasattr(args, 'seed_sampling') else config.
 seed_hparam= args.seed_hparam if hasattr(args, 'seed_hparam') else config.SEED
 # n_iter= args.n_iter sif hasattr(args, 'n_iter') else config.N_ITER
 model_name=config.ROOTPATH+'neuraltest'
-config.TRACEBACK=True
 sys.setprofile(util.tracefunc)
 #%%
 """ BEGGINNING """
