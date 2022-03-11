@@ -88,19 +88,20 @@ tuner.search(epochs=10)
 #%%
 """ SAVE TRAINED MODEL """
 """ work in progress """
-# best_hp = tuner.get_best_hyperparameters()[0]
+best_hp = tuner.get_best_hyperparameters()[0]
 # try:
 #     print('units: ',best_hp.values['units'])
 # except KeyError:
 #     best_hp.values['units']=[]
-# besthp=[best_hp[v] for v in best_hp.values]
-# callbacks = [keras.callbacks.EarlyStopping(monitor='val_loss',mode='min',
-#                                       patience=5,
-#                                       restore_best_weights=True)]
-# if best_hp.values['CyclicLR']:
-#     callbacks.append(config.clr(best_hp.values['low'], best_hp.values['high'], step=(len(y) // 1024)))
+best_hp_={k:v for k,v in best_hp.values.items() if not k.startswith('units')}
+best_hp_['units_0']=best_hp.values['units_0']
+best_hp_['hidden_units']={f'units_{i}':best_hp.values[f'units_{i}'] for i in range(1,best_hp.values['n_hidden']+1)}
+callbacks = [keras.callbacks.EarlyStopping(monitor='val_loss',mode='min',
+                                      patience=5,
+                                      restore_best_weights=True)]
+if best_hp.values['cyclic']:
+    callbacks.append(config.clr(best_hp.values['low'], best_hp.values['high'], step=(len(y) // 1024)))
 
 
-# config.keras_code(X,y,X_train,y_train,*besthp, saving_path=model_name)
-
-# hypermodel.save(model_name)
+config.keras_code(X,y,X_train,y_train,**best_hp_,
+                  callbacks=callbacks, saving_path=model_name)
