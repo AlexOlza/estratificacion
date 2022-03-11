@@ -179,9 +179,9 @@ def performance_distribution(models):
     pass #TODO  write
 #%%
 if __name__=='__main__':
-    year=int(input('YEAR TO PREDICT: '))
-    nested=eval(input('NESTED MODEL COMPARISON? (True/False) '))
-    all_models=eval(input('COMPARE ALL MODELS? (True/False) '))
+    year=int(input('YEAR TO PREDICT: ')) if not hasattr(args, 'year') else args.year
+    nested=eval(input('NESTED MODEL COMPARISON? (True/False) ')) if not hasattr(args, 'nested') else args.nested
+    all_models=eval(input('COMPARE ALL MODELS? (True/False) ')) if not hasattr(args, 'all') else args.all
     X,y=getData(year-1)
     available_models=detect_models()
     if nested:
