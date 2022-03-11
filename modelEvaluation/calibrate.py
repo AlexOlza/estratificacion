@@ -42,7 +42,6 @@ def sample(data,uncal):
     idx.append(np.argmax(uncal))
     return(idx,unique)
 
-
 def calibrate(model_name,yr,**kwargs):
     calibFilename=generate_filename(model_name,yr, calibrated=True)
     if Path(calibFilename).is_file():
@@ -65,7 +64,7 @@ def calibrate(model_name,yr,**kwargs):
     pastPred.sort_values(by='PATIENT_ID',inplace=True)
     pastPred.reset_index(drop=True,inplace=True)
     
-    p_train, _ , y_train, _ = train_test_split(pastPred.PRED.values, np.where(pastY[config.COLUMNS]>=1,1,0).ravel(),
+    p_train, _ , y_train, _ = train_test_split(pastPred.PRED.values, np.where(pastPred.OBS>=1,1,0).ravel(),
                                                         test_size=0.33, random_state=config.SEED)
     
     ir = IsotonicRegression( out_of_bounds = 'clip' )	
@@ -135,8 +134,7 @@ def plot(p):
             df['pastPredicción media']=mean_pastPredicted_value
             df['N']=bintot[bintot!=0]
             print('\n')
-            # print(df.to_latex(float_format="%.3f",index=False,caption='Tabla de calibrado para {0} con regresión isotónica y PCHIP'.format(n)))
-            # print('\n')
+
             reliabilityConsistency(probs, obs, nbins=30, nboot=100, ax=axTop, seed=config.SEED,color=col)
             
             axHist.hist(probs, range=(0, 1), bins=unique,
@@ -164,13 +162,14 @@ def plot(p):
 if __name__=='__main__':
         
     year=int(input('YEAR YOU WANT TO CALIBRATE:'))
-    # model_name=input('MODEL NAME (example: logistic20220118_132612): ')
-    
+
     pastX,pastY=getData(year-2)
     presentX,presentY=getData(year-1)
     models=detect_latest(detect_models())
     p={}
     for model_name in models:
+        if 'logistic' not in model_name:
+            continue
         print(model_name)
         p[model_name]=calibrate(model_name,year,
                 pastX=pastX,pastY=pastY,presentX=presentX,presentY=presentY)
