@@ -18,7 +18,8 @@ Created on Tue Dec 14 16:13:19 2021
     Compare
 
 """
-
+import sys
+sys.path.append('/home/aolza/Desktop/estratificacion/')
 import pandas as pd
 from pathlib import Path
 import re
