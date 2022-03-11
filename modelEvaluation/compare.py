@@ -79,22 +79,27 @@ def compare_nested(available_models,X,y,year):
     return(all_predictions,metrics)
 
 def compare(selected,X,y,year,experiment_name=Path(config.MODELPATH).parts[-1],**kwargs):
+    import traceback
     K=kwargs.get('K',20000)
     predictors=kwargs.get('predictors',{m:config.PREDICTORREGEX for m in selected})
     metrics={'Score':{},'Recall_{0}'.format(K):{},'PPV_{0}'.format(K):{}}
     all_predictions=pd.DataFrame()
     for m in selected:
-        probs,auc=predict(m,experiment_name,year,X=X,y=y,predictors=predictors[m])
-        if (probs is None) and (auc is None):#If model not found
-            continue
-        metrics['Score'][m]=auc
-        try:  
-            all_predictions=pd.merge(all_predictions,probs,on=['PATIENT_ID','OBS'],how='inner')
-        except:
-            all_predictions=probs
-        all_predictions.rename(columns={'PRED': 'PRED_{0}'.format(m)}, inplace=True)
-        metrics['Recall_{0}'.format(K)][m],metrics['PPV_{0}'.format(K)][m]=performance(all_predictions['PRED_{0}'.format(m)],all_predictions.OBS,K)
-        
+        try:
+            probs,auc=predict(m,experiment_name,year,X=X,y=y,predictors=predictors[m])
+            if (probs is None) and (auc is None):#If model not found
+                continue
+            metrics['Score'][m]=auc
+            try:  
+                all_predictions=pd.merge(all_predictions,probs,on=['PATIENT_ID','OBS'],how='inner')
+            except:
+                all_predictions=probs
+            all_predictions.rename(columns={'PRED': 'PRED_{0}'.format(m)}, inplace=True)
+            metrics['Recall_{0}'.format(K)][m],metrics['PPV_{0}'.format(K)][m]=performance(all_predictions['PRED_{0}'.format(m)],all_predictions.OBS,K)
+        except Exception as exc:
+            print('Something went wrong for model ', m)
+            print(traceback.format_exc())
+            print(exc)
         # selected=[m for m in available_models if ('nested' in m)]
         # selected.sort()
     return(all_predictions,metrics)
@@ -207,6 +212,10 @@ if __name__=='__main__':
     
     for column in df.select_dtypes(exclude=['object']):
         plt.figure()
-        # df.boxplot([column])
-        df[column].plot(kind='box',title=' - '.join([config.ALGORITHM,config.EXPERIMENT,column]))
+        title=' - '.join([config.ALGORITHM,config.EXPERIMENT,column])
+        df[column].plot(kind='box',title=title)
+        try:
+            plt.savefig(config.PREDPATH+title+'.png')
+        except:
+            print('Unable to save figure ',title)
     parameter_distribution(selected)
