@@ -196,6 +196,10 @@ if __name__=='__main__':
     
     for column in df.select_dtypes(exclude=['object']):
         plt.figure()
-        # df.boxplot([column])
-        df[column].plot(kind='box',title=' - '.join([config.ALGORITHM,config.EXPERIMENT,column]))
+        title=' - '.join([config.ALGORITHM,config.EXPERIMENT,column])
+        df[column].plot(kind='box',title=title)
+        try:
+            plt.savefig(config.PREDPATH+title+'.png')
+        except:
+            print('Unable to save figure ',title)
     parameter_distribution(selected)
