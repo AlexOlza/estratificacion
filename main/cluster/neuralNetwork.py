@@ -45,7 +45,7 @@ util.makeAllPaths()
 seed_sampling= args.seed_sampling if hasattr(args, 'seed_sampling') else config.SEED #imported from default configuration
 seed_hparam= args.seed_hparam if hasattr(args, 'seed_hparam') else config.SEED
 # n_iter= args.n_iter sif hasattr(args, 'n_iter') else config.N_ITER
-model_name=config.ROOTPATH+'neuraltest'
+model_name=config.ROOTPATH+'neural_AGESEX'
 sys.setprofile(util.tracefunc)
 #%%
 """ BEGGINNING """
@@ -61,7 +61,7 @@ try:
 except:
     pass
 
-X_train, X_test, y_train, y_test = train_test_split( X, y, test_size=0.99, random_state=42)
+X_train, X_test, y_train, y_test = train_test_split( X, y, test_size=0.2, random_state=42)
 print('Sample size ',len(y_train))
 
 #%% 
@@ -75,7 +75,7 @@ np.random.seed(seed_hparam)
 #     super(MyTuner, self).run_trial(*args, **kwargs, callbacks=callbacks)
 
 
-tuner = config.MyTuner(X_train, y_train.reshape(-1,1),X_test[:1000], y_test[:1000].reshape(-1,1),
+tuner = config.MyTuner(X_train, y_train.reshape(-1,1),X_test, y_test.reshape(-1,1),
                      objective='val_loss',
                      # max_epochs=10,
                      # factor=3,
