@@ -6,13 +6,13 @@ Created on Tue Mar  8 10:29:07 2022
 
 @author: aolza
 """
+import sys
+sys.path.append('/home/aolza/Desktop/estratificacion/')
 import numpy as np
 import pandas as pd
 import keras_tuner as kt
 from sklearn.model_selection import RandomizedSearchCV, train_test_split
 from tensorflow import keras
-import sys
-sys.path.append('/home/aolza/Desktop/estratificacion/')
 import argparse
 
 parser = argparse.ArgumentParser(description='Train and save Neural Network')
@@ -45,8 +45,8 @@ util.makeAllPaths()
 seed_sampling= args.seed_sampling if hasattr(args, 'seed_sampling') else config.SEED #imported from default configuration
 seed_hparam= args.seed_hparam if hasattr(args, 'seed_hparam') else config.SEED
 # n_iter= args.n_iter sif hasattr(args, 'n_iter') else config.N_ITER
-model_name=config.ROOTPATH+'neural_AGESEX'
-sys.setprofile(util.tracefunc)
+model_name=config.MODELPATH+'neural_AGESEX'
+# sys.setprofile(util.tracefunc)
 #%%
 """ BEGGINNING """
 from dataManipulation.dataPreparation import getData
@@ -75,12 +75,12 @@ np.random.seed(seed_hparam)
 #     super(MyTuner, self).run_trial(*args, **kwargs, callbacks=callbacks)
 
 
-tuner = config.MyTuner(X_train, y_train.reshape(-1,1),X_test, y_test.reshape(-1,1),
-                     objective='val_loss',
+tuner = config.MyTuner(X_train[:1000], y_train[:1000].reshape(-1,1),X_test[:1000], y_test[:1000].reshape(-1,1),
+                     objective=kt.Objective("val_loss", direction="min"),
                      # max_epochs=10,
                      # factor=3,
-                     directory=config.ROOTPATH+'my_dir',
-                     project_name='intro_to_kt')
+                     directory=config.ROOTPATH+'neuralAGESEX',
+                     project_name='neuralAGESEX')
 
 tuner.search(epochs=10)
 
@@ -105,3 +105,4 @@ if best_hp.values['cyclic']:
 
 config.keras_code(X,y,X_train,y_train,**best_hp_,
                   callbacks=callbacks, saving_path=model_name)
+util.saveconfig(config,config.USEDCONFIGPATH+model_name.split('/')[-1]+'.json')

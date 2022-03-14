@@ -96,8 +96,6 @@ def build_model(units_0, n_hidden, activ, cyclic, early, shuffle, **kwargs):
     # low=kwargs.get('low',None)
     # high=kwargs.get('high',None)
     hidden_units=kwargs.get('hidden_units',{})
-    print(units_0, n_hidden, activ, cyclic, early, shuffle,
-            hidden_units, lr)
     # BUILD MODEL
     model = keras.Sequential()
     #input layer
@@ -141,21 +139,22 @@ def keras_code(x_train, y_train, x_val, y_val,
                ):
     lr=kwargs.get('lr',None)
     hidden_units=kwargs.get('hidden_units',{})
-    print(units_0, n_hidden, activ, cyclic, early, shuffle, callbacks,
-            hidden_units, lr)
     # Build model
     model = build_model(units_0, n_hidden, activ, cyclic, early, shuffle,
                         lr=lr, hidden_units=hidden_units)
+    callbacks.append(keras.callbacks.Callback())
     # Train & eval model
-    model.fit(x_train, y_train, shuffle=shuffle, callbacks=callbacks, validation_data=(x_val,y_val))
+    history=model.fit(x_train, y_train, shuffle=shuffle, callbacks=callbacks, validation_data=(x_val,y_val))
     # Save model
     model.save(saving_path)
 
     # Return a single float as the objective value.
     # You may also return a dictionary
     # of {metric_name: metric_value}.
-    y_pred = model.predict(x_val)
-    return np.mean(np.abs(y_pred - y_val)) #FIXME CHANGE RETURN! RETURN VAL LOSS MAYBE
+    # y_pred = model.predict(x_val)
+    # 
+    print(history.history)
+    return({'val_loss':history.history['val_loss'][-1] }) #FIXME CHANGE RETURN! RETURN VAL LOSS MAYBE
 
 class MyTuner(kt.RandomSearch):
     def __init__(self, x_train, y_train, x_val, y_val,*args,**kwargs):
