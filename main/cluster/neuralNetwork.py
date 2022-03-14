@@ -28,6 +28,8 @@ parser.add_argument('--model-name', metavar='model_name',type=str, default=argpa
                     help='Custom model name to save (provide without extension nor directory)')
 parser.add_argument('--n-iter', metavar='n_iter',type=int, default=argparse.SUPPRESS,
                     help='Number of iterations for the random grid search (hyperparameter tuning)')
+parser.add_argument('--tuner', metavar='tuner',type=str, default='bayesian',
+                    help='Type of tuner (random/bayesian)')
 
 args = parser.parse_args()
 
@@ -44,9 +46,7 @@ import configurations.utility as util
 util.makeAllPaths()
 seed_sampling= args.seed_sampling if hasattr(args, 'seed_sampling') else config.SEED #imported from default configuration
 seed_hparam= args.seed_hparam if hasattr(args, 'seed_hparam') else config.SEED
-# n_iter= args.n_iter sif hasattr(args, 'n_iter') else config.N_ITER
-model_name=config.MODELPATH+'neural_AGESEX'
-# sys.setprofile(util.tracefunc)
+
 #%%
 """ BEGGINNING """
 from dataManipulation.dataPreparation import getData
@@ -67,21 +67,27 @@ print('Sample size ',len(y_train))
 #%% 
 """ FIT MODEL """
 np.random.seed(seed_hparam)
-# import tensorflow as tf
-# class MyTuner(kt.Tuner):
-#   def run_trial(self,trial, *args, **kwargs):
-#     patience = hp.Int('patience', 0, 3, default=1)
-#     callbacks = tf.keras.callbacks.ReduceLROnPlateau(patience=patience)
-#     super(MyTuner, self).run_trial(*args, **kwargs, callbacks=callbacks)
 
-
-tuner = config.MyTuner(X_train[:1000], y_train[:1000].reshape(-1,1),X_test[:1000], y_test[:1000].reshape(-1,1),
+if args.tuner=='bayesian':
+    model_name=config.MODELPATH+'neural_Bayesian'
+    print('Tuner: BayesianOptimization')
+    tuner = config.MyBayesianTuner(X_train, y_train.reshape(-1,1),X_test, y_test.reshape(-1,1),
                      objective=kt.Objective("val_loss", direction="min"),
-                     # max_epochs=10,
-                     # factor=3,
-                     directory=config.ROOTPATH+'neuralAGESEX',
-                     project_name='neuralAGESEX')
-
+                     max_trials=30, 
+                     num_initial_points=4,
+                     seed=seed_hparam,
+                     directory=model_name,
+                     project_name='neural_Bayesian')
+else:
+    model_name=config.MODELPATH+'neural_Random'
+    print('Tuner: Random')
+    tuner = config.MyRandomTuner(X_train, y_train.reshape(-1,1),X_test, y_test.reshape(-1,1),
+                 objective=kt.Objective("val_loss", direction="min"),
+                 max_trials=30, 
+                 seed=seed_hparam,
+                 directory=model_name,
+                 project_name='neural_Random')
+    
 tuner.search(epochs=10)
 
 
@@ -103,6 +109,6 @@ if best_hp.values['cyclic']:
     callbacks.append(config.clr(best_hp.values['low'], best_hp.values['high'], step=(len(y) // 1024)))
 
 
-config.keras_code(X,y,X_train,y_train,**best_hp_,
+config.keras_code(X,y,X_train,y_train, epochs=10,**best_hp_,
                   callbacks=callbacks, saving_path=model_name)
 util.saveconfig(config,config.USEDCONFIGPATH+model_name.split('/')[-1]+'.json')

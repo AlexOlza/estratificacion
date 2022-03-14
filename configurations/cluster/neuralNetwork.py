@@ -156,15 +156,7 @@ def keras_code(x_train, y_train, x_val, y_val,
     print(history.history)
     return({'val_loss':history.history['val_loss'][-1] }) #FIXME CHANGE RETURN! RETURN VAL LOSS MAYBE
 
-class MyTuner(kt.RandomSearch):
-    def __init__(self, x_train, y_train, x_val, y_val,*args,**kwargs):
-        super().__init__(*args,seed=seed_hparam,**kwargs)
-        self.x_train=x_train
-        self.y_train=y_train
-        self.x_val=x_val
-        self.y_val=y_val
-        
-    def run_trial(self, trial, **kwargs):
+def run_trial(tuner, trial, **kwargs):
         hp = trial.hyperparameters
         #neurons in input layer
         units_0=hp.Int("units_0", min_value=32, max_value=1024, step=32)
@@ -193,16 +185,37 @@ class MyTuner(kt.RandomSearch):
                                       patience=5,
                                       restore_best_weights=True)]
         if cyclic:
-            callbacks.append(clr(low, high, step=len(self.y_train // 1024)))
+            callbacks.append(clr(low, high, step=len(tuner.y_train // 1024)))
         print(units_0, n_hidden, activ, cyclic, early, shuffle, callbacks,
             units, lr)
-        return keras_code(self.x_train, self.y_train, self.x_val, self.y_val,
+        return keras_code(tuner.x_train, tuner.y_train, tuner.x_val, tuner.y_val,
             units_0, n_hidden, activ, cyclic, early, shuffle, callbacks,
             hidden_units=units, lr=lr,
-            saving_path=self.directory+'/'+trial.trial_id
+            saving_path=tuner.directory+'/'+trial.trial_id
         )
 
 
+class MyRandomTuner(kt.RandomSearch):
+    def __init__(self, x_train, y_train, x_val, y_val,*args,**kwargs):
+        super().__init__(*args,**kwargs)
+        self.x_train=x_train
+        self.y_train=y_train
+        self.x_val=x_val
+        self.y_val=y_val
+        
+    def run_trial(self, trial, **kwargs):
+        return(run_trial(self, trial, **kwargs))
+    
+class MyBayesianTuner(kt.BayesianOptimization):
+    def __init__(self, x_train, y_train, x_val, y_val,*args,**kwargs):
+        super().__init__(*args,**kwargs)
+        self.x_train=x_train
+        self.y_train=y_train
+        self.x_val=x_val
+        self.y_val=y_val
+        
+    def run_trial(self, trial, **kwargs):
+        return(run_trial(self, trial, **kwargs))
 # tuner = MyTuner(
 #     max_trials=3, overwrite=True, directory="my_dir", project_name="keep_code_separate",
 # )
