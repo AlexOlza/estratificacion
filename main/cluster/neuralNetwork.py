@@ -52,7 +52,7 @@ seed_hparam= args.seed_hparam if hasattr(args, 'seed_hparam') else config.SEED
 from dataManipulation.dataPreparation import getData
 np.random.seed(seed_sampling)
 
-X,y=getData(2016,predictors=r'FEMALE|AGE_')
+X,y=getData(2016)
 assert len(config.COLUMNS)==1, 'This model is built for a single response variable! Modify config.COLUMNS'
 y=np.where(y[config.COLUMNS]>=1,1,0)
 y=y.ravel()
@@ -69,27 +69,29 @@ print('Sample size ',len(y_train))
 np.random.seed(seed_hparam)
 
 if args.tuner=='bayesian':
-    model_name=config.MODELPATH+'neural_Bayesian'
+    model_name=config.MODELPATH+'neural_Bayesian_0'
     print('Tuner: BayesianOptimization')
     tuner = config.MyBayesianTuner(X_train, y_train.reshape(-1,1),X_test, y_test.reshape(-1,1),
                      objective=kt.Objective("val_loss", direction="min"),
-                     max_trials=30, 
+                     max_trials=100,
+                     overwrite=True,
                      num_initial_points=4,
                      seed=seed_hparam,
                      directory=model_name,
-                     project_name='neural_Bayesian')
+                     project_name='neural_Bayesian_0')
 else:
-    model_name=config.MODELPATH+'neural_Random'
+    model_name=config.MODELPATH+'neural_Random_0'
     print('Tuner: Random')
     tuner = config.MyRandomTuner(X_train, y_train.reshape(-1,1),X_test, y_test.reshape(-1,1),
                  objective=kt.Objective("val_loss", direction="min"),
-                 max_trials=30, 
+                 max_trials=100, 
+                 overwrite=True,
                  seed=seed_hparam,
                  directory=model_name,
-                 project_name='neural_Random')
-    
+                 project_name='neural_Random_0')
+  
 tuner.search(epochs=10)
-
+print(tuner.search_space_summary())  
 
 #%%
 """ SAVE TRAINED MODEL """

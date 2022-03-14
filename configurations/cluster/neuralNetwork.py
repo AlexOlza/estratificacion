@@ -86,12 +86,12 @@ from main.cluster.clr_callback import CyclicLR
 """ DEFINITION OF THE HYPERPARAMETER SPACE """
 def clr(low, high, step):
     	return CyclicLR(
-    	mode='triangular',
+    	mode='triangular2',
     	base_lr=low,
     	max_lr=high,
     	step_size= step)
 
-def build_model(units_0, n_hidden, activ, cyclic, early, shuffle, **kwargs):
+def build_model(units_0, n_hidden, activ, cyclic, early, **kwargs):
     lr=kwargs.get('lr',None)
     # low=kwargs.get('low',None)
     # high=kwargs.get('high',None)
@@ -125,26 +125,24 @@ def build_model(units_0, n_hidden, activ, cyclic, early, shuffle, **kwargs):
     else:
         model.compile(
         optimizer=keras.optimizers.Adam(learning_rate=lr), 
-           loss="binary_crossentropy", metrics=[keras.metrics.AUC(),keras.metrics.BinaryCrossentropy(),
-                                                              keras.metrics.Recall(),
-                                                              keras.metrics.Precision()])
+           loss="binary_crossentropy", metrics=[keras.metrics.AUC(),keras.metrics.BinaryCrossentropy()])
    
     
     return model
 
 def keras_code(x_train, y_train, x_val, y_val,
-               units_0, n_hidden, activ, cyclic, early, shuffle, callbacks,
+               units_0, n_hidden, activ, cyclic, early,  callbacks,
                saving_path,
                **kwargs
                ):
     lr=kwargs.get('lr',None)
     hidden_units=kwargs.get('hidden_units',{})
     # Build model
-    model = build_model(units_0, n_hidden, activ, cyclic, early, shuffle,
+    model = build_model(units_0, n_hidden, activ, cyclic, early, 
                         lr=lr, hidden_units=hidden_units)
     callbacks.append(keras.callbacks.Callback())
     # Train & eval model
-    history=model.fit(x_train, y_train, shuffle=shuffle, callbacks=callbacks, validation_data=(x_val,y_val))
+    history=model.fit(x_train, y_train, callbacks=callbacks, validation_data=(x_val,y_val))
     # Save model
     model.save(saving_path)
 
@@ -154,42 +152,41 @@ def keras_code(x_train, y_train, x_val, y_val,
     # y_pred = model.predict(x_val)
     # 
     print(history.history)
-    return({'val_loss':history.history['val_loss'][-1] }) #FIXME CHANGE RETURN! RETURN VAL LOSS MAYBE
+    return({'val_loss':history.history['val_loss'][-1] }) 
 
-def run_trial(tuner, trial, **kwargs):
+def run(tuner, trial, **kwargs):
         hp = trial.hyperparameters
         #neurons in input layer
         units_0=hp.Int("units_0", min_value=32, max_value=1024, step=32)
         #number of hidden layers
-        n_hidden=hp.Int('n_hidden', min_value=0, max_value=3, step=1)
+        n_hidden=hp.Int('n_hidden', min_value=1, max_value=3, step=1)
         units={}
-        for i in range(1,n_hidden+1):
-            # Tune number of units separately.
-            units[f"units_{i}"]=hp.Int(f"units_{i}", min_value=32, max_value=1024, step=32)
+        with hp.conditional_scope('n_hidden',[1,2,3]):#obsolete
+            for i in range(1,n_hidden+1):
+                # Tune number of units separately.
+                units[f"units_{i}"]=hp.Int(f"units_{i}", min_value=32, max_value=1024, step=32)
         cyclic=hp.Boolean('cyclic')
         with hp.conditional_scope('cyclic', False):
             #learning rate
             lr=hp.Float("lr", min_value=1e-4, max_value=1e-2, sampling="log")
         with hp.conditional_scope('cyclic', True):
-             low=hp.Float('low',min_value=1e-4,max_value=5e-3)
-             high=hp.Float('high',min_value=1e-2,max_value=5e-2)
+             low=hp.Float('low',min_value=1e-4,max_value=5e-3, sampling="log")
+             high=hp.Float('high',min_value=6e-3,max_value=5e-2, sampling="log")
         #activation function
         activ=hp.Choice('activ', ['relu','elu'])
         #callbacks and training details
         
        
         early=hp.Fixed('early', True)
-        shuffle=hp.Boolean("shuffle")
-        
         callbacks = [keras.callbacks.EarlyStopping(monitor='val_loss',mode='min',
-                                      patience=5,
+                                      patience=3,
                                       restore_best_weights=True)]
         if cyclic:
-            callbacks.append(clr(low, high, step=len(tuner.y_train // 1024)))
-        print(units_0, n_hidden, activ, cyclic, early, shuffle, callbacks,
-            units, lr)
+            callbacks.append(clr(low, high, step=len(tuner.y_train // 512)))
+        # print(units_0, n_hidden, activ, cyclic, early, callbacks,
+            # units, lr)
         return keras_code(tuner.x_train, tuner.y_train, tuner.x_val, tuner.y_val,
-            units_0, n_hidden, activ, cyclic, early, shuffle, callbacks,
+            units_0, n_hidden, activ, cyclic, early, callbacks,
             hidden_units=units, lr=lr,
             saving_path=tuner.directory+'/'+trial.trial_id
         )
@@ -204,7 +201,7 @@ class MyRandomTuner(kt.RandomSearch):
         self.y_val=y_val
         
     def run_trial(self, trial, **kwargs):
-        return(run_trial(self, trial, **kwargs))
+        return(run(self, trial, **kwargs))
     
 class MyBayesianTuner(kt.BayesianOptimization):
     def __init__(self, x_train, y_train, x_val, y_val,*args,**kwargs):
@@ -215,7 +212,7 @@ class MyBayesianTuner(kt.BayesianOptimization):
         self.y_val=y_val
         
     def run_trial(self, trial, **kwargs):
-        return(run_trial(self, trial, **kwargs))
+        return(run(self, trial, **kwargs))
 # tuner = MyTuner(
 #     max_trials=3, overwrite=True, directory="my_dir", project_name="keep_code_separate",
 # )
