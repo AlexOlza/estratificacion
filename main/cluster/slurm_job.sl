@@ -31,12 +31,5 @@ echo "-------"
 date +"%F %T" 
 
 exit 0
-
-type=bayesian
-out=$(pwd)/output/neural_${type}_OUT
-err=$(pwd)/output/neural_${type}_ERR
-SCRIPT=neuralNetwork
-ALGORITHM=$SCRIPT
-EXPERIMENT=urgcms_excl_nbinj
-sbatch --output=$out --error=$err --job-name=$type --export=ALL,SCRIPT=$SCRIPT,ALGORITHM=neuralNetwork,EXPERIMENT=urgcms_excl_nbinj,OPTIONS="--tuner ${type}" slurm_job.sl 
+ 
 
