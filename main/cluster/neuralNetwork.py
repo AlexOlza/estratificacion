@@ -43,7 +43,7 @@ parser.add_argument('--model-name', metavar='model_name',type=str, default=argpa
                     help='Custom model name to save (provide without extension nor directory)')
 parser.add_argument('--n-iter', metavar='n_iter',type=int, default=argparse.SUPPRESS,
                     help='Number of iterations for the random grid search (hyperparameter tuning)')
-parser.add_argument('--tuner', metavar='tuner',type=str, default='bayesian',
+parser.add_argument('--tuner','-t', metavar='tuner',type=str, default='bayesian',
                     help='Type of tuner (random/bayesian)')
 
 args = parser.parse_args()
