@@ -13,8 +13,24 @@ import pandas as pd
 import keras_tuner as kt
 from sklearn.model_selection import RandomizedSearchCV, train_test_split
 from tensorflow import keras
+import tensorflow as tf
 import argparse
-
+import os
+#%%
+"""REPRODUCIBILITY"""
+seed_value=42
+# 1. Set `PYTHONHASHSEED` environment variable at a fixed value
+os.environ['PYTHONHASHSEED']=str(seed_value)
+# GPU
+print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
+# 2. Set `python` built-in pseudo-random generator at a fixed value
+import random
+random.seed(seed_value)
+# 3. Set `numpy` pseudo-random generator at a fixed value
+np.random.seed(seed_value)
+# 4. Set `tensorflow` pseudo-random generator at a fixed value
+import tensorflow as tf
+tf.random.set_seed(seed_value) # tensorflow 2.x
 parser = argparse.ArgumentParser(description='Train and save Neural Network')
 parser.add_argument('chosen_config', type=str,
                     help='The name of the config file (without .py), which must be located in configurations/cluster.')

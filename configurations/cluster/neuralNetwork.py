@@ -16,13 +16,16 @@ import argparse
 import importlib
 import numpy as np
 import os
+from tensorflow.python.client import device_lib
+print(device_lib.list_local_devices())
+
 #%%
 """REPRODUCIBILITY"""
 seed_value=42
 # 1. Set `PYTHONHASHSEED` environment variable at a fixed value
 os.environ['PYTHONHASHSEED']=str(seed_value)
 # Disable GPU
-os.environ['CUDA_VISIBLE_DEVICES'] = ''
+# os.environ['CUDA_VISIBLE_DEVICES'] = ''
 # 2. Set `python` built-in pseudo-random generator at a fixed value
 import random
 random.seed(seed_value)
@@ -32,9 +35,9 @@ np.random.seed(seed_value)
 import tensorflow as tf
 tf.random.set_seed(seed_value) # tensorflow 2.x
 # 5. Configure a new global `tensorflow` session
-session_conf = tf.compat.v1.ConfigProto(intra_op_parallelism_threads=1, inter_op_parallelism_threads=3,allow_soft_placement=True)
-sess = tf.compat.v1.Session(graph=tf.compat.v1.get_default_graph(), config=session_conf)
-tf.compat.v1.keras.backend.set_session(sess)
+# session_conf = tf.compat.v1.ConfigProto(intra_op_parallelism_threads=1, inter_op_parallelism_threads=3,allow_soft_placement=True)
+# sess = tf.compat.v1.Session(graph=tf.compat.v1.get_default_graph(), config=session_conf)
+# tf.compat.v1.keras.backend.set_session(sess)
 #%%
 """ OUR ARGUMENTS AND IMPORTS """
 parser = argparse.ArgumentParser(description='Train HGB algorithm and save model')
