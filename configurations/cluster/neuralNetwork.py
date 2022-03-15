@@ -7,9 +7,6 @@ Created on Tue Mar  8 12:22:32 2022
 """
 """EXTERNAL IMPORTS"""
 import keras_tuner as kt
-from keras import layers, initializers
-from keras.callbacks import EarlyStopping
-from keras import initializers
 from tensorflow import keras
 import re
 import argparse
@@ -103,7 +100,7 @@ def build_model(units_0, n_hidden, activ, cyclic, early, **kwargs):
     model = keras.Sequential()
     #input layer
     model.add(
-        layers.Dense(
+        keras.layers.Dense(
             units=units_0,
             activation=activ,
         )
@@ -111,13 +108,13 @@ def build_model(units_0, n_hidden, activ, cyclic, early, **kwargs):
     #hidden layers
     for i in range(1,n_hidden+1):
         model.add(
-        layers.Dense(
+        keras.layers.Dense(
             # Tune number of units separately.
             units=hidden_units[f"units_{i}"],
             activation=activ))
     #output layer
-    model.add(layers.Dense(1, activation='sigmoid',name='output',
-            kernel_initializer=initializers.he_uniform(seed=seed_hparam)))
+    model.add(keras.layers.Dense(1, activation='sigmoid',name='output',
+            kernel_initializer=keras.initializers.he_uniform(seed=seed_hparam)))
 
     if cyclic:
         model.compile(

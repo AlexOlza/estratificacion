@@ -29,7 +29,6 @@ random.seed(seed_value)
 # 3. Set `numpy` pseudo-random generator at a fixed value
 np.random.seed(seed_value)
 # 4. Set `tensorflow` pseudo-random generator at a fixed value
-import tensorflow as tf
 tf.random.set_seed(seed_value) # tensorflow 2.x
 parser = argparse.ArgumentParser(description='Train and save Neural Network')
 parser.add_argument('chosen_config', type=str,
