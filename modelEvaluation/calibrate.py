@@ -135,6 +135,7 @@ def plot(p):
             df['N']=bintot[bintot!=0]
             print('\n')
 
+
             reliabilityConsistency(probs, obs, nbins=20, nboot=100, ax=axTop, seed=config.SEED,color=col)
             
             axHist.hist(probs, range=(0, 1), bins=unique,
@@ -168,8 +169,6 @@ if __name__=='__main__':
     models=detect_latest(detect_models())
     p={}
     for model_name in models:
-        # if 'logistic' not in model_name:
-        #     continue
         print(model_name)
         p[model_name]=calibrate(model_name,year,
                 pastX=pastX,pastY=pastY,presentX=presentX,presentY=presentY)
