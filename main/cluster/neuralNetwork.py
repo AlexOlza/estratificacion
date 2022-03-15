@@ -89,7 +89,7 @@ if args.tuner=='bayesian':
     print('Tuner: BayesianOptimization')
     tuner = config.MyBayesianTuner(X_train, y_train.reshape(-1,1),X_test, y_test.reshape(-1,1),
                      objective=kt.Objective("val_loss", direction="min"),
-                     max_trials=100,
+                     max_trials=50,
                      overwrite=True,
                      num_initial_points=4,
                      seed=seed_hparam,
@@ -100,13 +100,13 @@ else:
     print('Tuner: Random')
     tuner = config.MyRandomTuner(X_train, y_train.reshape(-1,1),X_test, y_test.reshape(-1,1),
                  objective=kt.Objective("val_loss", direction="min"),
-                 max_trials=100, 
+                 max_trials=50, 
                  overwrite=True,
                  seed=seed_hparam,
                  directory=model_name,
                  project_name='neural_Random_0')
   
-tuner.search(epochs=10)
+tuner.search(epochs=15)
 print(tuner.search_space_summary())  
 
 #%%
