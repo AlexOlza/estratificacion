@@ -50,6 +50,8 @@ parser.add_argument('--model-name', metavar='model_name',type=str, default=argpa
                     help='Custom model name to save (provide without extension nor directory)')
 parser.add_argument('--n-iter', metavar='n_iter',type=int, default=argparse.SUPPRESS,
                     help='Number of iterations for the random grid search (hyperparameter tuning)')
+parser.add_argument('--tuner','-t', metavar='tuner',type=str, default='bayesian',
+                    help='Type of tuner (random/bayesian)')
 args = parser.parse_args()
 experiment='configurations.'+re.sub('hyperparameter_|undersampling_|full_|variability_|fixsample_','',args.experiment)
 
