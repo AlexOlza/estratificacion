@@ -16,13 +16,12 @@ IFSsave="$IFS"
 #Change IFS to comma
 IFS=,
 #Split var into list of variables: "x,y,z" -> ("x","y","z")
+vars=($2_0)
 for s in "${seeds[@]}" ### loop through values
 do
-models=$2_$s.joblib,$models
-configs=$2_$s.json,$configs
-vars=("${vars[@]}" $2_$s)
+   vars=("${vars[@]}" $2_$s)
 done
-echo $vars
+
 j=${#vars[@]} #Number of models to transfer
 #Revert IFS change
 IFS="$IFSsave"
@@ -45,21 +44,21 @@ do
        echo "${vars[i]} is already in local computer"
        j=$(($j-1)) #This model should not be transferred because it's already there
    else
+      echo add $m
       models="${models}${m}" 
       configs="${configs}${c}"
    fi
 done
-
 if [ $j -eq 1 ]
 then
-  echo "Transferring ${#vars[@]} config file"
+  echo "Transferring ${j} config file"
   scp -P 6556 $CLUSTER:$configpath/$configs $configpath;
-  echo "Transferring ${#vars[@]} model"
+  echo "Transferring ${j} model"
   scp -P 6556 $CLUSTER:$modelpath/$models $modelpath;
 elif [ $j -gt 1 ] ; then
-  echo "Transferring ${#vars[@]} config files"
+  echo "Transferring ${j} config files"
   scp -P 6556 $CLUSTER:$configpath/\{$configs\} $configpath;
-  echo "Transferring ${#vars[@]} models"
+  echo "Transferring ${j} models"
   scp -P 6556 $CLUSTER:$modelpath/\{$models\} $modelpath;
 else 
   echo "No files to be transferred (j=${j})"
