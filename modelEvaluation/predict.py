@@ -14,6 +14,7 @@ from sklearn.metrics import roc_auc_score, r2_score
 import numpy as np
 import csv
 import pandas as pd
+from tensorflow import keras
 #%%
 msg='Full path to configuration json file'
 import argparse
@@ -63,6 +64,10 @@ def predict_save(yr,model,model_name,X,y,**kwargs):
     n=len(X)/CHUNK_SIZE
     filename=generate_filename(model_name,yr)
     print('predfilename ',filename)
+    if 'neural' in model_name:
+        pred=model.predict
+    else:
+        pred=model.predict_proba
     with open(filename,'w') as predFile:
         csv_out=csv.writer(predFile)
         csv_out.writerow(['PATIENT_ID','PRED','OBS'])
@@ -75,7 +80,10 @@ def predict_save(yr,model,model_name,X,y,**kwargs):
             if 'COSTE_TOTAL_ANO2' in config.COLUMNS:
                 predictions=model.predict(chunk.drop('PATIENT_ID',axis=1)) # predicted cost
             else:
-                predictions=model.predict_proba(chunk.drop('PATIENT_ID',axis=1))[:,1] #Probab of hospitalization
+                if 'neural' in config.ALGORITHM:
+                    predictions=pred(chunk.drop('PATIENT_ID',axis=1))[:,0] #Probab of hospitalization
+                else:
+                    predictions=pred(chunk.drop('PATIENT_ID',axis=1))[:,1] #Probab of hospitalization
             for element in zip(chunk['PATIENT_ID'],ychunk['PATIENT_ID'],predictions,ychunk[columns]):
                 csv_out.writerow(element)
                 del element
@@ -84,10 +92,17 @@ def predict_save(yr,model,model_name,X,y,**kwargs):
 
 def predict(model_name,experiment_name,year,**kwargs):
     predictors=kwargs.get('predictors',config.PREDICTORREGEX)
-    modelfilename='/home/aolza/Desktop/estratificacion/models/{1}/{0}.joblib'.format(model_name,experiment_name)
-    if Path(modelfilename).is_file():
+    modelfilename=f'{config.MODELPATH}/{model_name}'
+    if 'neural' in model_name:
+        load=keras.models.load_model
+        if model_name=='neural_AGESEX':
+            predictors=r'PATIENT_ID|FEMALE|AGE'
+    else:
+        modelfilename+='.joblib'
+        load=job.load
+    if Path(modelfilename):
         print('loading model ',model_name)
-        model=job.load(modelfilename)
+        model=load(modelfilename)
     else:
         print('Model not found :(')
         print('missing ',modelfilename)
@@ -111,4 +126,4 @@ def predict(model_name,experiment_name,year,**kwargs):
 if __name__=='__main__':
         
     year=int(input('YEAR YOU WANT TO PREDICT:'))
-    predict(model_name,experiment_name,year)       
+    probs,score=predict(model_name,experiment_name,year)       

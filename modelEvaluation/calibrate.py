@@ -107,7 +107,7 @@ def plot(p):
         obs=np.where(preds.OBS>=1,1,0).ravel()
         for probs,name in zip([preds.PRED,preds.PREDCAL],[model_name,model_name+' Calibrated']):
             fraction_of_positives, mean_pastPredicted_value = \
-                    calibration_curve(obs, probs, n_bins=30,normalize=False)
+                    calibration_curve(obs, probs, n_bins=20,normalize=False)
             
             if 'Calibrated' not in name:
                 axTop=ax1
@@ -117,7 +117,7 @@ def plot(p):
                 axHist=ax4
             unique=len(np.unique(probs))
        
-            bintot=bin_total(obs, probs, n_bins=30)
+            bintot=bin_total(obs, probs, n_bins=20)
             label=brier_score_loss(obs, probs)
             print('brier ',label)
             notempty=[i for i in range(len(mean_pastPredicted_value)) if bintot[i] != 0]
@@ -135,7 +135,8 @@ def plot(p):
             df['N']=bintot[bintot!=0]
             print('\n')
 
-            reliabilityConsistency(probs, obs, nbins=30, nboot=100, ax=axTop, seed=config.SEED,color=col)
+
+            reliabilityConsistency(probs, obs, nbins=20, nboot=100, ax=axTop, seed=config.SEED,color=col)
             
             axHist.hist(probs, range=(0, 1), bins=unique,
                     histtype="step", lw=2,color=col)
@@ -168,8 +169,6 @@ if __name__=='__main__':
     models=detect_latest(detect_models())
     p={}
     for model_name in models:
-        if 'logistic' not in model_name:
-            continue
         print(model_name)
         p[model_name]=calibrate(model_name,year,
                 pastX=pastX,pastY=pastY,presentX=presentX,presentY=presentY)

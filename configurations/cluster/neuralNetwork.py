@@ -7,22 +7,22 @@ Created on Tue Mar  8 12:22:32 2022
 """
 """EXTERNAL IMPORTS"""
 import keras_tuner as kt
-from keras import layers, initializers
-from keras.callbacks import EarlyStopping
-from keras import initializers
 from tensorflow import keras
 import re
 import argparse
 import importlib
 import numpy as np
 import os
+from tensorflow.python.client import device_lib
+print(device_lib.list_local_devices())
+
 #%%
 """REPRODUCIBILITY"""
 seed_value=42
 # 1. Set `PYTHONHASHSEED` environment variable at a fixed value
 os.environ['PYTHONHASHSEED']=str(seed_value)
 # Disable GPU
-os.environ['CUDA_VISIBLE_DEVICES'] = ''
+# os.environ['CUDA_VISIBLE_DEVICES'] = ''
 # 2. Set `python` built-in pseudo-random generator at a fixed value
 import random
 random.seed(seed_value)
@@ -32,9 +32,9 @@ np.random.seed(seed_value)
 import tensorflow as tf
 tf.random.set_seed(seed_value) # tensorflow 2.x
 # 5. Configure a new global `tensorflow` session
-session_conf = tf.compat.v1.ConfigProto(intra_op_parallelism_threads=1, inter_op_parallelism_threads=3,allow_soft_placement=True)
-sess = tf.compat.v1.Session(graph=tf.compat.v1.get_default_graph(), config=session_conf)
-tf.compat.v1.keras.backend.set_session(sess)
+# session_conf = tf.compat.v1.ConfigProto(intra_op_parallelism_threads=1, inter_op_parallelism_threads=3,allow_soft_placement=True)
+# sess = tf.compat.v1.Session(graph=tf.compat.v1.get_default_graph(), config=session_conf)
+# tf.compat.v1.keras.backend.set_session(sess)
 #%%
 """ OUR ARGUMENTS AND IMPORTS """
 parser = argparse.ArgumentParser(description='Train HGB algorithm and save model')
@@ -50,6 +50,8 @@ parser.add_argument('--model-name', metavar='model_name',type=str, default=argpa
                     help='Custom model name to save (provide without extension nor directory)')
 parser.add_argument('--n-iter', metavar='n_iter',type=int, default=argparse.SUPPRESS,
                     help='Number of iterations for the random grid search (hyperparameter tuning)')
+parser.add_argument('--tuner','-t', metavar='tuner',type=str, default='bayesian',
+                    help='Type of tuner (random/bayesian)')
 args = parser.parse_args()
 experiment='configurations.'+re.sub('hyperparameter_|undersampling_|full_|variability_|fixsample_','',args.experiment)
 
@@ -86,23 +88,21 @@ from main.cluster.clr_callback import CyclicLR
 """ DEFINITION OF THE HYPERPARAMETER SPACE """
 def clr(low, high, step):
     	return CyclicLR(
-    	mode='triangular',
+    	mode='triangular2',
     	base_lr=low,
     	max_lr=high,
     	step_size= step)
 
-def build_model(units_0, n_hidden, activ, cyclic, early, shuffle, **kwargs):
+def build_model(units_0, n_hidden, activ, cyclic, early, **kwargs):
     lr=kwargs.get('lr',None)
     # low=kwargs.get('low',None)
     # high=kwargs.get('high',None)
     hidden_units=kwargs.get('hidden_units',{})
-    print(units_0, n_hidden, activ, cyclic, early, shuffle,
-            hidden_units, lr)
     # BUILD MODEL
     model = keras.Sequential()
     #input layer
     model.add(
-        layers.Dense(
+        keras.layers.Dense(
             units=units_0,
             activation=activ,
         )
@@ -110,13 +110,13 @@ def build_model(units_0, n_hidden, activ, cyclic, early, shuffle, **kwargs):
     #hidden layers
     for i in range(1,n_hidden+1):
         model.add(
-        layers.Dense(
+        keras.layers.Dense(
             # Tune number of units separately.
             units=hidden_units[f"units_{i}"],
             activation=activ))
     #output layer
-    model.add(layers.Dense(1, activation='sigmoid',name='output',
-            kernel_initializer=initializers.he_uniform(seed=seed_hparam)))
+    model.add(keras.layers.Dense(1, activation='sigmoid',name='output',
+            kernel_initializer=keras.initializers.he_uniform(seed=seed_hparam)))
 
     if cyclic:
         model.compile(
@@ -127,83 +127,94 @@ def build_model(units_0, n_hidden, activ, cyclic, early, shuffle, **kwargs):
     else:
         model.compile(
         optimizer=keras.optimizers.Adam(learning_rate=lr), 
-           loss="binary_crossentropy", metrics=[keras.metrics.AUC(),keras.metrics.BinaryCrossentropy(),
-                                                              keras.metrics.Recall(),
-                                                              keras.metrics.Precision()])
+           loss="binary_crossentropy", metrics=[keras.metrics.AUC(),keras.metrics.BinaryCrossentropy()])
    
     
     return model
 
 def keras_code(x_train, y_train, x_val, y_val,
-               units_0, n_hidden, activ, cyclic, early, shuffle, callbacks,
+               units_0, n_hidden, activ, cyclic, early,  callbacks,
                saving_path,
                **kwargs
                ):
     lr=kwargs.get('lr',None)
     hidden_units=kwargs.get('hidden_units',{})
-    print(units_0, n_hidden, activ, cyclic, early, shuffle, callbacks,
-            hidden_units, lr)
     # Build model
-    model = build_model(units_0, n_hidden, activ, cyclic, early, shuffle,
+    model = build_model(units_0, n_hidden, activ, cyclic, early, 
                         lr=lr, hidden_units=hidden_units)
+    callbacks.append(keras.callbacks.Callback())
     # Train & eval model
-    model.fit(x_train, y_train, shuffle=shuffle, callbacks=callbacks, validation_data=(x_val,y_val))
+    history=model.fit(x_train, y_train, callbacks=callbacks, validation_data=(x_val,y_val))
     # Save model
     model.save(saving_path)
 
     # Return a single float as the objective value.
     # You may also return a dictionary
     # of {metric_name: metric_value}.
-    y_pred = model.predict(x_val)
-    return np.mean(np.abs(y_pred - y_val)) #FIXME CHANGE RETURN! RETURN VAL LOSS MAYBE
+    # y_pred = model.predict(x_val)
+    # 
+    print(history.history)
+    return({'val_loss':history.history['val_loss'][-1] }) 
 
-class MyTuner(kt.RandomSearch):
-    def __init__(self, x_train, y_train, x_val, y_val,*args,**kwargs):
-        super().__init__(*args,seed=seed_hparam,**kwargs)
-        self.x_train=x_train
-        self.y_train=y_train
-        self.x_val=x_val
-        self.y_val=y_val
-        
-    def run_trial(self, trial, **kwargs):
+def run(tuner, trial, **kwargs):
         hp = trial.hyperparameters
         #neurons in input layer
         units_0=hp.Int("units_0", min_value=32, max_value=1024, step=32)
         #number of hidden layers
-        n_hidden=hp.Int('n_hidden', min_value=0, max_value=3, step=1)
+        n_hidden=hp.Int('n_hidden', min_value=1, max_value=3, step=1)
         units={}
-        for i in range(1,n_hidden+1):
-            # Tune number of units separately.
-            units[f"units_{i}"]=hp.Int(f"units_{i}", min_value=32, max_value=1024, step=32)
+        with hp.conditional_scope('n_hidden',[1,2,3]):#obsolete
+            for i in range(1,n_hidden+1):
+                # Tune number of units separately.
+                units[f"units_{i}"]=hp.Int(f"units_{i}", min_value=32, max_value=1024, step=32)
         cyclic=hp.Boolean('cyclic')
         with hp.conditional_scope('cyclic', False):
             #learning rate
             lr=hp.Float("lr", min_value=1e-4, max_value=1e-2, sampling="log")
         with hp.conditional_scope('cyclic', True):
-             low=hp.Float('low',min_value=1e-4,max_value=5e-3)
-             high=hp.Float('high',min_value=1e-2,max_value=5e-2)
+             low=hp.Float('low',min_value=1e-4,max_value=5e-3, sampling="log")
+             high=hp.Float('high',min_value=6e-3,max_value=5e-2, sampling="log")
         #activation function
         activ=hp.Choice('activ', ['relu','elu'])
         #callbacks and training details
         
        
         early=hp.Fixed('early', True)
-        shuffle=hp.Boolean("shuffle")
-        
         callbacks = [keras.callbacks.EarlyStopping(monitor='val_loss',mode='min',
-                                      patience=5,
+                                      patience=3,
                                       restore_best_weights=True)]
         if cyclic:
-            callbacks.append(clr(low, high, step=len(self.y_train // 1024)))
-        print(units_0, n_hidden, activ, cyclic, early, shuffle, callbacks,
-            units, lr)
-        return keras_code(self.x_train, self.y_train, self.x_val, self.y_val,
-            units_0, n_hidden, activ, cyclic, early, shuffle, callbacks,
+            callbacks.append(clr(low, high, step=len(tuner.y_train // 512)))
+        # print(units_0, n_hidden, activ, cyclic, early, callbacks,
+            # units, lr)
+        return keras_code(tuner.x_train, tuner.y_train, tuner.x_val, tuner.y_val,
+            units_0, n_hidden, activ, cyclic, early, callbacks,
             hidden_units=units, lr=lr,
-            saving_path=self.directory+'/'+trial.trial_id
+            saving_path=tuner.directory+'/'+trial.trial_id
         )
 
 
+class MyRandomTuner(kt.RandomSearch):
+    def __init__(self, x_train, y_train, x_val, y_val,*args,**kwargs):
+        super().__init__(*args,**kwargs)
+        self.x_train=x_train
+        self.y_train=y_train
+        self.x_val=x_val
+        self.y_val=y_val
+        
+    def run_trial(self, trial, **kwargs):
+        return(run(self, trial, **kwargs))
+    
+class MyBayesianTuner(kt.BayesianOptimization):
+    def __init__(self, x_train, y_train, x_val, y_val,*args,**kwargs):
+        super().__init__(*args,**kwargs)
+        self.x_train=x_train
+        self.y_train=y_train
+        self.x_val=x_val
+        self.y_val=y_val
+        
+    def run_trial(self, trial, **kwargs):
+        return(run(self, trial, **kwargs))
 # tuner = MyTuner(
 #     max_trials=3, overwrite=True, directory="my_dir", project_name="keep_code_separate",
 # )
