@@ -204,6 +204,8 @@ if __name__=='__main__':
             print(available_metrics)
             boxplots(available_metrics, year, K=20000)
             exit(1)
+    else:
+        available_metrics=pd.DataFrame()
 
     if not nested:
         all_predictions,metrics=compare(selected,X,y,year)
@@ -218,8 +220,8 @@ if __name__=='__main__':
         score,recall,ppv=[list(array.values()) for array in list(metrics.values())]
         df=pd.DataFrame(list(zip(selected,score,recall,ppv)),columns=['Model']+list(metrics.keys()))
         print(df.to_markdown(index=False,))
-        df.to_csv(config.PREDPATH+'/metrics.csv', index=False)
-
-    # df=pd.read_csv(config.MODELPATH+'metrics.csv')
+    
+    df=pd.concat(df, available_metrics, ignore_index=True, axis=0)
+    df.to_csv(config.PREDPATH+'/metrics.csv', index=False)
 
     boxplots(df, year, K=20000)
