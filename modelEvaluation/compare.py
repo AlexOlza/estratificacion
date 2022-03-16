@@ -18,7 +18,8 @@ Created on Tue Dec 14 16:13:19 2021
     Compare
 
 """
-
+import matplotlib.pyplot as plt
+from sklearn.metrics import roc_auc_score
 import pandas as pd
 from pathlib import Path
 import re
@@ -34,7 +35,7 @@ from modelEvaluation.predict import predict, generate_filename
 from dataManipulation.dataPreparation import getData
 #%%
 def detect_models(modelpath=config.MODELPATH):
-    available_models=[x.stem for x in Path(modelpath).glob('./*') if x.is_file()]
+    available_models=[x.stem for x in Path(modelpath).glob('./*') if x.is_file() and x.suffix in ['.joblib','.pb']]
     print('Available models are:')
     print(available_models)
     return(available_models)
@@ -159,19 +160,24 @@ def parameter_distribution(models,**args):
                                                          index=[0]) #fixes ValueError: If using all scalar values, you must pass an index
         plt.figure()
         times_selected[parameter].plot(kind='bar',title=parameter, rot=0)
-def performance_distribution(models):
-    pass #TODO  write
-    
-def boxplots(df, logistic_predfile):
-    logistic=pd.read_csv(logistic_predfile)
-    # logdf,metrics=compare(available_models,X,y,year)
-    df['Algorithm']=[re.sub('_[0-9]', '', model) for model in df['Model'].values]
-    import matplotlib.pyplot as plt
-    for column in df.select_dtypes(exclude=['object']):
-        plt.figure()
+
+def boxplots(df, year, K):
+    parent_models=detect_models(re.sub('hyperparameter_variability_|fixsample_','',config.MODELPATH))
+    logistic_model=[i for i in detect_latest(parent_models) if 'logistic' in i][0]
+    logistic_predfile=re.sub('hyperparameter_variability_|fixsample_','',generate_filename(logistic_model,year))
+    logistic_predictions=pd.read_csv(logistic_predfile)
+    auc=roc_auc_score(np.where(logistic_predictions.OBS>=1,1,0), logistic_predictions.PRED)
+    recall, ppv= performance(logistic_predictions.PRED, logistic_predictions.OBS,K)
+    logistic_metrics={'Score':auc,'Recall_{0}'.format(K):recall,'PPV_{0}'.format(K):ppv}
+    df['Algorithm']=[re.sub('_|[0-9]', '', model) for model in df['Model'].values]
+    for column in logistic_metrics.keys():
+        print(column)
+        fig, ax = plt.subplots(figsize=(10,8))
+        plt.suptitle('')
         # for algorithm in df.algorithm.unique():
-        df[column].plot(kind='box',by='Algorithm')
-        plt.axhline(y = logdf[colum].values, color = 'r', linestyle = '-')
+        df.boxplot(column=column, by='Algorithm', ax=ax)
+        plt.axhline(y = logistic_metrics[column], color = 'r', linestyle = '-')
+        plt.show()
     # parameter_distribution(selected)
 
 #%%
@@ -206,10 +212,5 @@ if __name__=='__main__':
     #     ax[i]=df[m].plot.box()
     df=pd.read_csv(config.MODELPATH+'metrics.csv')
         # print(i,m)
-    import matplotlib.pyplot as plt
-    
-    for column in df.select_dtypes(exclude=['object']):
-        plt.figure()
-        # df.boxplot([column])
-        df[column].plot(kind='box', by='Algorithm',title=' - '.join([config.ALGORITHM,config.EXPERIMENT,column]))
+    boxplots(df, year, K=20000)
     # parameter_distribution(selected)
