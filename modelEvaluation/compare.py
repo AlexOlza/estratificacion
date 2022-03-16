@@ -162,24 +162,28 @@ def parameter_distribution(models,**args):
         plt.figure()
         times_selected[parameter].plot(kind='bar',title=parameter, rot=0)
 
-def boxplots(df, year, K):
-    parent_models=detect_models(re.sub('hyperparameter_variability_|fixsample_','',config.MODELPATH))
-    logistic_model=[i for i in detect_latest(parent_models) if 'logistic' in i][0]
-    logistic_predfile=re.sub('hyperparameter_variability_|fixsample_','',generate_filename(logistic_model,year))
-    logistic_predictions=pd.read_csv(logistic_predfile)
-    auc=roc_auc_score(np.where(logistic_predictions.OBS>=1,1,0), logistic_predictions.PRED)
-    recall, ppv= performance(logistic_predictions.PRED, logistic_predictions.OBS,K)
-    logistic_metrics={'Score':auc,'Recall_{0}'.format(K):recall,'PPV_{0}'.format(K):ppv}
+def boxplots(df, year, K, parent_metrics=None):
+    if not parent_metrics: #we have to compute them
+        parent_models=detect_models(re.sub('hyperparameter_variability_|fixsample_','',config.MODELPATH))
+        logistic_model=[i for i in detect_latest(parent_models) if 'logistic' in i][0]
+        logistic_predfile=re.sub('hyperparameter_variability_|fixsample_','',generate_filename(logistic_model,year))
+        logistic_predictions=pd.read_csv(logistic_predfile)
+        auc=roc_auc_score(np.where(logistic_predictions.OBS>=1,1,0), logistic_predictions.PRED)
+        recall, ppv= performance(logistic_predictions.PRED, logistic_predictions.OBS,K)
+        parent_metrics={'Score':auc,'Recall_{0}'.format(K):recall,'PPV_{0}'.format(K):ppv}
     df['Algorithm']=[re.sub('_|[0-9]', '', model) for model in df['Model'].values]
-    for column in logistic_metrics.keys():
+    for column in ['Score', 'Recall_{0}'.format(K), 'PPV_{0}'.format(K)]:
         print(column)
         fig, ax = plt.subplots(figsize=(10,8))
         plt.suptitle('')
-        # for algorithm in df.algorithm.unique():
+
         df.boxplot(column=column, by='Algorithm', ax=ax)
-        plt.axhline(y = logistic_metrics[column], color = 'r', linestyle = '-')
+        for model, value in zip(parent_metrics['Model'], parent_metrics[column]):
+            # plt.plot([0, 1], [value, value], label=model)
+            plt.axhline(y = value, linestyle = '-', label=model, color=next(ax._get_lines.prop_cycler)['color'])
+        plt.legend()
         plt.show()
-    # parameter_distribution(selected)
+
 
 #%%
 if __name__=='__main__':
@@ -224,4 +228,5 @@ if __name__=='__main__':
     df=pd.concat(df, available_metrics, ignore_index=True, axis=0)
     df.to_csv(config.PREDPATH+'/metrics.csv', index=False)
 
-    boxplots(df, year, K=20000)
+    parent_metrics=pd.read_csv(re.sub('hyperparameter_variability_|fixsample_','',config.PREDPATH+'/metrics.csv')).to_dict('list')
+    boxplots(df, year, K=20000, parent_metrics=parent_metrics)
