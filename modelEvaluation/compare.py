@@ -33,8 +33,8 @@ from modelEvaluation.predict import predict, generate_filename
 
 from dataManipulation.dataPreparation import getData
 #%%
-def detect_models():
-    available_models=[x.stem for x in Path(config.MODELPATH).glob('**/*') if x.is_file()]
+def detect_models(modelpath=config.MODELPATH):
+    available_models=[x.stem for x in Path(modelpath).glob('./*') if x.is_file()]
     print('Available models are:')
     print(available_models)
     return(available_models)
@@ -161,41 +161,55 @@ def parameter_distribution(models,**args):
         times_selected[parameter].plot(kind='bar',title=parameter, rot=0)
 def performance_distribution(models):
     pass #TODO  write
+    
+def boxplots(df, logistic_predfile):
+    logistic=pd.read_csv(logistic_predfile)
+    # logdf,metrics=compare(available_models,X,y,year)
+    df['Algorithm']=[re.sub('_[0-9]', '', model) for model in df['Model'].values]
+    import matplotlib.pyplot as plt
+    for column in df.select_dtypes(exclude=['object']):
+        plt.figure()
+        # for algorithm in df.algorithm.unique():
+        df[column].plot(kind='box',by='Algorithm')
+        plt.axhline(y = logdf[colum].values, color = 'r', linestyle = '-')
+    # parameter_distribution(selected)
+
 #%%
 if __name__=='__main__':
     year=int(input('YEAR TO PREDICT: '))
     nested=eval(input('NESTED MODEL COMPARISON? (True/False) '))
     all_models=eval(input('COMPARE ALL MODELS? (True/False) '))
-    X,y=getData(year-1)
+    # X,y=getData(year-1)
     available_models=detect_models()
-    if nested:
-        all_predictions,metrics=compare_nested(available_models,X,y,year)
-        selected=sorted([m for m in available_models if ('nested' in m)])
-    elif all_models:
-        all_predictions,metrics=compare(available_models,X,y,year)
-        selected=available_models
-    else:
-        selected=detect_latest(available_models)
-        all_predictions,metrics=compare(selected,X,y,year)
-    all_predictions=update_all_preds(all_predictions,selected)
+    # if nested:
+    #     all_predictions,metrics=compare_nested(available_models,X,y,year)
+    #     selected=sorted([m for m in available_models if ('nested' in m)])
+    # elif all_models:
+    #     all_predictions,metrics=compare(available_models,X,y,year)
+    #     selected=available_models
+    # else:
+    #     selected=detect_latest(available_models)
+    #     all_predictions,metrics=compare(selected,X,y,year)
+    # all_predictions=update_all_preds(all_predictions,selected)
 
-    if nested:
-        variable_groups=[r'SEX+ AGE','+ EDC_','+ RXMG_','+ ACG']
-        score,recall,ppv=[list(array.values()) for array in list(metrics.values())]
-        print(pd.DataFrame(list(zip(selected,variable_groups,score,recall,ppv)),columns=['Model','Predictors']+list(metrics.keys())).to_markdown(index=False))
-    else:
-        variable_groups=['']*len(selected)
-        score,recall,ppv=[list(array.values()) for array in list(metrics.values())]
-        df=pd.DataFrame(list(zip(selected,variable_groups,score,recall,ppv)),columns=['Model','Predictors']+list(metrics.keys()))
-        print(df.to_markdown(index=False,))
-    ax=[0]*len(metrics)
-    for i,m in enumerate(list(metrics.keys())):
-        ax[i]=df[m].plot.box()
+    # if nested:
+    #     variable_groups=[r'SEX+ AGE','+ EDC_','+ RXMG_','+ ACG']
+    #     score,recall,ppv=[list(array.values()) for array in list(metrics.values())]
+    #     print(pd.DataFrame(list(zip(selected,variable_groups,score,recall,ppv)),columns=['Model','Predictors']+list(metrics.keys())).to_markdown(index=False))
+    # else:
+    #     score,recall,ppv=[list(array.values()) for array in list(metrics.values())]
+    #     df=pd.DataFrame(list(zip(selected,score,recall,ppv)),columns=['Model']+list(metrics.keys()))
+    #     print(df.to_markdown(index=False,))
+    #     df.to_csv(config.MODELPATH+'metrics.csv')
+    # ax=[0]*len(metrics)
+    # for i,m in enumerate(list(metrics.keys())):
+    #     ax[i]=df[m].plot.box()
+    df=pd.read_csv(config.MODELPATH+'metrics.csv')
         # print(i,m)
     import matplotlib.pyplot as plt
     
     for column in df.select_dtypes(exclude=['object']):
         plt.figure()
         # df.boxplot([column])
-        df[column].plot(kind='box',title=' - '.join([config.ALGORITHM,config.EXPERIMENT,column]))
-    parameter_distribution(selected)
+        df[column].plot(kind='box', by='Algorithm',title=' - '.join([config.ALGORITHM,config.EXPERIMENT,column]))
+    # parameter_distribution(selected)
