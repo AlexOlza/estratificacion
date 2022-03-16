@@ -35,7 +35,8 @@ from modelEvaluation.predict import predict, generate_filename
 from dataManipulation.dataPreparation import getData
 #%%
 def detect_models(modelpath=config.MODELPATH):
-    available_models=[x.stem for x in Path(modelpath).glob('./*') if x.is_file() and x.suffix in ['.joblib','.pb']]
+    available_models=[x.stem for x in Path(modelpath).glob('./*') if x.is_file() and x.suffix in ['.joblib']]
+    available_models+=[x.stem for x in Path(modelpath).glob('./neural*') if x.is_dir() or x.suffix in['.joblib', '.pb']] #this can be a file or directory
     print('Available models are:')
     print(available_models)
     return(available_models)
@@ -185,32 +186,40 @@ if __name__=='__main__':
     year=int(input('YEAR TO PREDICT: '))
     nested=eval(input('NESTED MODEL COMPARISON? (True/False) '))
     all_models=eval(input('COMPARE ALL MODELS? (True/False) '))
-    # X,y=getData(year-1)
+    X,y=getData(year-1)
     available_models=detect_models()
-    # if nested:
-    #     all_predictions,metrics=compare_nested(available_models,X,y,year)
-    #     selected=sorted([m for m in available_models if ('nested' in m)])
-    # elif all_models:
-    #     all_predictions,metrics=compare(available_models,X,y,year)
-    #     selected=available_models
-    # else:
-    #     selected=detect_latest(available_models)
-    #     all_predictions,metrics=compare(selected,X,y,year)
-    # all_predictions=update_all_preds(all_predictions,selected)
+    
+    if nested:
+        all_predictions,metrics=compare_nested(available_models,X,y,year)
+        selected=sorted([m for m in available_models if ('nested' in m)])
+    elif all_models:
+        selected=available_models
+    else:
+        selected=detect_latest(available_models)
+    
+    if Path(config.PREDPATH+'/metrics.csv').is_file():
+        available_metrics=pd.read_csv(config.PREDPATH+'/metrics.csv')
+        if all([s in available_metrics.Model.values for s in selected]):
+            print('All metrics are available')
+            print(available_metrics)
+            boxplots(available_metrics, year, K=20000)
+            exit(1)
 
-    # if nested:
-    #     variable_groups=[r'SEX+ AGE','+ EDC_','+ RXMG_','+ ACG']
-    #     score,recall,ppv=[list(array.values()) for array in list(metrics.values())]
-    #     print(pd.DataFrame(list(zip(selected,variable_groups,score,recall,ppv)),columns=['Model','Predictors']+list(metrics.keys())).to_markdown(index=False))
-    # else:
-    #     score,recall,ppv=[list(array.values()) for array in list(metrics.values())]
-    #     df=pd.DataFrame(list(zip(selected,score,recall,ppv)),columns=['Model']+list(metrics.keys()))
-    #     print(df.to_markdown(index=False,))
-    #     df.to_csv(config.MODELPATH+'metrics.csv')
-    # ax=[0]*len(metrics)
-    # for i,m in enumerate(list(metrics.keys())):
-    #     ax[i]=df[m].plot.box()
-    df=pd.read_csv(config.MODELPATH+'metrics.csv')
-        # print(i,m)
+    if not nested:
+        all_predictions,metrics=compare(selected,X,y,year)
+    all_predictions=update_all_preds(all_predictions,selected)
+    
+
+    if nested:
+        variable_groups=[r'SEX+ AGE','+ EDC_','+ RXMG_','+ ACG']
+        score,recall,ppv=[list(array.values()) for array in list(metrics.values())]
+        print(pd.DataFrame(list(zip(selected,variable_groups,score,recall,ppv)),columns=['Model','Predictors']+list(metrics.keys())).to_markdown(index=False))
+    else:
+        score,recall,ppv=[list(array.values()) for array in list(metrics.values())]
+        df=pd.DataFrame(list(zip(selected,score,recall,ppv)),columns=['Model']+list(metrics.keys()))
+        print(df.to_markdown(index=False,))
+        df.to_csv(config.PREDPATH+'/metrics.csv', index=False)
+
+    # df=pd.read_csv(config.MODELPATH+'metrics.csv')
+
     boxplots(df, year, K=20000)
-    # parameter_distribution(selected)
