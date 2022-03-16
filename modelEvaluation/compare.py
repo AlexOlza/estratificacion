@@ -18,8 +18,12 @@ Created on Tue Dec 14 16:13:19 2021
     Compare
 
 """
+
+import matplotlib.pyplot as plt
+from sklearn.metrics import roc_auc_score
 import sys
 sys.path.append('/home/aolza/Desktop/estratificacion/')
+
 import pandas as pd
 from pathlib import Path
 import re
@@ -49,8 +53,9 @@ if not config.configured:
 from modelEvaluation.predict import predict, generate_filename
 from dataManipulation.dataPreparation import getData
 #%%
-def detect_models():
-    available_models=[x.stem for x in Path(config.MODELPATH).glob('**/*') if x.is_file()]
+def detect_models(modelpath=config.MODELPATH):
+    available_models=[x.stem for x in Path(modelpath).glob('./*') if x.is_file() and x.suffix in ['.joblib']]
+    available_models+=[x.stem for x in Path(modelpath).glob('./neural*') if x.is_dir() or x.suffix in['.joblib', '.pb']] #this can be a file or directory
     print('Available models are:')
     print(available_models)
     return(available_models)
@@ -175,8 +180,30 @@ def parameter_distribution(models,**args):
                                                          index=[0]) #fixes ValueError: If using all scalar values, you must pass an index
         plt.figure()
         times_selected[parameter].plot(kind='bar',title=parameter, rot=0)
-def performance_distribution(models):
-    pass #TODO  write
+
+def boxplots(df, year, K, parent_metrics=None):
+    if not parent_metrics: #we have to compute them
+        parent_models=detect_models(re.sub('hyperparameter_variability_|fixsample_','',config.MODELPATH))
+        logistic_model=[i for i in detect_latest(parent_models) if 'logistic' in i][0]
+        logistic_predfile=re.sub('hyperparameter_variability_|fixsample_','',generate_filename(logistic_model,year))
+        logistic_predictions=pd.read_csv(logistic_predfile)
+        auc=roc_auc_score(np.where(logistic_predictions.OBS>=1,1,0), logistic_predictions.PRED)
+        recall, ppv= performance(logistic_predictions.PRED, logistic_predictions.OBS,K)
+        parent_metrics={'Score':auc,'Recall_{0}'.format(K):recall,'PPV_{0}'.format(K):ppv}
+    df['Algorithm']=[re.sub('_|[0-9]', '', model) for model in df['Model'].values]
+    for column in ['Score', 'Recall_{0}'.format(K), 'PPV_{0}'.format(K)]:
+        print(column)
+        fig, ax = plt.subplots(figsize=(10,8))
+        plt.suptitle('')
+
+        df.boxplot(column=column, by='Algorithm', ax=ax)
+        for model, value in zip(parent_metrics['Model'], parent_metrics[column]):
+            if any(['logistic' in model,'neural' in model]): #exclude other algorithms
+                plt.axhline(y = value, linestyle = '-', label=model, color=next(ax._get_lines.prop_cycler)['color'])
+        plt.legend()
+        plt.show()
+
+
 #%%
 if __name__=='__main__':
     year=int(input('YEAR TO PREDICT: ')) if not hasattr(args, 'year') else args.year
@@ -184,38 +211,41 @@ if __name__=='__main__':
     all_models=eval(input('COMPARE ALL MODELS? (True/False) ')) if not hasattr(args, 'all') else args.all
     X,y=getData(year-1)
     available_models=detect_models()
+    
     if nested:
         all_predictions,metrics=compare_nested(available_models,X,y,year)
         selected=sorted([m for m in available_models if ('nested' in m)])
     elif all_models:
-        all_predictions,metrics=compare(available_models,X,y,year)
         selected=available_models
     else:
         selected=detect_latest(available_models)
+    
+    if Path(config.PREDPATH+'/metrics.csv').is_file():
+        available_metrics=pd.read_csv(config.PREDPATH+'/metrics.csv')
+        if all([s in available_metrics.Model.values for s in selected]):
+            print('All metrics are available')
+            print(available_metrics)
+            boxplots(available_metrics, year, K=20000)
+            exit(1)
+    else:
+        available_metrics=pd.DataFrame()
+
+    if not nested:
         all_predictions,metrics=compare(selected,X,y,year)
     all_predictions=update_all_preds(all_predictions,selected)
+    
 
     if nested:
         variable_groups=[r'SEX+ AGE','+ EDC_','+ RXMG_','+ ACG']
         score,recall,ppv=[list(array.values()) for array in list(metrics.values())]
         print(pd.DataFrame(list(zip(selected,variable_groups,score,recall,ppv)),columns=['Model','Predictors']+list(metrics.keys())).to_markdown(index=False))
     else:
-        variable_groups=['']*len(selected)
         score,recall,ppv=[list(array.values()) for array in list(metrics.values())]
-        df=pd.DataFrame(list(zip(selected,variable_groups,score,recall,ppv)),columns=['Model','Predictors']+list(metrics.keys()))
+        df=pd.DataFrame(list(zip(selected,score,recall,ppv)),columns=['Model']+list(metrics.keys()))
         print(df.to_markdown(index=False,))
-    ax=[0]*len(metrics)
-    for i,m in enumerate(list(metrics.keys())):
-        ax[i]=df[m].plot.box()
-        # print(i,m)
-    import matplotlib.pyplot as plt
     
-    for column in df.select_dtypes(exclude=['object']):
-        plt.figure()
-        title=' - '.join([config.ALGORITHM,config.EXPERIMENT,column])
-        df[column].plot(kind='box',title=title)
-        try:
-            plt.savefig(config.PREDPATH+title+'.png')
-        except:
-            print('Unable to save figure ',title)
-    parameter_distribution(selected)
+    df=pd.concat(df, available_metrics, ignore_index=True, axis=0)
+    df.to_csv(config.PREDPATH+'/metrics.csv', index=False)
+
+    parent_metrics=pd.read_csv(re.sub('hyperparameter_variability_|fixsample_','',config.PREDPATH+'/metrics.csv')).to_dict('list')
+    boxplots(df, year, K=20000, parent_metrics=parent_metrics)
