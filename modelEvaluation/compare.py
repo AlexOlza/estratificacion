@@ -179,8 +179,8 @@ def boxplots(df, year, K, parent_metrics=None):
 
         df.boxplot(column=column, by='Algorithm', ax=ax)
         for model, value in zip(parent_metrics['Model'], parent_metrics[column]):
-            # plt.plot([0, 1], [value, value], label=model)
-            plt.axhline(y = value, linestyle = '-', label=model, color=next(ax._get_lines.prop_cycler)['color'])
+            if any(['logistic' in model,'neural' in model]): #exclude other algorithms
+                plt.axhline(y = value, linestyle = '-', label=model, color=next(ax._get_lines.prop_cycler)['color'])
         plt.legend()
         plt.show()
 
