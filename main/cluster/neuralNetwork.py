@@ -16,6 +16,9 @@ from tensorflow import keras
 import tensorflow as tf
 import argparse
 import os
+import re
+import importlib
+import random
 #%%
 """REPRODUCIBILITY"""
 seed_value=42
@@ -24,7 +27,6 @@ os.environ['PYTHONHASHSEED']=str(seed_value)
 # GPU
 print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
 # 2. Set `python` built-in pseudo-random generator at a fixed value
-import random
 random.seed(seed_value)
 # 3. Set `numpy` pseudo-random generator at a fixed value
 np.random.seed(seed_value)
@@ -49,23 +51,21 @@ parser.add_argument('--tuner','-t', metavar='tuner',type=str, default='bayesian'
 args = parser.parse_args()
 
 chosen_config='configurations.cluster.'+args.chosen_config
-import importlib
 importlib.invalidate_caches()
 from python_settings import settings as config
 settings=importlib.import_module(chosen_config,package='estratificacion')
 if not config.configured:
     config.configure(settings) # configure() receives a python module
 assert config.configured 
-# from configurations.cluster import configRandomForest as randomForest_settings
+
 import configurations.utility as util
 util.makeAllPaths()
 seed_sampling= args.seed_sampling if hasattr(args, 'seed_sampling') else config.SEED #imported from default configuration
 seed_hparam= args.seed_hparam if hasattr(args, 'seed_hparam') else config.SEED
-
+model_name= args.model_name if hasattr(args,'model_name') else 'neural' 
 #%%
 """ BEGGINNING """
 from dataManipulation.dataPreparation import getData
-np.random.seed(seed_sampling)
 
 X,y=getData(2016)
 assert len(config.COLUMNS)==1, 'This model is built for a single response variable! Modify config.COLUMNS'
@@ -78,13 +78,13 @@ except:
 
 X_train, X_test, y_train, y_test = train_test_split( X, y, test_size=0.2, random_state=42)
 print('Sample size ',len(y_train))
-
+print('---------------------------------------------------'*5)
 #%% 
 """ FIT MODEL """
 np.random.seed(seed_hparam)
-
+print('Seed ', seed_hparam)
 if args.tuner=='bayesian':
-    model_name=config.MODELPATH+'neural_Bayesian_0'
+    model_name=config.MODELPATH+re.sub('neural','neuralBayesian',model_name)
     print('Tuner: BayesianOptimization')
     tuner = config.MyBayesianTuner(X_train, y_train.reshape(-1,1),X_test, y_test.reshape(-1,1),
                      objective=kt.Objective("val_loss", direction="min"),
@@ -95,17 +95,19 @@ if args.tuner=='bayesian':
                      directory=model_name,
                      project_name='neural_Bayesian_0')
 else:
-    model_name=config.MODELPATH+'neural_Random_0'
+    model_name=config.MODELPATH+re.sub('neural','neuralRandom',model_name)
     print('Tuner: Random')
     tuner = config.MyRandomTuner(X_train, y_train.reshape(-1,1),X_test, y_test.reshape(-1,1),
                  objective=kt.Objective("val_loss", direction="min"),
-                 max_trials=50, 
+                 max_trials=60, 
                  overwrite=True,
                  seed=seed_hparam,
                  directory=model_name,
                  project_name='neural_Random_0')
   
-tuner.search(epochs=15)
+tuner.search(epochs=20)
+print('---------------------------------------------------'*5)
+print('SEARCH SPACE SUMMARY:')
 print(tuner.search_space_summary())  
 
 #%%
@@ -126,6 +128,11 @@ if best_hp.values['cyclic']:
     callbacks.append(config.clr(best_hp.values['low'], best_hp.values['high'], step=(len(y) // 1024)))
 
 
+print('Best hyperparameters:')
+print(best_hp_)
+print('---------------------------------------------------'*5)
+print('Retraining:')
 config.keras_code(X,y,X_train,y_train, epochs=10,**best_hp_,
                   callbacks=callbacks, saving_path=model_name)
 util.saveconfig(config,config.USEDCONFIGPATH+model_name.split('/')[-1]+'.json')
+print('Saved ')
