@@ -84,7 +84,8 @@ print('---------------------------------------------------'*5)
 np.random.seed(seed_hparam)
 print('Seed ', seed_hparam)
 if args.tuner=='bayesian':
-    model_name=config.MODELPATH+re.sub('neural','neuralBayesian',model_name)
+    name=re.sub('neuralNetwork','neuralNetworkBayesian',model_name)
+    model_name=config.MODELPATH+name
     print('Tuner: BayesianOptimization')
     tuner = config.MyBayesianTuner(X_train, y_train.reshape(-1,1),X_test, y_test.reshape(-1,1),
                      objective=kt.Objective("val_loss", direction="min"),
@@ -93,9 +94,10 @@ if args.tuner=='bayesian':
                      num_initial_points=4,
                      seed=seed_hparam,
                      directory=model_name,
-                     project_name='neural_Bayesian_0')
+                     project_name=name)
 else:
-    model_name=config.MODELPATH+re.sub('neural','neuralRandom',model_name)
+    name=re.sub('neuralNetwork','neuralNetworkBayesian',model_name)
+    model_name=config.MODELPATH+name
     print('Tuner: Random')
     tuner = config.MyRandomTuner(X_train, y_train.reshape(-1,1),X_test, y_test.reshape(-1,1),
                  objective=kt.Objective("val_loss", direction="min"),
@@ -103,7 +105,7 @@ else:
                  overwrite=True,
                  seed=seed_hparam,
                  directory=model_name,
-                 project_name='neural_Random_0')
+                 project_name=name)
   
 tuner.search(epochs=20)
 print('---------------------------------------------------'*5)
@@ -133,6 +135,6 @@ print(best_hp_)
 print('---------------------------------------------------'*5)
 print('Retraining:')
 config.keras_code(X,y,X_train,y_train, epochs=10,**best_hp_,
-                  callbacks=callbacks, saving_path=model_name)
+                  callbacks=callbacks, saving_path=model_name+'.h5')#save a single lightweight file
 util.saveconfig(config,config.USEDCONFIGPATH+model_name.split('/')[-1]+'.json')
 print('Saved ')

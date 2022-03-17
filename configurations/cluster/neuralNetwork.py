@@ -190,7 +190,7 @@ def run(tuner, trial, **kwargs):
         return keras_code(tuner.x_train, tuner.y_train, tuner.x_val, tuner.y_val,
             units_0, n_hidden, activ, cyclic, early, callbacks,
             hidden_units=units, lr=lr,
-            saving_path=tuner.directory+'/'+trial.trial_id
+            saving_path=tuner.directory+'/'+trial.trial_id+'.h5'#lightweight single file
         )
 
 
