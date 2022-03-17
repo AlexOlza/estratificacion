@@ -83,7 +83,7 @@ TRACEBACK=False
 
 seed_sampling= args.seed_sampling if hasattr(args, 'seed_sampling') else SEED #imported from default configuration
 seed_hparam= args.seed_hparam if hasattr(args, 'seed_hparam') else SEED
-
+model_name= args.model_name if hasattr(args,'model_name') else 'neural'
 from main.cluster.clr_callback import CyclicLR
 """ DEFINITION OF THE HYPERPARAMETER SPACE """
 def clr(low, high, step):
@@ -190,7 +190,7 @@ def run(tuner, trial, **kwargs):
         return keras_code(tuner.x_train, tuner.y_train, tuner.x_val, tuner.y_val,
             units_0, n_hidden, activ, cyclic, early, callbacks,
             hidden_units=units, lr=lr,
-            saving_path=tuner.directory+'/'+trial.trial_id
+            saving_path=tuner.directory+'/'+trial.trial_id+'.h5'#lightweight single file
         )
 
 
