@@ -225,6 +225,8 @@ if __name__=='__main__':
         if all([s in available_metrics.Model.values for s in selected]):
             print('All metrics are available')
             print(available_metrics)
+            available_metrics['Algorithm']=[re.sub('_|[0-9]', '', model) for model in available_metrics['Model'].values]
+            print(available_metrics.groupby('Algorithm').describe().transpose())
             boxplots(available_metrics, year, K=20000)
             exit(1)
     else:
@@ -249,3 +251,4 @@ if __name__=='__main__':
 
     parent_metrics=pd.read_csv(re.sub('hyperparameter_variability_|fixsample_','',config.PREDPATH+'/metrics.csv')).to_dict('list')
     boxplots(df, year, K=20000, parent_metrics=parent_metrics)
+    print(df.groupby('Algorithm').describe().transpose())
