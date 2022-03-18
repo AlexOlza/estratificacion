@@ -134,6 +134,7 @@ def build_model(units_0, n_hidden, activ, cyclic, early, **kwargs):
 
 def keras_code(x_train, y_train, x_val, y_val,
                units_0, n_hidden, activ, cyclic, early,  callbacks,
+               save=False,
                saving_path=None,
                **kwargs
                ):
