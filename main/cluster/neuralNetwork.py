@@ -62,7 +62,7 @@ import configurations.utility as util
 util.makeAllPaths()
 seed_sampling= args.seed_sampling if hasattr(args, 'seed_sampling') else config.SEED #imported from default configuration
 seed_hparam= args.seed_hparam if hasattr(args, 'seed_hparam') else config.SEED
-model_name= args.model_name if hasattr(args,'model_name') else 'neural' 
+model_name= args.model_name if hasattr(args,'model_name') else 'neuralNetwork' 
 #%%
 """ BEGGINNING """
 from dataManipulation.dataPreparation import getData
@@ -104,6 +104,7 @@ else:
                  max_trials=60, 
                  overwrite=True,
                  seed=seed_hparam,
+                 save=False,
                  directory=model_name,
                  project_name=name)
   
@@ -135,6 +136,6 @@ print(best_hp_)
 print('---------------------------------------------------'*5)
 print('Retraining:')
 config.keras_code(X,y,X_train,y_train, epochs=10,**best_hp_,
-                  callbacks=callbacks, saving_path=model_name+'.h5')#save a single lightweight file
+                  callbacks=callbacks, save=True, saving_path=model_name)
 util.saveconfig(config,config.USEDCONFIGPATH+model_name.split('/')[-1]+'.json')
 print('Saved ')

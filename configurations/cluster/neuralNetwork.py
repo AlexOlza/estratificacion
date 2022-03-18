@@ -133,8 +133,8 @@ def build_model(units_0, n_hidden, activ, cyclic, early, **kwargs):
     return model
 
 def keras_code(x_train, y_train, x_val, y_val,
-               units_0, n_hidden, activ, cyclic, early,  callbacks,
-               saving_path,
+               units_0, n_hidden, activ, cyclic, early,  callbacks, save=False,
+               saving_path=None,
                **kwargs
                ):
     lr=kwargs.get('lr',None)
@@ -145,8 +145,10 @@ def keras_code(x_train, y_train, x_val, y_val,
     callbacks.append(keras.callbacks.Callback())
     # Train & eval model
     history=model.fit(x_train, y_train, callbacks=callbacks, validation_data=(x_val,y_val))
-    # Save model
-    model.save(saving_path)
+    
+    if save and saving_path:
+        # Save model
+        model.save(saving_path)
 
     # Return a single float as the objective value.
     # You may also return a dictionary
@@ -157,6 +159,7 @@ def keras_code(x_train, y_train, x_val, y_val,
     return({'val_loss':history.history['val_loss'][-1] }) 
 
 def run(tuner, trial, **kwargs):
+        save=tuner.save
         hp = trial.hyperparameters
         #neurons in input layer
         units_0=hp.Int("units_0", min_value=32, max_value=1024, step=32)
@@ -184,13 +187,13 @@ def run(tuner, trial, **kwargs):
                                       patience=3,
                                       restore_best_weights=True)]
         if cyclic:
-            callbacks.append(clr(low, high, step=len(tuner.y_train // 512)))
+            callbacks.append(clr(low, high, step=len(tuner.y_train // 1024)))
         # print(units_0, n_hidden, activ, cyclic, early, callbacks,
             # units, lr)
         return keras_code(tuner.x_train, tuner.y_train, tuner.x_val, tuner.y_val,
             units_0, n_hidden, activ, cyclic, early, callbacks,
-            hidden_units=units, lr=lr,
-            saving_path=tuner.directory+'/'+trial.trial_id+'.h5'#lightweight single file
+            hidden_units=units, lr=lr, save=save,
+            saving_path=tuner.directory+'/'+trial.trial_id+'.h5'
         )
 
 
@@ -201,6 +204,7 @@ class MyRandomTuner(kt.RandomSearch):
         self.y_train=y_train
         self.x_val=x_val
         self.y_val=y_val
+        self.save=kwargs.get('save',False)
         
     def run_trial(self, trial, **kwargs):
         return(run(self, trial, **kwargs))
@@ -212,6 +216,7 @@ class MyBayesianTuner(kt.BayesianOptimization):
         self.y_train=y_train
         self.x_val=x_val
         self.y_val=y_val
+        self.save=kwargs.get('save',False)
         
     def run_trial(self, trial, **kwargs):
         return(run(self, trial, **kwargs))
