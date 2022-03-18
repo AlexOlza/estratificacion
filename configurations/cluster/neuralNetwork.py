@@ -138,13 +138,15 @@ def keras_code(x_train, y_train, x_val, y_val,
                **kwargs
                ):
     lr=kwargs.get('lr',None)
+    batch_size=kwargs.get('batch_size', 256)
     hidden_units=kwargs.get('hidden_units',{})
     # Build model
     model = build_model(units_0, n_hidden, activ, cyclic, early, 
                         lr=lr, hidden_units=hidden_units)
     callbacks.append(keras.callbacks.Callback())
     # Train & eval model
-    history=model.fit(x_train, y_train, callbacks=callbacks, validation_data=(x_val,y_val))
+    history=model.fit(x_train, y_train, callbacks=callbacks,
+                      batch_size=batch_size, validation_data=(x_val,y_val))
     
     if save and saving_path:
         # Save model
@@ -159,8 +161,10 @@ def keras_code(x_train, y_train, x_val, y_val,
     return({'val_loss':history.history['val_loss'][-1] }) 
 
 def run(tuner, trial, **kwargs):
-        save=tuner.save
+        cyclic=tuner.cyclic
         hp = trial.hyperparameters
+        #batch size
+        batch_size = hp.Int('batch_size', 64, 1024, step=32)
         #neurons in input layer
         units_0=hp.Int("units_0", min_value=32, max_value=1024, step=32)
         #number of hidden layers
@@ -170,7 +174,7 @@ def run(tuner, trial, **kwargs):
             for i in range(1,n_hidden+1):
                 # Tune number of units separately.
                 units[f"units_{i}"]=hp.Int(f"units_{i}", min_value=32, max_value=1024, step=32)
-        cyclic=hp.Boolean('cyclic')
+        cyclic=hp.Fixed('cyclic', cyclic)
         with hp.conditional_scope('cyclic', False):
             #learning rate
             lr=hp.Float("lr", min_value=1e-4, max_value=1e-2, sampling="log")
@@ -188,35 +192,33 @@ def run(tuner, trial, **kwargs):
                                       restore_best_weights=True)]
         if cyclic:
             callbacks.append(clr(low, high, step=len(tuner.y_train // 1024)))
-        # print(units_0, n_hidden, activ, cyclic, early, callbacks,
-            # units, lr)
+        print(units_0, n_hidden, activ, cyclic, early, callbacks,
+            units, lr)
         return keras_code(tuner.x_train, tuner.y_train, tuner.x_val, tuner.y_val,
             units_0, n_hidden, activ, cyclic, early, callbacks,
-            hidden_units=units, lr=lr, save=save,
-            saving_path=tuner.directory+'/'+trial.trial_id+'.h5'
-        )
+            hidden_units=units, lr=lr, save=save, batch_size=batch_size )
 
 
 class MyRandomTuner(kt.RandomSearch):
-    def __init__(self, x_train, y_train, x_val, y_val,*args,**kwargs):
+    def __init__(self, x_train, y_train, x_val, y_val, cyclic=False,*args,**kwargs):
         super().__init__(*args,**kwargs)
         self.x_train=x_train
         self.y_train=y_train
         self.x_val=x_val
         self.y_val=y_val
-        self.save=kwargs.get('save',False)
-        
+        self.cyclic=cyclic
+
     def run_trial(self, trial, **kwargs):
         return(run(self, trial, **kwargs))
     
 class MyBayesianTuner(kt.BayesianOptimization):
-    def __init__(self, x_train, y_train, x_val, y_val,*args,**kwargs):
+    def __init__(self, x_train, y_train, x_val, y_val, cyclic=False,*args,**kwargs):
         super().__init__(*args,**kwargs)
         self.x_train=x_train
         self.y_train=y_train
         self.x_val=x_val
         self.y_val=y_val
-        self.save=kwargs.get('save',False)
+        self.cyclic=cyclic
         
     def run_trial(self, trial, **kwargs):
         return(run(self, trial, **kwargs))

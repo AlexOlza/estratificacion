@@ -47,6 +47,8 @@ parser.add_argument('--n-iter', metavar='n_iter',type=int, default=argparse.SUPP
                     help='Number of iterations for the random grid search (hyperparameter tuning)')
 parser.add_argument('--tuner','-t', metavar='tuner',type=str, default='bayesian',
                     help='Type of tuner (random/bayesian)')
+parser.add_argument('--clr','-c', dest='cyclic',action='store_true', default=False,
+                    help='Use Cyclic Learning Rate')
 
 args = parser.parse_args()
 
@@ -63,6 +65,7 @@ util.makeAllPaths()
 seed_sampling= args.seed_sampling if hasattr(args, 'seed_sampling') else config.SEED #imported from default configuration
 seed_hparam= args.seed_hparam if hasattr(args, 'seed_hparam') else config.SEED
 model_name= args.model_name if hasattr(args,'model_name') else 'neuralNetwork' 
+cyclic=args.cyclic
 #%%
 """ BEGGINNING """
 from dataManipulation.dataPreparation import getData
@@ -83,29 +86,33 @@ print('---------------------------------------------------'*5)
 """ FIT MODEL """
 np.random.seed(seed_hparam)
 print('Seed ', seed_hparam)
+
 if args.tuner=='bayesian':
     name=re.sub('neuralNetwork','neuralNetworkBayesian',model_name)
+    name=name+'CLR' if cyclic else name
     model_name=config.MODELPATH+name
     print('Tuner: BayesianOptimization')
     tuner = config.MyBayesianTuner(X_train, y_train.reshape(-1,1),X_test, y_test.reshape(-1,1),
                      objective=kt.Objective("val_loss", direction="min"),
-                     max_trials=50,
+                     max_trials=2,
                      overwrite=True,
                      num_initial_points=4,
                      seed=seed_hparam,
-                     directory=model_name,
+                     cyclic=cyclic,
+                     directory=model_name+'_search',
                      project_name=name)
 else:
-    name=re.sub('neuralNetwork','neuralNetworkBayesian',model_name)
+    name=re.sub('neuralNetwork','neuralNetworkRandom',model_name)
+    name=name+'CLR' if cyclic else name
     model_name=config.MODELPATH+name
     print('Tuner: Random')
     tuner = config.MyRandomTuner(X_train, y_train.reshape(-1,1),X_test, y_test.reshape(-1,1),
                  objective=kt.Objective("val_loss", direction="min"),
-                 max_trials=60, 
+                 max_trials=5, 
                  overwrite=True,
                  seed=seed_hparam,
-                 save=False,
-                 directory=model_name,
+                 cyclic=cyclic,
+                 directory=model_name+'_search',
                  project_name=name)
   
 tuner.search(epochs=20)
