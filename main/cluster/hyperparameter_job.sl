@@ -26,8 +26,6 @@ srun python $ALGORITHM.py --seed-sampling $SAMP_SEED --seed-hparam $SEED --model
 else
 echo "${modelpath}/${modelname}.joblib" found, not launching
 fi
-
-
 sleep 1
 echo "-------" 
 date +"%F %T" 
