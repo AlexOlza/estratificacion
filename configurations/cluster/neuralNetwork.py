@@ -52,7 +52,7 @@ parser.add_argument('--n-iter', metavar='n_iter',type=int, default=argparse.SUPP
                     help='Number of iterations for the random grid search (hyperparameter tuning)')
 parser.add_argument('--tuner','-t', metavar='tuner',type=str, default='bayesian',
                     help='Type of tuner (random/bayesian)')
-args = parser.parse_args()
+args, unknown = parser.parse_known_args()
 experiment='configurations.'+re.sub('hyperparameter_|undersampling_|full_|variability_|fixsample_','',args.experiment)
 
 importlib.invalidate_caches()
