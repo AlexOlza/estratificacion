@@ -94,7 +94,7 @@ if args.tuner=='bayesian':
     print('Tuner: BayesianOptimization')
     tuner = config.MyBayesianTuner(X_train, y_train.reshape(-1,1),X_test, y_test.reshape(-1,1),
                      objective=kt.Objective("val_loss", direction="min"),
-                     max_trials=2,
+                     max_trials=100,
                      overwrite=True,
                      num_initial_points=4,
                      seed=seed_hparam,
@@ -108,7 +108,7 @@ else:
     print('Tuner: Random')
     tuner = config.MyRandomTuner(X_train, y_train.reshape(-1,1),X_test, y_test.reshape(-1,1),
                  objective=kt.Objective("val_loss", direction="min"),
-                 max_trials=5, 
+                 max_trials=100, 
                  overwrite=True,
                  seed=seed_hparam,
                  cyclic=cyclic,
@@ -134,7 +134,7 @@ best_hp_['hidden_units']={f'units_{i}':best_hp.values[f'units_{i}'] for i in ran
 callbacks = [keras.callbacks.EarlyStopping(monitor='val_loss',mode='min',
                                       patience=5,
                                       restore_best_weights=True)]
-if best_hp.values['cyclic']:
+if cyclic:
     callbacks.append(config.clr(best_hp.values['low'], best_hp.values['high'], step=(len(y) // 1024)))
 
 
@@ -142,7 +142,7 @@ print('Best hyperparameters:')
 print(best_hp_)
 print('---------------------------------------------------'*5)
 print('Retraining:')
-config.keras_code(X,y,X_train,y_train, epochs=10,**best_hp_,
-                  callbacks=callbacks, save=True, saving_path=model_name)
+config.keras_code(X,y,X_train,y_train, epochs=30,**best_hp_,
+                  callbacks=callbacks, save=True, saving_path=model_name, verbose=1)
 util.saveconfig(config,config.USEDCONFIGPATH+model_name.split('/')[-1]+'.json')
 print('Saved ')

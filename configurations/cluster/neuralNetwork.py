@@ -138,6 +138,7 @@ def keras_code(x_train, y_train, x_val, y_val,
                saving_path=None,
                **kwargs
                ):
+    verbose=kwargs.get('verbose',0)
     lr=kwargs.get('lr',None)
     batch_size=kwargs.get('batch_size', 256)
     hidden_units=kwargs.get('hidden_units',{})
@@ -147,7 +148,7 @@ def keras_code(x_train, y_train, x_val, y_val,
     callbacks.append(keras.callbacks.Callback())
     # Train & eval model
     history=model.fit(x_train, y_train, callbacks=callbacks,
-                      batch_size=batch_size, validation_data=(x_val,y_val))
+                      batch_size=batch_size, validation_data=(x_val,y_val), verbose=verbose)
     
     if save and saving_path:
         # Save model
