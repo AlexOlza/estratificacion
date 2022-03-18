@@ -133,7 +133,7 @@ def build_model(units_0, n_hidden, activ, cyclic, early, **kwargs):
     return model
 
 def keras_code(x_train, y_train, x_val, y_val,
-               units_0, n_hidden, activ, cyclic, early,  callbacks, save=False,
+               units_0, n_hidden, activ, cyclic, early,  callbacks,
                saving_path=None,
                **kwargs
                ):
@@ -196,7 +196,7 @@ def run(tuner, trial, **kwargs):
             units, lr)
         return keras_code(tuner.x_train, tuner.y_train, tuner.x_val, tuner.y_val,
             units_0, n_hidden, activ, cyclic, early, callbacks,
-            hidden_units=units, lr=lr, save=save, batch_size=batch_size )
+            hidden_units=units, lr=lr, batch_size=batch_size )
 
 
 class MyRandomTuner(kt.RandomSearch):
