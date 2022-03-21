@@ -89,7 +89,7 @@ print('Seed ', seed_hparam)
 
 if not args.random_tuner:
     name=re.sub('neuralNetwork','neuralNetworkBayesian',model_name)
-    name=name+'CLR' if cyclic else name
+    name=re.sub('neuralNetworkBayesian','neuralNetworkBayesianCLR',name) if cyclic else name
     model_name=config.MODELPATH+name
     print('Tuner: BayesianOptimization')
     tuner = config.MyBayesianTuner(X_train, y_train.reshape(-1,1),X_test, y_test.reshape(-1,1),
@@ -103,7 +103,7 @@ if not args.random_tuner:
                      project_name=name)
 else:
     name=re.sub('neuralNetwork','neuralNetworkRandom',model_name)
-    name=name+'CLR' if cyclic else name
+    name=re.sub('neuralNetworkRandom','neuralNetworkRandomCLR',name) if cyclic else name
     model_name=config.MODELPATH+name
     print('Tuner: Random')
     tuner = config.MyRandomTuner(X_train, y_train.reshape(-1,1),X_test, y_test.reshape(-1,1),
