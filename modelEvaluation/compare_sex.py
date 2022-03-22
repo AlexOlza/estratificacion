@@ -8,7 +8,7 @@ Created on Fri Mar 18 13:13:37 2022
 import re
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.metrics import roc_auc_score, RocCurveDisplay,roc_curve, auc
+from sklearn.metrics import roc_auc_score, RocCurveDisplay,roc_curve, auc,precision_recall_curve, PrecisionRecallDisplay
 from modelEvaluation.predict import generate_filename
 import sys
 sys.path.append('/home/aolza/Desktop/estratificacion/')
@@ -35,6 +35,10 @@ def plot_roc(y, pred, groupname):
     
     return display
 
+def plot_pr(y, pred, groupname):
+    precision, recall, _ = precision_recall_curve(y, pred)
+    display = PrecisionRecallDisplay(precision=precision, recall=recall, estimator_name=groupname)
+    return display
 def beta_differences(modelname1, modelname2, features):
     m1=job.load(config.MODELPATH+modelname1)
     m2=job.load(config.MODELPATH+modelname2)
@@ -47,9 +51,13 @@ def beta_differences(modelname1, modelname2, features):
     return(diff, ratio,m1,m2)
 
 def top_K_dict(d, K):
-     """ a) create a list of the dict's keys and values; 
-         b) return the key with the max value"""  
-     return sorted(d.items(), key=lambda x: x[1], reverse=True)[:K]
+    """ a) create a list of the dict's keys and values; 
+     b) return the key with the max value"""  
+    items=sorted(d.items(), key=lambda x: x[1], reverse=True)
+    if all([v>=0 for v in d.values()]):
+        return items[:K]
+    else:
+        return items[:K]+items[-K:]
 #%%
 year=int(input('YEAR TO PREDICT: ')) 
 X,y=getData(year-1)
@@ -62,6 +70,7 @@ sex=['Mujeres', 'Hombres']
 #%%
 import joblib as job
 roc,roc_joint={},{}
+pr, pr_joint={}, {} #precision-recall curves
 table=pd.DataFrame()
 K=20000
 for group, groupname in zip([female,male],sex):
@@ -85,6 +94,8 @@ for group, groupname in zip([female,male],sex):
     
     roc[groupname]=plot_roc(obs,separate_preds, groupname)
     roc_joint[groupname]=plot_roc(obs,joint_preds, groupname)
+    pr_joint[groupname]=plot_pr(obs, joint_preds, groupname)
+    pr[groupname]=plot_pr(obs, separate_preds, groupname)
     
     recall,ppv=performance(separate_preds, obs, K)
     score=roc_auc_score(obs, separate_preds)
@@ -93,21 +104,38 @@ for group, groupname in zip([female,male],sex):
     df=pd.DataFrame(list(zip([f'Global- {groupname}', f'Separado- {groupname}'],[scorejoint,score],[recalljoint,recall],[ppvjoint, ppv])),
                     columns=['Model', 'AUC', f'Recall_{K}', f'PPV_{K}'])
     table=pd.concat([df, table])
-fig, (ax_sep,ax_joint) = plt.subplots(1,2,figsize=(10,8))
+fig1, (ax_sep1,ax_joint1) = plt.subplots(1,2,figsize=(10,8))
+fig2, (ax_sep2,ax_joint2) = plt.subplots(1,2,figsize=(10,8))
 for groupname in sex:
-    roc[groupname].plot(ax_sep)
-    roc_joint[groupname].plot(ax_joint)
-    
-ax_sep.set_title('Separados')
-ax_joint.set_title('Juntos')
+    roc[groupname].plot(ax_sep1)
+    roc_joint[groupname].plot(ax_joint1)
+    pr[groupname].plot(ax_sep2)
+    pr_joint[groupname].plot(ax_joint2)
+
+ax_sep1.set_title('Separados')
+ax_joint1.set_title('Juntos')
+ax_sep2.set_title('Separados')
+ax_joint2.set_title('Juntos')
 
 print(table.to_markdown(index=False,))
-
+features=X.drop(['PATIENT_ID','FEMALE'],axis=1).columns
 diff,ratio,m1,m2=beta_differences('logisticHombres.joblib', 'logisticMujeres.joblib',
-                            X.drop(['PATIENT_ID','FEMALE'],axis=1).columns)
-
-print('TOP 5 coefficient differences are: ')
+                            features)
+coefMuj={name:value for name, value in zip(features, m2.coef_[0])}
+coefHom={name:value for name, value in zip(features, m1.coef_[0])}
 K=5
+print(f'TOP {K} positive and negative coefficients for women')
+print(top_K_dict(coefMuj, K))
+print('  ')
+print(f'TOP {K} positive and negative coefficients for men')
+print(top_K_dict(coefHom, K))
+print('-----'*5)
+print('  ')
+print(f'TOP {K} coefficient differences are: ')
 print(top_K_dict(diff, K))
-print('TOP 5 coefficient ratios are: ')
+print('-----'*5)
+print('  ')
+print(f'TOP {K} coefficient ratios are: ')
 print(top_K_dict(ratio, K))
+
+
