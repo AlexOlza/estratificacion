@@ -28,6 +28,7 @@ def configure(configname=None,**kwargs):
         return None
     if not configname:
         configname=input('Enter configuration json file path: ')
+    configname=str(configname)
     if configname.endswith('.json'):
         with open(configname) as c:
             configuration=json.load(c)
