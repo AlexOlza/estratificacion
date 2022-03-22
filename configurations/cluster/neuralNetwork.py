@@ -162,7 +162,7 @@ def keras_code(x_train, y_train, x_val, y_val,
     # y_pred = model.predict(x_val)
     # 
     print(history.history)
-    return({'loss':history.history['loss'][-1] }) 
+    return({'val_loss':history.history['val_loss'][-1] }) 
 
 def run(tuner, trial, **kwargs):
         cyclic=tuner.cyclic

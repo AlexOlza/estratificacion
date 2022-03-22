@@ -115,7 +115,7 @@ else:
                  directory=model_name+'_search',
                  project_name=name)
   
-tuner.search(epochs=20)
+tuner.search(epochs=30)
 print('---------------------------------------------------'*5)
 print('SEARCH SPACE SUMMARY:')
 print(tuner.search_space_summary())  
@@ -141,8 +141,8 @@ if cyclic:
 print('Best hyperparameters:')
 print(best_hp_)
 print('---------------------------------------------------'*5)
-print('Retraining:')
-config.keras_code(X,y,X_train,y_train, epochs=30,**best_hp_,
-                  callbacks=callbacks, save=True, saving_path=model_name, verbose=1)
+print('Retraining (70 epochs):')
+config.keras_code(X,y,X_train,y_train, epochs=70,**best_hp_,
+                  callbacks=callbacks, save=True, saving_path=model_name, verbose=2)
 util.saveconfig(config,config.USEDCONFIGPATH+model_name.split('/')[-1]+'.json')
 print('Saved ')
