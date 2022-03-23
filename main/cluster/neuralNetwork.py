@@ -45,8 +45,10 @@ parser.add_argument('--model-name', metavar='model_name',type=str, default=argpa
                     help='Custom model name to save (provide without extension nor directory)')
 parser.add_argument('--n-iter', metavar='n_iter',type=int, default=argparse.SUPPRESS,
                     help='Number of iterations for the random grid search (hyperparameter tuning)')
-parser.add_argument('--tuner','-t', metavar='tuner',type=str, default='bayesian',
-                    help='Type of tuner (random/bayesian)')
+parser.add_argument('--random_tuner','-r', dest='random_tuner',action='store_true', default=False,
+                    help='Use random grid search (default: False, use Bayesian)')
+parser.add_argument('--clr','-c', dest='cyclic',action='store_true', default=False,
+                    help='Use Cyclic Learning Rate')
 
 args = parser.parse_args()
 
@@ -62,7 +64,8 @@ import configurations.utility as util
 util.makeAllPaths()
 seed_sampling= args.seed_sampling if hasattr(args, 'seed_sampling') else config.SEED #imported from default configuration
 seed_hparam= args.seed_hparam if hasattr(args, 'seed_hparam') else config.SEED
-model_name= args.model_name if hasattr(args,'model_name') else 'neural' 
+model_name= args.model_name if hasattr(args,'model_name') else 'neuralNetwork' 
+cyclic=args.cyclic
 #%%
 """ BEGGINNING """
 from dataManipulation.dataPreparation import getData
@@ -83,28 +86,33 @@ print('---------------------------------------------------'*5)
 """ FIT MODEL """
 np.random.seed(seed_hparam)
 print('Seed ', seed_hparam)
-if args.tuner=='bayesian':
+
+if not args.random_tuner:
     name=re.sub('neuralNetwork','neuralNetworkBayesian',model_name)
+    name=name+'CLR' if cyclic else name
     model_name=config.MODELPATH+name
     print('Tuner: BayesianOptimization')
     tuner = config.MyBayesianTuner(X_train, y_train.reshape(-1,1),X_test, y_test.reshape(-1,1),
                      objective=kt.Objective("val_loss", direction="min"),
-                     max_trials=50,
+                     max_trials=100,
                      overwrite=True,
                      num_initial_points=4,
                      seed=seed_hparam,
-                     directory=model_name,
+                     cyclic=cyclic,
+                     directory=model_name+'_search',
                      project_name=name)
 else:
-    name=re.sub('neuralNetwork','neuralNetworkBayesian',model_name)
+    name=re.sub('neuralNetwork','neuralNetworkRandom',model_name)
+    name=name+'CLR' if cyclic else name
     model_name=config.MODELPATH+name
     print('Tuner: Random')
     tuner = config.MyRandomTuner(X_train, y_train.reshape(-1,1),X_test, y_test.reshape(-1,1),
                  objective=kt.Objective("val_loss", direction="min"),
-                 max_trials=60, 
+                 max_trials=100, 
                  overwrite=True,
                  seed=seed_hparam,
-                 directory=model_name,
+                 cyclic=cyclic,
+                 directory=model_name+'_search',
                  project_name=name)
   
 tuner.search(epochs=20)
@@ -126,7 +134,7 @@ best_hp_['hidden_units']={f'units_{i}':best_hp.values[f'units_{i}'] for i in ran
 callbacks = [keras.callbacks.EarlyStopping(monitor='val_loss',mode='min',
                                       patience=5,
                                       restore_best_weights=True)]
-if best_hp.values['cyclic']:
+if cyclic:
     callbacks.append(config.clr(best_hp.values['low'], best_hp.values['high'], step=(len(y) // 1024)))
 
 
@@ -134,7 +142,7 @@ print('Best hyperparameters:')
 print(best_hp_)
 print('---------------------------------------------------'*5)
 print('Retraining:')
-config.keras_code(X,y,X_train,y_train, epochs=10,**best_hp_,
-                  callbacks=callbacks, saving_path=model_name+'.h5')#save a single lightweight file
+config.keras_code(X,y,X_train,y_train, epochs=30,**best_hp_,
+                  callbacks=callbacks, save=True, saving_path=model_name, verbose=1)
 util.saveconfig(config,config.USEDCONFIGPATH+model_name.split('/')[-1]+'.json')
 print('Saved ')
