@@ -34,8 +34,7 @@ def plot_roc(y, pred, groupname):
     
     return display
 
-def plot_pr(y, pred, groupname):
-    precision, recall, _ = precision_recall_curve(y, pred)
+def plot_pr(precision, recall, groupname):
     display = PrecisionRecallDisplay(precision=precision, recall=recall, estimator_name=groupname)
     return display
 def beta_differences(modelname1, modelname2, features):
@@ -78,7 +77,7 @@ sex=[ 'Hombres','Mujeres']
 import joblib as job
 roc,roc_joint,roc_inter={},{},{}
 pr, pr_joint, pr_inter={}, {}, {} #precision-recall curves
-precision, recall, thresh={}, {}, {}
+PRECISION, RECALL, THRESHOLDS={}, {}, {}
 table=pd.DataFrame()
 K=20000
 for group, groupname in zip([female,male],sex):
@@ -101,14 +100,16 @@ for group, groupname in zip([female,male],sex):
     inter_preds=interactionmodel.predict_proba(Xgroup)[:,-1]
     obs=np.where(ygroup[config.COLUMNS]>=1,1,0)
     
-    precision[groupname], recall[groupname], thresh[groupname] = precision_recall_curve(obs, joint_preds)
-    
+    prec, rec, thre = precision_recall_curve(obs, joint_preds)
+    PRECISION[groupname]=prec
+    RECALL[groupname]=rec
+    THRESHOLDS[groupname]=thre
     roc[groupname]=plot_roc(obs,separate_preds, groupname)
     roc_joint[groupname]=plot_roc(obs,joint_preds, groupname)
     roc_inter[groupname]=plot_roc(obs,inter_preds, groupname)
-    pr_joint[groupname]=plot_pr(obs, joint_preds, groupname)
-    pr_inter[groupname]=plot_pr(obs, inter_preds, groupname)
-    pr[groupname]=plot_pr(obs, separate_preds, groupname)
+    pr_joint[groupname]=plot_pr(PRECISION[groupname], RECALL[groupname], groupname)
+    pr_inter[groupname]=plot_pr(PRECISION[groupname], RECALL[groupname], groupname)
+    pr[groupname]=plot_pr(PRECISION[groupname],RECALL[groupname], groupname)
     
     
     recall,ppv=performance(separate_preds, obs, K)
@@ -182,7 +183,7 @@ oddsContrib['NHom']=[Xhom[name].sum() for name in oddsContrib.index]
 
 
 oddsContrib.to_csv(config.MODELPATH+'sexSpecificOddsContributions.csv')
-
+#%%
 print(' ')
 print('what should the probability threshold be to get the same recall for women as for men? ')
 idx=[ n for n,i in enumerate(recall) if i<=0.140583 ][0]
