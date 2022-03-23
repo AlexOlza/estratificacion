@@ -32,7 +32,7 @@ X,y=getData(2016)
 #%%
 female=X['FEMALE']==1
 male=X['FEMALE']==0
-sex=['Mujeres', 'Hombres']
+sex=[ 'Hombres','Mujeres']
 
 for group, groupname in zip([female,male],sex):
     print(groupname)
@@ -42,8 +42,6 @@ for group, groupname in zip([female,male],sex):
     ygroup=np.where(ygroup[config.COLUMNS]>=1,1,0)
     ygroup=ygroup.ravel()
     print('Sample size ',len(Xgroup), 'positive: ',sum(ygroup))
-    # assert False
-    #%%
     logistic=LogisticRegression(penalty='none',max_iter=1000,verbose=0)
     
     to_drop=['PATIENT_ID','ingresoUrg', 'FEMALE']
