@@ -209,11 +209,10 @@ if __name__=='__main__':
     year=int(input('YEAR TO PREDICT: ')) if not hasattr(args, 'year') else args.year
     nested=eval(input('NESTED MODEL COMPARISON? (True/False) ')) if not hasattr(args, 'nested') else args.nested
     all_models=eval(input('COMPARE ALL MODELS? (True/False) ')) if not hasattr(args, 'all') else args.all
-    X,y=getData(year-1)
+    
     available_models=detect_models()
     
-    if nested:
-        all_predictions,metrics=compare_nested(available_models,X,y,year)
+    if nested:   
         selected=sorted([m for m in available_models if ('nested' in m)])
     elif all_models:
         selected=available_models
@@ -222,30 +221,37 @@ if __name__=='__main__':
     
     if Path(config.PREDPATH+'/metrics.csv').is_file():
         available_metrics=pd.read_csv(config.PREDPATH+'/metrics.csv')
-        if all([s in available_metrics.Model.values for s in selected]):
-            print('All metrics are available')
-            print(available_metrics)
-            boxplots(available_metrics, year, K=20000)
-            exit(1)
     else:
-        available_metrics=pd.DataFrame()
-
-    if not nested:
-        all_predictions,metrics=compare(selected,X,y,year)
-    all_predictions=update_all_preds(all_predictions,selected)
-    
-
-    if nested:
-        variable_groups=[r'SEX+ AGE','+ EDC_','+ RXMG_','+ ACG']
-        score,recall,ppv=[list(array.values()) for array in list(metrics.values())]
-        print(pd.DataFrame(list(zip(selected,variable_groups,score,recall,ppv)),columns=['Model','Predictors']+list(metrics.keys())).to_markdown(index=False))
+        available_metrics=pd.DataFrame.from_dict({'Model':[]})
+    if all([s in available_metrics.Model.values for s in selected]):
+        print('All metrics are available')
+        print(available_metrics)
+        available_metrics['Algorithm']=[re.sub('_|[0-9]', '', model) for model in available_metrics['Model'].values]
+        print(available_metrics.groupby('Algorithm').describe().transpose())
+        parent_metrics=pd.read_csv(re.sub('hyperparameter_variability_|fixsample_','',config.PREDPATH+'/metrics.csv')).to_dict('list')
+        boxplots(available_metrics, year, K=20000, parent_metrics=parent_metrics)
     else:
-        score,recall,ppv=[list(array.values()) for array in list(metrics.values())]
-        df=pd.DataFrame(list(zip(selected,score,recall,ppv)),columns=['Model']+list(metrics.keys()))
-        print(df.to_markdown(index=False,))
-    
-    df=pd.concat(df, available_metrics, ignore_index=True, axis=0)
-    df.to_csv(config.PREDPATH+'/metrics.csv', index=False)
+        selected=[s for s in selected if not (s in available_metrics.Model.values)]
+        X,y=getData(year-1)
 
-    parent_metrics=pd.read_csv(re.sub('hyperparameter_variability_|fixsample_','',config.PREDPATH+'/metrics.csv')).to_dict('list')
-    boxplots(df, year, K=20000, parent_metrics=parent_metrics)
+        if not nested:
+            all_predictions,metrics=compare(selected,X,y,year)
+        all_predictions=update_all_preds(all_predictions,selected)
+        
+    
+        if nested:
+            all_predictions,metrics=compare_nested(available_models,X,y,year)
+            variable_groups=[r'SEX+ AGE','+ EDC_','+ RXMG_','+ ACG']
+            score,recall,ppv=[list(array.values()) for array in list(metrics.values())]
+            print(pd.DataFrame(list(zip(selected,variable_groups,score,recall,ppv)),columns=['Model','Predictors']+list(metrics.keys())).to_markdown(index=False))
+        else:
+            score,recall,ppv=[list(array.values()) for array in list(metrics.values())]
+            df=pd.DataFrame(list(zip(selected,score,recall,ppv)),columns=['Model']+list(metrics.keys()))
+            print(df.to_markdown(index=False,))
+        
+        df=pd.concat([df, available_metrics], ignore_index=True, axis=0)
+        df.to_csv(config.PREDPATH+'/metrics.csv', index=False)
+    
+        parent_metrics=pd.read_csv(re.sub('hyperparameter_variability_|fixsample_','',config.PREDPATH+'/metrics.csv')).to_dict('list')
+        boxplots(df, year, K=20000, parent_metrics=parent_metrics)
+        print(df.groupby('Algorithm').describe().transpose())
