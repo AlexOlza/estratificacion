@@ -44,16 +44,16 @@ def beta_differences(modelname1, modelname2, features):
     m2=job.load(config.MODELPATH+modelname2)
     assert m1.n_features_in_==m2.n_features_in_, 'Models with different number of predictors!'
     assert m1.n_features_in_==len(features)
-    diff=abs(m1.coef_-m2.coef_)
+    diff=m1.coef_-m2.coef_
     ratio=m1.coef_/(m2.coef_+1e-14)
-    diff={name:value for name, value in zip(features, diff[0])}
+    timesLargerForMen={name:np.exp(value) for name, value in zip(features, diff[0])}
     ratio={name:value for name, value in zip(features, ratio[0])}
-    return(diff, ratio,m1,m2)
+    return(timesLargerForMen, ratio,m1,m2)
 
-def top_K_dict(d, K):
+def top_K_dict(d, K, reverse=True):
     """ a) create a list of the dict's keys and values; 
      b) return the key with the max value"""  
-    items=sorted(d.items(), key=lambda x: x[1], reverse=True)
+    items=sorted(d.items(), key=lambda x: x[1], reverse=reverse)
     if all([v>=0 for v in d.values()]):
         return items[:K]
     else:
@@ -119,23 +119,40 @@ ax_joint2.set_title('Juntos')
 
 print(table.to_markdown(index=False,))
 features=X.drop(['PATIENT_ID','FEMALE'],axis=1).columns
-diff,ratio,m1,m2=beta_differences('logisticHombres.joblib', 'logisticMujeres.joblib',
+globalFeatures=X.drop(['PATIENT_ID'],axis=1).columns #preserves the order
+timesLargerForMen,ratio,m1,m2=beta_differences('logisticHombres.joblib', 'logisticMujeres.joblib',
                             features)
-coefMuj={name:value for name, value in zip(features, m2.coef_[0])}
-coefHom={name:value for name, value in zip(features, m1.coef_[0])}
+oddsContribMuj={name:np.exp(value) for name, value in zip(features, m2.coef_[0])}
+oddsContribHom={name:np.exp(value) for name, value in zip(features, m1.coef_[0])}
+oddsContribGlobal={name:np.exp(value) for name, value in zip(globalFeatures, globalmodel.coef_[0])}
+print('Global contrib of FEMALE variable is: ', oddsContribGlobal['FEMALE'])
+
 K=5
 print(f'TOP {K} positive and negative coefficients for women')
-print(top_K_dict(coefMuj, K))
+print(top_K_dict(oddsContribMuj, K))
+print(top_K_dict(oddsContribMuj, K, reverse=False))
 print('  ')
 print(f'TOP {K} positive and negative coefficients for men')
-print(top_K_dict(coefHom, K))
+print(top_K_dict(oddsContribHom, K))
+print(top_K_dict(oddsContribHom, K, reverse=False))
 print('-----'*5)
 print('  ')
-print(f'TOP {K} coefficient differences are: ')
-print(top_K_dict(diff, K))
-print('-----'*5)
+print(f'TOP {K} variables that increase the ODDS for men to be hospitalized more prominently than for women: ')
+print(top_K_dict(timesLargerForMen, K))
 print('  ')
-print(f'TOP {K} coefficient ratios are: ')
-print(top_K_dict(ratio, K))
+print(f'TOP {K} variables that DECREASE the ODDS for men to be hospitalized more prominently than for women: ')
+print(top_K_dict(timesLargerForMen, K, reverse=False))
+
+oddsContrib={name:[muj, hom] for name, muj, hom in zip(features, oddsContribMuj.values(), oddsContribHom.values())}
+oddsContrib=pd.DataFrame.from_dict(oddsContrib,orient='index',columns=['Mujeres', 'Hombres'])
+oddsContrib['Global']=pd.Series(oddsContribGlobal)
+femaleContrib=pd.Series([np.nan, np.nan , oddsContribGlobal['FEMALE']],index=['Mujeres', 'Hombres', 'Global'],name='FEMALE')
+oddsContrib.loc['FEMALE']=femaleContrib
+Xhom=X.loc[male]
+Xmuj=X.loc[female]
+oddsContrib['NMuj']=[Xmuj[name].sum() for name in oddsContrib.index]
+oddsContrib['NHom']=[Xhom[name].sum() for name in oddsContrib.index]
 
 
+
+oddsContrib.to_csv(config.MODELPATH+'sexSpecificOddsContributions.csv')
