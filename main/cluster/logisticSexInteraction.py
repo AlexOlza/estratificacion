@@ -54,5 +54,7 @@ print('fitting time: ',time()-t0)
 #%%
 
 config.ALGORITHM='logisticSexInteraction'
+import os
+config.USEDCONFIGPATH=os.path.join(config.USEDCONFIGPATH,config.EXPERIMENT)
 util.savemodel(config, fit, name='logisticSexInteraction')
 

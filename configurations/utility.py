@@ -116,7 +116,7 @@ def savemodel(config,model,**kwargs):
         os.mkdir(config.MODELPATH)
     modelname=kwargs.get('name',config.ALGORITHM+NOW)
     modelfilename=modelname+'.joblib'
-    configname=config.USEDCONFIGPATH+modelname+'.json'
+    configname=os.path.join(config.USEDCONFIGPATH,modelname+'.json')
     print('configname',configname)
     os.chdir(config.MODELPATH)
     print('dump',config.MODELPATH+modelfilename)
