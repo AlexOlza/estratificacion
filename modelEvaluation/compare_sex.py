@@ -23,6 +23,7 @@ if not config.configured:
     configuration=util.configure(config_used)
 # sys.stdout = open(f'{config.ROOTPATH}estratificacion-reports/compare_sex_{config.EXPERIMENT}.md', 'w')
 from modelEvaluation.compare import detect_models, compare, detect_latest, performance
+import modelEvaluation.calibrate as cal
 from dataManipulation.dataPreparation import getData
 #%%
 def plot_roc(fpr, tpr, groupname):
@@ -58,14 +59,16 @@ def top_K_dict(d, K, reverse=True):
 #%%
 year=int(input('YEAR TO PREDICT: ')) 
 X,y=getData(year-1)
-
+pastX,pasty=getData(year-2)
 #%%
 # X.drop('PATIENT_ID', axis=1, inplace=True)
+predictors=X.columns
 features=X.drop('PATIENT_ID', axis=1).columns
 
 for column in features:
     if column!='FEMALE':
         X[f'{column}INTsex']=X[column]*X['FEMALE']
+        pastX[f'{column}INTsex']=pastX[column]*pastX['FEMALE']
 #%%
 available_models=detect_models()
 # latest=detect_latest(available_models)
@@ -84,30 +87,53 @@ table=pd.DataFrame()
 K=20000
 models=['Global', 'Separado', 'Interaccion']
 fighist, (axhist,axhist2) = plt.subplots(1,2)
-for group, groupname in zip([female,male],sex):
+
+for i, group, groupname in zip([1,0],[female,male],sex):
     recall,ppv,spec, score={},{},{},{}
     selected=[l for l in available_models if ((groupname in l ) or (bool(re.match('logistic\d+|logisticSexInteraction',l))))]
     print('Selected models: ',selected)
     # LOAD MODELS
-    globalmodel=list(set(selected)-set([f'logistic{groupname}'])-set(['logisticSexInteraction']))[0]+'.joblib'
-    separatemodel=f'logistic{groupname}.joblib'
-    globalmodel=job.load(config.MODELPATH+globalmodel)
+    globalmodelname=list(set(selected)-set([f'logistic{groupname}'])-set(['logisticSexInteraction']))[0]
+    separatemodelname=f'logistic{groupname}.joblib'
+    globalmodel=job.load(config.MODELPATH+globalmodelname+'.joblib')
     interactionmodel=job.load(config.MODELPATH+'logisticSexInteraction.joblib')
-    separatemodel=job.load(config.MODELPATH+separatemodel)
+    separatemodel=job.load(config.MODELPATH+separatemodelname)
     
     # SUBSET DATA
     Xgroup=X.loc[group]
     ygroup=y.loc[group]
-    print(Xgroup.head().PATIENT_ID)
-    print(ygroup.head())
-    Xgroup.drop('PATIENT_ID', axis=1, inplace=True)
+
+    pastXgroup=pastX.loc[pastX['FEMALE']==i]
+    pastygroup=pasty.loc[pastX['FEMALE']==i]
+
+    # Xgroup.drop('PATIENT_ID', axis=1, inplace=True)
+    # pastXgroup.drop('PATIENT_ID', axis=1, inplace=True)
+
     assert (all(Xgroup['FEMALE']==1) or all(Xgroup['FEMALE']==0))
     print('Sample size ',len(Xgroup), 'positive: ',sum(np.where(ygroup[config.COLUMNS]>=1,1,0)))  
     
     # PREDICT
-    separate_preds=separatemodel.predict_proba(Xgroup[features].drop(['FEMALE'],axis=1))[:,-1]
-    joint_preds=globalmodel.predict_proba(Xgroup[features])[:,-1]
-    inter_preds=interactionmodel.predict_proba(Xgroup)[:,-1]
+    # separate_preds=separatemodel.predict_proba(Xgroup[features].drop(['FEMALE'],axis=1))[:,-1]
+    # joint_preds=globalmodel.predict_proba(Xgroup[features])[:,-1]
+    # inter_preds=interactionmodel.predict_proba(Xgroup)[:,-1]
+    # obs=np.where(ygroup[config.COLUMNS]>=1,1,0)
+    separate_cal=cal.calibrate(f'logistic{groupname}',year,
+                              presentX=Xgroup[predictors].drop('FEMALE', axis=1),
+                              presentY=ygroup,
+                              pastX=pastXgroup[predictors].drop('FEMALE', axis=1),
+                              pastY=pastygroup)
+    joint_cal=cal.calibrate(globalmodelname,year,
+                              presentX=Xgroup[predictors], presentY=ygroup,
+                              pastX=pastXgroup[predictors], pastY=pastygroup)
+    inter_cal=cal.calibrate('logisticSexInteraction',year,
+                              presentX=Xgroup, presentY=ygroup,
+                              pastX=pastXgroup[pastXgroup.columns],
+                              pastY=pastygroup,
+                              predictors=config.PREDICTORREGEX+'|INTsex')
+    inter_preds=inter_cal.PREDCAL
+    joint_preds=joint_cal.PREDCAL
+    separate_preds=separate_cal.PREDCAL
+
     obs=np.where(ygroup[config.COLUMNS]>=1,1,0)
     axhist.hist(separate_preds,bins=1000,label=groupname)
     axhist2.hist(joint_preds,bins=1000,label=groupname)
@@ -152,15 +178,6 @@ for groupname in sex:
 
 print(table.to_markdown(index=False,))
 #%%
-
-for model in ['Global']:
-    for groupname in sex:
-        print(groupname)
-        print(FPR['Hombres'][model]-FPR['Mujeres'][model])
-        print(TPR['Hombres'][model]-TPR['Mujeres'][model])
-        # print(PRECISION[groupname][model])
-        # print(RECALL[groupname][model]  )
-
 interFeatures=X.columns #preserves the order
 globalFeatures=features #original columns (without interaction terms)
 separateFeatures=[f for f in features if not f=='FEMALE'] #for the separate models
@@ -215,7 +232,9 @@ for i,model in enumerate(models):
     print('Threshold: ',t)
     print('Recall: ', RECALL['Mujeres'][model][idx])
     print('Number of selected women: ', sum(joint_preds>=t))
-    print('Specificity for these women is: ',1-FPR['Mujeres'][model][idx])
+
+    print('Specificity for these women is: ',1-FPR['Mujeres'][model][idx2])
+
     print('ANd for men: ',table.Specificity_20000.iloc[i])
     print('PPV for these women is: ',PRECISION['Mujeres'][model][idx])
     print('ANd for men: ',table.PPV_20000.iloc[i])
