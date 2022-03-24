@@ -38,11 +38,13 @@ for group, groupname in zip([female,male],sex):
     print(groupname)
     Xgroup=X.loc[group]
     ygroup=y.loc[group]
+    print(Xgroup.PATIENT_ID)
+    print(ygroup)
     assert (all(Xgroup['FEMALE']==1) or all(Xgroup['FEMALE']==0))
     ygroup=np.where(ygroup[config.COLUMNS]>=1,1,0)
     ygroup=ygroup.ravel()
     print('Sample size ',len(Xgroup), 'positive: ',sum(ygroup))
-    logistic=LogisticRegression(penalty='none',max_iter=1000,verbose=0)
+    logistic=LogisticRegression(penalty='none',max_iter=1000,verbose=0, warm_start=False)
     
     to_drop=['PATIENT_ID','ingresoUrg', 'FEMALE']
     for c in to_drop:
@@ -56,6 +58,5 @@ for group, groupname in zip([female,male],sex):
     t0=time()
     fit=logistic.fit(Xgroup, ygroup)
     print('fitting time: ',time()-t0)
-    #%%
     util.savemodel(config, fit,  name=f'logistic{groupname}')
 

@@ -149,8 +149,9 @@ def performance(pred,obs,K):
     print(' tn, fp, fn, tp =',tn, fp, fn, tp)
     recall=c[1][1]/(c[1][0]+c[1][1])
     ppv=c[1][1]/(c[0][1]+c[1][1])
-    print('Recall, Positive Predictive Value = ',recall,ppv)
-    return(recall,ppv)
+    specificity = tn / (tn+fp)
+    print('Recall, PPV, Spec = ',recall,ppv, specificity)
+    return(recall,ppv, specificity)
 
 def parameter_distribution(models,**args):
     model_dict,grid,params,times_selected={},{},{},{}
