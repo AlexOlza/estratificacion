@@ -186,7 +186,9 @@ oddsContrib.to_csv(config.MODELPATH+'sexSpecificOddsContributions.csv')
 #%%
 print(' ')
 print('what should the probability threshold be to get the same recall for women as for men? ')
-idx=[ n for n,i in enumerate(recall) if i<=0.140583 ][0]
-t=thresh[idx]
+print('Recall for men (global model): ',table.Recall_20000.iloc[0])
+idx=[ n for n,i in enumerate(RECALL['Mujeres']) if i<=table.Recall_20000.iloc[0]][0]
+t=THRESHOLDS['Mujeres'][idx]
 print('Threshold: ',t)
-print('Number of selected women: ', sum())
+print('Number of selected women: ', sum(joint_preds>=t))
+print('PPV for these women is: ',PRECISION['Mujeres'][idx])
