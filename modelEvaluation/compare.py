@@ -36,7 +36,7 @@ parser.add_argument('--year', '-y', type=int,default=argparse.SUPPRESS,
                     help='The year for which you want to compare the predictions.')
 parser.add_argument('--nested','-n', dest='nested', action='store_true', default=False,
                     help='Are you comparing nested models with the same algorithm?')
-parser.add_argument('--all','-a', dest='all', action='store_true', default=False,
+parser.add_argument('--all','-a', dest='all', action='store_true', default=True,
                     help='Compare all models with the same algorithm?')
 parser.add_argument('--config_used', type=str, default=argparse.SUPPRESS,
                 help='Full path to configuration json file')
@@ -149,8 +149,9 @@ def performance(pred,obs,K):
     print(' tn, fp, fn, tp =',tn, fp, fn, tp)
     recall=c[1][1]/(c[1][0]+c[1][1])
     ppv=c[1][1]/(c[0][1]+c[1][1])
-    print('Recall, Positive Predictive Value = ',recall,ppv)
-    return(recall,ppv)
+    specificity = tn / (tn+fp)
+    print('Recall, PPV, Spec = ',recall,ppv, specificity)
+    return(recall,ppv, specificity)
 
 def parameter_distribution(models,**args):
     model_dict,grid,params,times_selected={},{},{},{}

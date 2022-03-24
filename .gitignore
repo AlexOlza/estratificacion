@@ -8,6 +8,7 @@ predictions/
 *.ini
 *.zip
 *.csv
+*.md
 .Rhistory
 .spyproject/
 *.txt

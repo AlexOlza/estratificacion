@@ -87,6 +87,7 @@ table=pd.DataFrame()
 K=20000
 models=['Global', 'Separado', 'Interaccion']
 fighist, (axhist,axhist2) = plt.subplots(1,2)
+
 for i, group, groupname in zip([1,0],[female,male],sex):
     recall,ppv,spec, score={},{},{},{}
     selected=[l for l in available_models if ((groupname in l ) or (bool(re.match('logistic\d+|logisticSexInteraction',l))))]
@@ -101,11 +102,13 @@ for i, group, groupname in zip([1,0],[female,male],sex):
     # SUBSET DATA
     Xgroup=X.loc[group]
     ygroup=y.loc[group]
+
     pastXgroup=pastX.loc[pastX['FEMALE']==i]
     pastygroup=pasty.loc[pastX['FEMALE']==i]
 
     # Xgroup.drop('PATIENT_ID', axis=1, inplace=True)
     # pastXgroup.drop('PATIENT_ID', axis=1, inplace=True)
+
     assert (all(Xgroup['FEMALE']==1) or all(Xgroup['FEMALE']==0))
     print('Sample size ',len(Xgroup), 'positive: ',sum(np.where(ygroup[config.COLUMNS]>=1,1,0)))  
     
@@ -130,6 +133,7 @@ for i, group, groupname in zip([1,0],[female,male],sex):
     inter_preds=inter_cal.PREDCAL
     joint_preds=joint_cal.PREDCAL
     separate_preds=separate_cal.PREDCAL
+
     obs=np.where(ygroup[config.COLUMNS]>=1,1,0)
     axhist.hist(separate_preds,bins=1000,label=groupname)
     axhist2.hist(joint_preds,bins=1000,label=groupname)
@@ -228,7 +232,9 @@ for i,model in enumerate(models):
     print('Threshold: ',t)
     print('Recall: ', RECALL['Mujeres'][model][idx])
     print('Number of selected women: ', sum(joint_preds>=t))
+
     print('Specificity for these women is: ',1-FPR['Mujeres'][model][idx2])
+
     print('ANd for men: ',table.Specificity_20000.iloc[i])
     print('PPV for these women is: ',PRECISION['Mujeres'][model][idx])
     print('ANd for men: ',table.PPV_20000.iloc[i])

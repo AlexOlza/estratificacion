@@ -14,7 +14,7 @@ do
         exp=${experiments[$e]} 
         alg=${algorithms[$a]}
 	scr=$alg
-        if [[ "$alg" == *"nested"* ]]; then
+        if [[ "$alg" == *"nested"* ]] || [[ "$alg" == *"SexInteraction"* ]]; then
 		alg="logistic"
 	fi
 
