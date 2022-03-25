@@ -43,7 +43,8 @@ def sample(data,uncal):
     return(idx,unique)
 
 def calibrate(model_name,yr,**kwargs):
-    calibFilename=generate_filename(model_name,yr, calibrated=True)
+    filename=kwargs.get('filename',model_name)
+    calibFilename=generate_filename(filename,yr, calibrated=True)
     if Path(calibFilename).is_file():
         util.vprint('Calibrated predictions found; loading')
         p_calibrated=pd.read_csv(calibFilename)
@@ -59,8 +60,12 @@ def calibrate(model_name,yr,**kwargs):
         presentX,presentY=getData(yr-1)
 
     #This reads the prediction files, or creates them if not present
-    pastPred, _= predict(model_name,config.EXPERIMENT,yr-1, X=pastX, y=pastY, predictors=predictors)
-    pred, _= predict(model_name,config.EXPERIMENT,yr, X=presentX, y=presentY, predictors=predictors)
+    pastPred, _= predict(model_name,config.EXPERIMENT,yr-1,
+                         filename=filename,
+                         X=pastX, y=pastY, predictors=predictors)
+    pred, _= predict(model_name,config.EXPERIMENT,yr,
+                     filename=filename,
+                     X=presentX, y=presentY, predictors=predictors)
     
     pastPred.sort_values(by='PATIENT_ID',inplace=True)
     pastPred.reset_index(drop=True,inplace=True)
