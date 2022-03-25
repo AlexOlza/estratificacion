@@ -93,7 +93,7 @@ models=['Global', 'Separado', 'Interaccion']
 fighist, (axhist,axhist2) = plt.subplots(1,2)
 
 for i, group, groupname in zip([1,0],[female,male],sex):
-    recall,ppv,spec, score={},{},{},{}
+    recall,ppv,spec, score, ap={},{},{},{},{}
     selected=[l for l in available_models if ((groupname in l ) or (bool(re.match('logistic\d+|logisticSexInteraction',l))))]
     print('Selected models: ',selected)
     # LOAD MODELS
@@ -159,14 +159,20 @@ for i, group, groupname in zip([1,0],[female,male],sex):
 
         recallK,ppvK, specK=performance(preds, obs, K)
         rocauc=roc_auc_score(obs, preds)
+        avg_prec = average_precision_score(obs, preds)
         recall[model]=recallK
         spec[model]=specK
         score[model]=rocauc
         ppv[model]=ppvK
+        ap[model]=avg_prec
 
     df=pd.DataFrame(list(zip([f'{model}- {groupname}' for model in models],
-                             [score[model] for model in models],[recall[model] for model in models],[spec[model] for model in models],[ppv[model] for model in models])),
-                    columns=['Model', 'AUC', f'Recall_{K}',f'Specificity_{K}', f'PPV_{K}'])
+                             [score[model] for model in models],
+                             [ap[model] for model in models],
+                             [recall[model] for model in models],
+                             [spec[model] for model in models],
+                             [ppv[model] for model in models])),
+                    columns=['Model', 'AUC', 'AP', f'Recall_{K}',f'Specificity_{K}', f'PPV_{K}'])
     table=pd.concat([df, table])
 #%%
 axhist.legend(prop={'size': 10})
