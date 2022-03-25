@@ -8,7 +8,7 @@ Created on Fri Mar 18 13:13:37 2022
 import re
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.metrics import roc_auc_score, RocCurveDisplay,roc_curve, auc,precision_recall_curve, PrecisionRecallDisplay
+from sklearn.metrics import average_precision_score, roc_auc_score, RocCurveDisplay,roc_curve, auc,precision_recall_curve, PrecisionRecallDisplay
 from modelEvaluation.predict import generate_filename
 import sys
 sys.path.append('/home/aolza/Desktop/estratificacion/')
@@ -34,8 +34,11 @@ def plot_roc(fpr, tpr, groupname):
     
     return display
 
-def plot_pr(precision, recall, groupname):
-    display = PrecisionRecallDisplay(precision=precision, recall=recall, estimator_name=groupname)
+def plot_pr(precision, recall, groupname, y, pred):
+    avg_prec = average_precision_score(y, pred)
+    display = PrecisionRecallDisplay(precision=precision, recall=recall, 
+                                     estimator_name=groupname,
+                                     average_precision=avg_prec)
     return display
 def beta_differences(modelname1, modelname2, features):
     m1=job.load(config.MODELPATH+modelname1)
@@ -152,7 +155,7 @@ for i, group, groupname in zip([1,0],[female,male],sex):
         ROCTHRESHOLDS[groupname][model]=rocthresholds
         # CURVES - PLOTS
         roc[groupname][model]=plot_roc(fpr, tpr, groupname)
-        pr[groupname][model]=plot_pr(prec,rec, groupname)
+        pr[groupname][model]=plot_pr(prec,rec, groupname, obs, preds)
 
         recallK,ppvK, specK=performance(preds, obs, K)
         rocauc=roc_auc_score(obs, preds)
@@ -237,6 +240,6 @@ for i,model in enumerate(models):
 
     print('Specificity for these women is: ',1-FPR['Mujeres'][model][idx2])
 
-    print('ANd for men: ',table.Specificity_20000.iloc[i])
+    print('And for men: ',table.Specificity_20000.iloc[i])
     print('PPV for these women is: ',PRECISION['Mujeres'][model][idx])
     print('ANd for men: ',table.PPV_20000.iloc[i])
