@@ -41,27 +41,7 @@ def plot_pr(precision, recall, groupname, y, pred):
                                      estimator_name=groupname,
                                      average_precision=avg_prec)
     return display
-def beta_differences(modelname1, modelname2, features):
-    m1=job.load(config.MODELPATH+modelname1)
-    m2=job.load(config.MODELPATH+modelname2)
-    assert m1.n_features_in_==m2.n_features_in_, 'Models with different number of predictors!'
-    assert m1.n_features_in_==len(features)
-    diff=m1.coef_-m2.coef_
-    ratio=m1.coef_/(m2.coef_+1e-14)
-    timesLargerForMen={name:np.exp(value) for name, value in zip(features, diff[0])}
-    ratio={name:value for name, value in zip(features, ratio[0])}
-    return(timesLargerForMen, ratio,m1,m2)
 
-def top_K_dict(d, K, description, reverse=True):
-    """ a) create a list of the dict's keys and values; 
-     b) return the key with the max value"""  
-    d={key:[val, description.loc[key]] for key, val in d.items()}
-    items=sorted(d.items(), key=lambda x: x[1], reverse=reverse)
-    if all([v>=0 for v in d.values()]):
-        return items[:K]
-    else:
-        return items[:K]+items[-K:]
-    
 def translateVariables(df,**kwargs):
      dictionaryFile=kwargs.get('file',os.path.join(config.INDISPENSABLEDATAPATH+'diccionarioACG.csv'))
      dictionary=pd.read_csv(dictionaryFile)
@@ -206,20 +186,23 @@ interFeatures=X.columns #preserves the order
 globalFeatures=features #original columns (without interaction terms)
 separateFeatures=[f for f in features if not f=='FEMALE'] #for the separate models
 
-timesLargerForMen,ratio,m1,m2=beta_differences('logisticHombres.joblib', 'logisticMujeres.joblib',
-                            separateFeatures)
-oddsContribMuj={name:np.exp(value) for name, value in zip(separateFeatures, m2.coef_[0])}
-oddsContribHom={name:np.exp(value) for name, value in zip(separateFeatures, m1.coef_[0])}
+modeloH=job.load(config.MODELPATH+'logisticHombres.joblib')
+modeloM=job.load(config.MODELPATH+'logisticMujeres.joblib')
+
+oddsContribMuj={name:np.exp(value) for name, value in zip(separateFeatures, modeloM.coef_[0])}
+oddsContribHom={name:np.exp(value) for name, value in zip(separateFeatures, modeloH.coef_[0])}
 oddsContribGlobal={name:np.exp(value) for name, value in zip(globalFeatures, globalmodel.coef_[0])}
 oddsContribInter={name:np.exp(value) for name, value in zip(interFeatures, interactionmodel.coef_[0])}
 print('Global contrib of FEMALE variable is: ', oddsContribGlobal['FEMALE'])
 
-oddsContrib={name:[muj, hom] for name, muj, hom in zip(features, oddsContribMuj.values(), oddsContribHom.values())}
+oddsContrib={name:[muj, hom] for name, muj, hom in zip(separateFeatures, oddsContribMuj.values(), oddsContribHom.values())}
 oddsContrib=pd.DataFrame.from_dict(oddsContrib,orient='index',columns=['Mujeres', 'Hombres'])
 oddsContrib['Global']=pd.Series(oddsContribGlobal)
 oddsContrib['Interaccion']=pd.Series(oddsContribInter)
 femaleContrib=pd.Series([np.nan, np.nan , oddsContribGlobal['FEMALE'],oddsContribInter['FEMALE']],index=['Mujeres', 'Hombres', 'Global', 'Interaccion'],name='FEMALE')
 oddsContrib.loc['FEMALE']=femaleContrib
+oddsContrib['ratioH/M']=oddsContrib['Hombres']/oddsContrib['Mujeres']
+oddsContrib['ratioM/H']=1/oddsContrib['ratioH/M']
 Xhom=X.loc[male]
 Xmuj=X.loc[female]
 oddsContrib['NMuj']=[Xmuj[name].sum() for name in oddsContrib.index]
@@ -227,22 +210,25 @@ oddsContrib['NHom']=[Xhom[name].sum() for name in oddsContrib.index]
 
 oddsContrib=translateVariables(oddsContrib)
 
+#%% PRINT RISK FACTORS
 N=5
-print(f'TOP {N} positive and negative coefficients for women')
-print(top_K_dict(oddsContribMuj, N))
-print(top_K_dict(oddsContribMuj, N, reverse=False))
+for s, col in zip(['Mujeres', 'Hombres'], ['NMuj', 'NHom']):
+    print(f'TOP {N} factores de riesgo para {s}')
+    print(oddsContrib.sort_values(by=s, ascending=False).head(N)[[s,col,'descripcion']])
+    print('  ')
+    print(f'TOP {N} factores protectores para {s}')
+    print(oddsContrib.sort_values(by=s, ascending=True).head(N)[[s, col,'descripcion']])
+    print('  ')
+print('-----'*N)
 print('  ')
-print(f'TOP {N} positive and negative coefficients for men')
-print(top_K_dict(oddsContribHom, N))
-print(top_K_dict(oddsContribHom, N, reverse=False))
-print('-----'*5)
-print('  ')
-print(f'TOP {N} variables that increase the ODDS for men to be hospitalized more prominently than for women: ')
-print(top_K_dict(timesLargerForMen, N))
-print('  ')
-print(f'TOP {N} variables that DECREASE the ODDS for men to be hospitalized more prominently than for women: ')
-print(top_K_dict(timesLargerForMen, N, reverse=False))
 
+print(f'TOP {N} variables cuya presencia acrecienta el riesgo para los hombres más que para las mujeres: ')
+print(oddsContrib.sort_values(by='ratioH/M', ascending=False).head(N)[['ratioH/M','NMuj', 'NHom','descripcion']])
+print('  ')
+print(f'TOP {N} variables cuya presencia acrecienta el riesgo para las mujeres más que para los hombres: ')
+print(oddsContrib.sort_values(by='ratioM/H', ascending=False).head(N)[['ratioM/H','NMuj', 'NHom','descripcion']])
+
+#%%
 oddsContrib.to_csv(config.MODELPATH+'sexSpecificOddsContributions.csv')
 #%%
 for i,model in enumerate(models):
