@@ -81,6 +81,8 @@ USEDCONFIGPATH+=EXPERIMENT+'/'
 ALGORITHM='neuralNetwork'
 CONFIGNAME='neuralNetwork.py'
 PREDPATH=os.path.join(OUTPATH,EXPERIMENT)
+FIGUREPATH=os.path.join(ROOTPATH,'figures',EXPERIMENT)
+
 TRACEBACK=False
 
 seed_sampling= args.seed_sampling if hasattr(args, 'seed_sampling') else SEED #imported from default configuration

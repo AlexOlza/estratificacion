@@ -182,7 +182,9 @@ def parameter_distribution(models,**args):
         plt.figure()
         times_selected[parameter].plot(kind='bar',title=parameter, rot=0)
 
-def boxplots(df, year, K, parent_metrics=None):
+def boxplots(df, year, K, parent_metrics=None, **kwargs):
+    path=kwargs.get('path',config.FIGUREPATH)
+    name=kwargs.get('name','')
     if not parent_metrics: #we have to compute them
         parent_models=detect_models(re.sub('hyperparameter_variability_|fixsample_','',config.MODELPATH))
         logistic_model=[i for i in detect_latest(parent_models) if 'logistic' in i][0]

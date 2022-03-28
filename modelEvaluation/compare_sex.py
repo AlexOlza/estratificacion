@@ -6,9 +6,10 @@ Created on Fri Mar 18 13:13:37 2022
 @author: aolza
 """
 import re
+import os
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.metrics import roc_auc_score, RocCurveDisplay,roc_curve, auc,precision_recall_curve, PrecisionRecallDisplay
+from sklearn.metrics import average_precision_score, roc_auc_score, RocCurveDisplay,roc_curve, auc,precision_recall_curve, PrecisionRecallDisplay
 from modelEvaluation.predict import generate_filename
 import sys
 sys.path.append('/home/aolza/Desktop/estratificacion/')
@@ -34,8 +35,11 @@ def plot_roc(fpr, tpr, groupname):
     
     return display
 
-def plot_pr(precision, recall, groupname):
-    display = PrecisionRecallDisplay(precision=precision, recall=recall, estimator_name=groupname)
+def plot_pr(precision, recall, groupname, y, pred):
+    avg_prec = average_precision_score(y, pred)
+    display = PrecisionRecallDisplay(precision=precision, recall=recall, 
+                                     estimator_name=groupname,
+                                     average_precision=avg_prec)
     return display
 def beta_differences(modelname1, modelname2, features):
     m1=job.load(config.MODELPATH+modelname1)
@@ -78,6 +82,7 @@ male=X['FEMALE']==0
 sex=['Mujeres', 'Hombres']
 #%%
 import joblib as job
+separate_cal,joint_cal,inter_cal={},{},{}
 roc,roc_joint,roc_inter={k:{} for k in sex},{k:{} for k in sex},{k:{} for k in sex}
 pr, pr_joint, pr_inter={k:{} for k in sex}, {k:{} for k in sex}, {k:{} for k in sex} #precision-recall curves
 PRECISION, RECALL, THRESHOLDS={k:{} for k in sex}, {k:{} for k in sex}, {k:{} for k in sex}
@@ -89,7 +94,7 @@ models=['Global', 'Separado', 'Interaccion']
 fighist, (axhist,axhist2) = plt.subplots(1,2)
 
 for i, group, groupname in zip([1,0],[female,male],sex):
-    recall,ppv,spec, score={},{},{},{}
+    recall,ppv,spec, score, ap={},{},{},{},{}
     selected=[l for l in available_models if ((groupname in l ) or (bool(re.match('logistic\d+|logisticSexInteraction',l))))]
     print('Selected models: ',selected)
     # LOAD MODELS
@@ -106,35 +111,40 @@ for i, group, groupname in zip([1,0],[female,male],sex):
     pastXgroup=pastX.loc[pastX['FEMALE']==i]
     pastygroup=pasty.loc[pastX['FEMALE']==i]
 
-    # Xgroup.drop('PATIENT_ID', axis=1, inplace=True)
-    # pastXgroup.drop('PATIENT_ID', axis=1, inplace=True)
-
     assert (all(Xgroup['FEMALE']==1) or all(Xgroup['FEMALE']==0))
-    print('Sample size ',len(Xgroup), 'positive: ',sum(np.where(ygroup[config.COLUMNS]>=1,1,0)))  
     
+    pos=sum(np.where(ygroup[config.COLUMNS]>=1,1,0))
+    pastpos=sum(np.where(pastygroup[config.COLUMNS]>=1,1,0))
+    print('Sample size 2017',len(Xgroup), 'positive: ',pastpos, 'prevalence=', pastpos/len(pastXgroup))  
+    print('Sample size 2018',len(pastXgroup), 'positive: ',pos, 'prevalence=', pos/len(Xgroup))  
+
     # PREDICT
-    # separate_preds=separatemodel.predict_proba(Xgroup[features].drop(['FEMALE'],axis=1))[:,-1]
-    # joint_preds=globalmodel.predict_proba(Xgroup[features])[:,-1]
-    # inter_preds=interactionmodel.predict_proba(Xgroup)[:,-1]
-    # obs=np.where(ygroup[config.COLUMNS]>=1,1,0)
-    separate_cal=cal.calibrate(f'logistic{groupname}',year,
+    separate_cal[groupname]=cal.calibrate(f'logistic{groupname}',year,
+                              predictors=[p for p in predictors if not p=='FEMALE'],
                               presentX=Xgroup[predictors].drop('FEMALE', axis=1),
                               presentY=ygroup,
                               pastX=pastXgroup[predictors].drop('FEMALE', axis=1),
                               pastY=pastygroup)
-    joint_cal=cal.calibrate(globalmodelname,year,
+
+    joint_cal[groupname]=cal.calibrate(globalmodelname,year,
+                              filename=f'{globalmodelname}_{groupname}',
+                              predictors=predictors,
                               presentX=Xgroup[predictors], presentY=ygroup,
                               pastX=pastXgroup[predictors], pastY=pastygroup)
-    inter_cal=cal.calibrate('logisticSexInteraction',year,
+    inter_cal[groupname]=cal.calibrate('logisticSexInteraction',year,
+                              filename=f'logisticSexInteraction_{groupname}',
                               presentX=Xgroup, presentY=ygroup,
                               pastX=pastXgroup[pastXgroup.columns],
                               pastY=pastygroup,
                               predictors=config.PREDICTORREGEX+'|INTsex')
-    inter_preds=inter_cal.PREDCAL
-    joint_preds=joint_cal.PREDCAL
-    separate_preds=separate_cal.PREDCAL
+    inter_preds=inter_cal[groupname].PRED
+    joint_preds=joint_cal[groupname].PRED
+    separate_preds=separate_cal[groupname].PRED
 
-    obs=np.where(ygroup[config.COLUMNS]>=1,1,0)
+    assert all(inter_cal[groupname].OBS==joint_cal[groupname].OBS)
+    assert all(separate_cal[groupname].OBS==joint_cal[groupname].OBS)
+    
+    obs=np.where(inter_cal[groupname].OBS>=1,1,0)
     axhist.hist(separate_preds,bins=1000,label=groupname)
     axhist2.hist(joint_preds,bins=1000,label=groupname)
     
@@ -150,24 +160,30 @@ for i, group, groupname in zip([1,0],[female,male],sex):
         ROCTHRESHOLDS[groupname][model]=rocthresholds
         # CURVES - PLOTS
         roc[groupname][model]=plot_roc(fpr, tpr, groupname)
-        pr[groupname][model]=plot_pr(prec,rec, groupname)
+        pr[groupname][model]=plot_pr(prec,rec, groupname, obs, preds)
 
         recallK,ppvK, specK=performance(preds, obs, K)
         rocauc=roc_auc_score(obs, preds)
+        avg_prec = average_precision_score(obs, preds)
         recall[model]=recallK
         spec[model]=specK
         score[model]=rocauc
         ppv[model]=ppvK
+        ap[model]=avg_prec
 
     df=pd.DataFrame(list(zip([f'{model}- {groupname}' for model in models],
-                             [score[model] for model in models],[recall[model] for model in models],[spec[model] for model in models],[ppv[model] for model in models])),
-                    columns=['Model', 'AUC', f'Recall_{K}',f'Specificity_{K}', f'PPV_{K}'])
+                             [score[model] for model in models],
+                             [ap[model] for model in models],
+                             [recall[model] for model in models],
+                             [spec[model] for model in models],
+                             [ppv[model] for model in models])),
+                    columns=['Model', 'AUC', 'AP', f'Recall_{K}',f'Specificity_{K}', f'PPV_{K}'])
     table=pd.concat([df, table])
-
+#%%
 axhist.legend(prop={'size': 10})
 axhist2.legend(prop={'size': 10})
-fig1, (ax_sep1,ax_joint1, ax_inter1) = plt.subplots(1,3,figsize=(10,8))
-fig2, (ax_sep2,ax_joint2, ax_inter2) = plt.subplots(1,3,figsize=(10,8))
+fig1, (ax_sep1,ax_joint1, ax_inter1) = plt.subplots(1,3,figsize=(16,8))
+fig2, (ax_sep2,ax_joint2, ax_inter2) = plt.subplots(1,3,figsize=(16,8))
 for groupname in sex:
     for ax, model in zip((ax_sep1,ax_joint1, ax_inter1), models):
         roc[groupname][model].plot(ax)
@@ -175,7 +191,8 @@ for groupname in sex:
     for ax, model in zip((ax_sep2,ax_joint2, ax_inter2), models):
         pr[groupname][model].plot(ax)
         ax.set_title(model)
-
+fig1.savefig(os.path.join(config.FIGUREPATH,'rocCurve.png'))
+fig2.savefig(os.path.join(config.FIGUREPATH,'prCurve.png'))
 print(table.to_markdown(index=False,))
 #%%
 interFeatures=X.columns #preserves the order
@@ -190,21 +207,21 @@ oddsContribGlobal={name:np.exp(value) for name, value in zip(globalFeatures, glo
 oddsContribInter={name:np.exp(value) for name, value in zip(interFeatures, interactionmodel.coef_[0])}
 print('Global contrib of FEMALE variable is: ', oddsContribGlobal['FEMALE'])
 
-K=5
-print(f'TOP {K} positive and negative coefficients for women')
-print(top_K_dict(oddsContribMuj, K))
-print(top_K_dict(oddsContribMuj, K, reverse=False))
+N=5
+print(f'TOP {N} positive and negative coefficients for women')
+print(top_K_dict(oddsContribMuj, N))
+print(top_K_dict(oddsContribMuj, N, reverse=False))
 print('  ')
-print(f'TOP {K} positive and negative coefficients for men')
-print(top_K_dict(oddsContribHom, K))
-print(top_K_dict(oddsContribHom, K, reverse=False))
+print(f'TOP {N} positive and negative coefficients for men')
+print(top_K_dict(oddsContribHom, N))
+print(top_K_dict(oddsContribHom, N, reverse=False))
 print('-----'*5)
 print('  ')
-print(f'TOP {K} variables that increase the ODDS for men to be hospitalized more prominently than for women: ')
-print(top_K_dict(timesLargerForMen, K))
+print(f'TOP {N} variables that increase the ODDS for men to be hospitalized more prominently than for women: ')
+print(top_K_dict(timesLargerForMen, N))
 print('  ')
-print(f'TOP {K} variables that DECREASE the ODDS for men to be hospitalized more prominently than for women: ')
-print(top_K_dict(timesLargerForMen, K, reverse=False))
+print(f'TOP {N} variables that DECREASE the ODDS for men to be hospitalized more prominently than for women: ')
+print(top_K_dict(timesLargerForMen, N, reverse=False))
 
 oddsContrib={name:[muj, hom] for name, muj, hom in zip(features, oddsContribMuj.values(), oddsContribHom.values())}
 oddsContrib=pd.DataFrame.from_dict(oddsContrib,orient='index',columns=['Mujeres', 'Hombres'])
@@ -235,6 +252,10 @@ for i,model in enumerate(models):
 
     print('Specificity for these women is: ',1-FPR['Mujeres'][model][idx2])
 
-    print('ANd for men: ',table.Specificity_20000.iloc[i])
+    print('And for men: ',table.Specificity_20000.iloc[i])
     print('PPV for these women is: ',PRECISION['Mujeres'][model][idx])
     print('ANd for men: ',table.PPV_20000.iloc[i])
+    
+#%% CALIBRATION CURVES
+for title, preds in zip(['Global', 'Separado', 'Interaccion'], [joint_cal, separate_cal, inter_cal]):
+    cal.plot(preds,filename=title)
