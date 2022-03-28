@@ -167,9 +167,10 @@ def plot(p, **kwargs):
         f.tight_layout(rect=[0, 1, 1, 0.95],w_pad=4.0)
     gs.tight_layout(fig)
     gs2.tight_layout(fig2)
-    fig.savefig(os.path.join(path,filename+'BeforeCal.png'))
-    fig2.savefig(os.path.join(path,filename+'AfterCal.png'))
     plt.show()
+    fig.savefig(os.path.join(path,filename+'BeforeCal.png'), bbox_inches = 'tight')
+    fig2.savefig(os.path.join(path,filename+'AfterCal.png'), bbox_inches = 'tight')
+    
 
 #%%
 if __name__=='__main__':
