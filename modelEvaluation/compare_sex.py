@@ -6,6 +6,7 @@ Created on Fri Mar 18 13:13:37 2022
 @author: aolza
 """
 import re
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.metrics import average_precision_score, roc_auc_score, RocCurveDisplay,roc_curve, auc,precision_recall_curve, PrecisionRecallDisplay
@@ -190,7 +191,8 @@ for groupname in sex:
     for ax, model in zip((ax_sep2,ax_joint2, ax_inter2), models):
         pr[groupname][model].plot(ax)
         ax.set_title(model)
-
+fig1.savefig(os.path.join(config.FIGUREPATH,'rocCurve.png'))
+fig2.savefig(os.path.join(config.FIGUREPATH,'prCurve.png'))
 print(table.to_markdown(index=False,))
 #%%
 interFeatures=X.columns #preserves the order

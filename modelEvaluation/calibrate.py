@@ -96,7 +96,7 @@ def calibrate(model_name,yr,**kwargs):
 
 def plot(p, **kwargs):
     path=kwargs.get('path',config.FIGUREPATH)
-    name=kwargs.get('name','')
+    filename=kwargs.get('filename','')
     util.makeAllPaths()
     from matplotlib.gridspec import GridSpec
     names=list(p.keys())
@@ -167,8 +167,8 @@ def plot(p, **kwargs):
         f.tight_layout(rect=[0, 1, 1, 0.95],w_pad=4.0)
     gs.tight_layout(fig)
     gs2.tight_layout(fig2)
-    gs.savefig(os.path.join(path,name+'BeforeCal.png'))
-    gs2.savefig(os.path.join(path,name+'AfterCal.png'))
+    fig.savefig(os.path.join(path,filename+'BeforeCal.png'))
+    fig2.savefig(os.path.join(path,filename+'AfterCal.png'))
     plt.show()
 
 #%%

@@ -9,6 +9,8 @@ predictions/
 *.zip
 *.csv
 *.md
+figures/
+*.png
 .Rhistory
 .spyproject/
 *.txt
