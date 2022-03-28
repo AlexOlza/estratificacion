@@ -52,14 +52,22 @@ def beta_differences(modelname1, modelname2, features):
     ratio={name:value for name, value in zip(features, ratio[0])}
     return(timesLargerForMen, ratio,m1,m2)
 
-def top_K_dict(d, K, reverse=True):
+def top_K_dict(d, K, description, reverse=True):
     """ a) create a list of the dict's keys and values; 
      b) return the key with the max value"""  
+    d={key:[val, description.loc[key]] for key, val in d.items()}
     items=sorted(d.items(), key=lambda x: x[1], reverse=reverse)
     if all([v>=0 for v in d.values()]):
         return items[:K]
     else:
         return items[:K]+items[-K:]
+    
+def translateVariables(df,**kwargs):
+     dictionaryFile=kwargs.get('file',os.path.join(config.INDISPENSABLEDATAPATH+'diccionarioACG.csv'))
+     dictionary=pd.read_csv(dictionaryFile)
+     dictionary.index=dictionary.codigo
+     df=pd.merge(df, dictionary, right_index=True, left_index=True)
+     return df
 #%%
 year=int(input('YEAR TO PREDICT: ')) 
 X,y=getData(year-1)
@@ -180,8 +188,6 @@ for i, group, groupname in zip([1,0],[female,male],sex):
                     columns=['Model', 'AUC', 'AP', f'Recall_{K}',f'Specificity_{K}', f'PPV_{K}'])
     table=pd.concat([df, table])
 #%%
-axhist.legend(prop={'size': 10})
-axhist2.legend(prop={'size': 10})
 fig1, (ax_sep1,ax_joint1, ax_inter1) = plt.subplots(1,3,figsize=(16,8))
 fig2, (ax_sep2,ax_joint2, ax_inter2) = plt.subplots(1,3,figsize=(16,8))
 for groupname in sex:
@@ -193,6 +199,7 @@ for groupname in sex:
         ax.set_title(model)
 fig1.savefig(os.path.join(config.FIGUREPATH,'rocCurve.png'))
 fig2.savefig(os.path.join(config.FIGUREPATH,'prCurve.png'))
+plt.show()
 print(table.to_markdown(index=False,))
 #%%
 interFeatures=X.columns #preserves the order
@@ -206,6 +213,19 @@ oddsContribHom={name:np.exp(value) for name, value in zip(separateFeatures, m1.c
 oddsContribGlobal={name:np.exp(value) for name, value in zip(globalFeatures, globalmodel.coef_[0])}
 oddsContribInter={name:np.exp(value) for name, value in zip(interFeatures, interactionmodel.coef_[0])}
 print('Global contrib of FEMALE variable is: ', oddsContribGlobal['FEMALE'])
+
+oddsContrib={name:[muj, hom] for name, muj, hom in zip(features, oddsContribMuj.values(), oddsContribHom.values())}
+oddsContrib=pd.DataFrame.from_dict(oddsContrib,orient='index',columns=['Mujeres', 'Hombres'])
+oddsContrib['Global']=pd.Series(oddsContribGlobal)
+oddsContrib['Interaccion']=pd.Series(oddsContribInter)
+femaleContrib=pd.Series([np.nan, np.nan , oddsContribGlobal['FEMALE'],oddsContribInter['FEMALE']],index=['Mujeres', 'Hombres', 'Global', 'Interaccion'],name='FEMALE')
+oddsContrib.loc['FEMALE']=femaleContrib
+Xhom=X.loc[male]
+Xmuj=X.loc[female]
+oddsContrib['NMuj']=[Xmuj[name].sum() for name in oddsContrib.index]
+oddsContrib['NHom']=[Xhom[name].sum() for name in oddsContrib.index]
+
+oddsContrib=translateVariables(oddsContrib)
 
 N=5
 print(f'TOP {N} positive and negative coefficients for women')
@@ -222,19 +242,6 @@ print(top_K_dict(timesLargerForMen, N))
 print('  ')
 print(f'TOP {N} variables that DECREASE the ODDS for men to be hospitalized more prominently than for women: ')
 print(top_K_dict(timesLargerForMen, N, reverse=False))
-
-oddsContrib={name:[muj, hom] for name, muj, hom in zip(features, oddsContribMuj.values(), oddsContribHom.values())}
-oddsContrib=pd.DataFrame.from_dict(oddsContrib,orient='index',columns=['Mujeres', 'Hombres'])
-oddsContrib['Global']=pd.Series(oddsContribGlobal)
-oddsContrib['Interaccion']=pd.Series(oddsContribInter)
-femaleContrib=pd.Series([np.nan, np.nan , oddsContribGlobal['FEMALE'],oddsContribInter['FEMALE']],index=['Mujeres', 'Hombres', 'Global', 'Interaccion'],name='FEMALE')
-oddsContrib.loc['FEMALE']=femaleContrib
-Xhom=X.loc[male]
-Xmuj=X.loc[female]
-oddsContrib['NMuj']=[Xmuj[name].sum() for name in oddsContrib.index]
-oddsContrib['NHom']=[Xhom[name].sum() for name in oddsContrib.index]
-
-
 
 oddsContrib.to_csv(config.MODELPATH+'sexSpecificOddsContributions.csv')
 #%%
