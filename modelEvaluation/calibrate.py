@@ -16,7 +16,8 @@ from python_settings import settings as config
 import configurations.utility as util
 from modelEvaluation.predict import predict, generate_filename
 from modelEvaluation.compare import detect_models, detect_latest
-util.configure('configurations.cluster.logistic')
+if not config.configured:
+    util.configure('configurations.cluster.logistic')
 from dataManipulation.dataPreparation import getData
 from modelEvaluation.reliableDiagram import reliabilityConsistency
 np.random.seed(config.SEED)
@@ -93,7 +94,10 @@ def calibrate(model_name,yr,**kwargs):
     util.vprint('Saved ',calibFilename)
     return(pred)
 
-def plot(p):
+def plot(p, **kwargs):
+    path=kwargs.get('path',config.FIGUREPATH)
+    name=kwargs.get('name','')
+    util.makeAllPaths()
     from matplotlib.gridspec import GridSpec
     names=list(p.keys())
     fig=plt.figure(1,figsize=(15, 10))
@@ -163,6 +167,8 @@ def plot(p):
         f.tight_layout(rect=[0, 1, 1, 0.95],w_pad=4.0)
     gs.tight_layout(fig)
     gs2.tight_layout(fig2)
+    gs.savefig(os.path.join(path,name+'BeforeCal.png'))
+    gs2.savefig(os.path.join(path,name+'AfterCal.png'))
     plt.show()
 
 #%%
