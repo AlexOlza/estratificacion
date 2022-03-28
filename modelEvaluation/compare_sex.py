@@ -111,8 +111,12 @@ for i, group, groupname in zip([1,0],[female,male],sex):
     pastygroup=pasty.loc[pastX['FEMALE']==i]
 
     assert (all(Xgroup['FEMALE']==1) or all(Xgroup['FEMALE']==0))
-    print('Sample size ',len(Xgroup), 'positive: ',sum(np.where(ygroup[config.COLUMNS]>=1,1,0)))  
     
+    pos=sum(np.where(ygroup[config.COLUMNS]>=1,1,0))
+    pastpos=sum(np.where(pastygroup[config.COLUMNS]>=1,1,0))
+    print('Sample size 2017',len(Xgroup), 'positive: ',pastpos, 'prevalence=', pastpos/len(pastXgroup))  
+    print('Sample size 2018',len(pastXgroup), 'positive: ',pos, 'prevalence=', pos/len(Xgroup))  
+
     # PREDICT
     separate_cal[groupname]=cal.calibrate(f'logistic{groupname}',year,
                               predictors=[p for p in predictors if not p=='FEMALE'],
@@ -249,3 +253,7 @@ for i,model in enumerate(models):
     print('And for men: ',table.Specificity_20000.iloc[i])
     print('PPV for these women is: ',PRECISION['Mujeres'][model][idx])
     print('ANd for men: ',table.PPV_20000.iloc[i])
+    
+#%% CALIBRATION CURVES
+for title, preds in zip(['Global', 'Separado', 'Interaccion'], [joint_cal, separate_cal, inter_cal]):
+    cal.plot(preds)
