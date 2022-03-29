@@ -6,6 +6,10 @@ Created on Tue Mar 29 10:01:15 2022
 @author: aolza
 """
 #%% EXTERNAL IMPORTS
+import sys
+sys.path.append('/home/aolza/Desktop/estratificacion/')
+import pandas as pd
+
 from scipy.stats import norm
 import re
 import os
@@ -26,9 +30,6 @@ if not config.configured:
 from dataManipulation.dataPreparation import getData
 from modelEvaluation.predict import generate_filename
 from modelEvaluation.independent_sex_riskfactors import beta_std_error, confidence_interval_odds_ratio
-import sys
-sys.path.append('/home/aolza/Desktop/estratificacion/')
-import pandas as pd
 
 #%%
 """ QUESTION 2:
