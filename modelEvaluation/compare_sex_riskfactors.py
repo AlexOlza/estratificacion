@@ -59,7 +59,7 @@ def beta_std_error(logModel, X, eps=1e-20):
     D=np.diag(covLogit).copy() #copy, because the original array is non-mutable (ValueError: assignment destination is read-only)
     D[np.abs(D) < eps] = 0 # Avoid negative values in the diagonal (a necessary evil)
     
-    assert all(D>=0), 'Negative vavlues found in the diagonal of the var-cov matrix. Increase eps!!'
+    assert all(D>=0), 'Negative values found in the diagonal of the var-cov matrix. Increase eps!!'
     
     stderr=np.sqrt(D)
     print("Standard errors: ", stderr)
@@ -68,13 +68,16 @@ def beta_std_error(logModel, X, eps=1e-20):
     waldT=(logitParams / stderr) ** 2
     print("Wald statistics: ", waldT)
     p = (1 - norm.cdf(abs(waldT))) * 2
-    return( stderr, p)
+    return( stderr, waldT, p)
 
-def confidence_interval_odds_ratio():
+def confidence_interval_odds_ratio(betas, stderr, waldT):
     """ Source:
         https://stats.stackexchange.com/questions/354098/calculating-confidence-intervals-for-a-logistic-regression
      Using the invariance property of the MLE allows us to exponentiate to get the conf.int.
     """
+    low=np.exp(betas-waldT*stderr)
+    high=np.exp(betas+waldT*stderr)
+    return(low,high)
     
 #%%
 year=int(input('YEAR TO PREDICT: ')) 
@@ -94,24 +97,43 @@ separateFeatures=X.columns
 modeloH=job.load(config.MODELPATH+'logisticHombres.joblib')
 modeloM=job.load(config.MODELPATH+'logisticMujeres.joblib')
 
-stderrH,pH=beta_std_error(modeloH, X)
-stderrM,pM=beta_std_error(modeloM, X)
+stderrH, zH, pH=beta_std_error(modeloH, X)
+stderrM, zM, pM=beta_std_error(modeloM, X)
 
 stderrHdict={name:value  for name, value in zip(separateFeatures, stderrH)}
 stderrMdict={name:value  for name, value in zip(separateFeatures, stderrH)}
 
+betaH=list(modeloH.intercept_)+list(modeloH.coef_[0])
+betaM=list(modeloM.intercept_)+list(modeloM.coef_[0])
+lowH, highH = confidence_interval_odds_ratio(betaH,stderrH, zH)
+lowM, highM = confidence_interval_odds_ratio(betaM,stderrM, zM)
+
+oddsContribMujLow={name:value for name, value in zip(separateFeatures, lowM)}
 oddsContribMuj={name:np.exp(value) for name, value in zip(separateFeatures, modeloM.coef_[0])}
+oddsContribMujHigh={name:value for name, value in zip(separateFeatures, highM)}
+
+oddsContribHomLow={name:value for name, value in zip(separateFeatures, lowH)}
 oddsContribHom={name:np.exp(value) for name, value in zip(separateFeatures, modeloH.coef_[0])}
-oddsContrib={name:[muj, hom, stdM, stdH] for name, muj, hom, stdM, stdH in zip(separateFeatures, 
-                                                                   oddsContribMuj.values(), 
+oddsContribHomHigh={name:value for name, value in zip(separateFeatures, highH)}
+
+oddsContrib={name:[lowm, muj, highm, lowh, hom, highh, stdM, stdH] for name, lowm, muj, highm, lowh, hom, highh, stdM, stdH in zip(separateFeatures, 
+                                                                   oddsContribMujLow.values(),
+                                                                   oddsContribMuj.values(),
+                                                                   oddsContribMujHigh.values(),
+                                                                   oddsContribHomLow.values(),
                                                                    oddsContribHom.values(),
+                                                                   oddsContribHomHigh.values(),
                                                                    stderrMdict.values(),
                                                                    stderrHdict.values())}
 oddsContrib=pd.DataFrame.from_dict(oddsContrib,orient='index',
-                                   columns=['Mujeres', 'Hombres', 'stderrM', 'stderrH'])
+                                   columns=['LowM','Mujeres','HighM','LowH', 'Hombres', 'HighH', 'stderrM', 'stderrH'])
 
+oddsContrib['LowratioH/M']=oddsContrib['LowH']/oddsContrib['LowM']
 oddsContrib['ratioH/M']=oddsContrib['Hombres']/oddsContrib['Mujeres']
+oddsContrib['HighratioH/M']=oddsContrib['HighH']/oddsContrib['HighM']
+oddsContrib['LowratioM/H']=1/oddsContrib['LowratioH/M']
 oddsContrib['ratioM/H']=1/oddsContrib['ratioH/M']
+oddsContrib['HighratioM/H']=1/oddsContrib['HighratioH/M']
 Xhom=X.loc[male]
 Xmuj=X.loc[female]
 oddsContrib['NMuj']=[Xmuj[name].sum() for name in oddsContrib.index]
@@ -121,12 +143,12 @@ oddsContrib=translateVariables(oddsContrib)
 
 #%% PRINT RISK FACTORS
 N=5
-for s, col in zip(['Mujeres', 'Hombres'], ['NMuj', 'NHom']):
+for s, col, low in zip(['Mujeres', 'Hombres'], ['NMuj', 'NHom'], ['LowM','LowH']):
     print(f'TOP {N} factores de riesgo para {s}')
-    print(oddsContrib.sort_values(by=s, ascending=False).head(N)[[s,col,'descripcion']])
+    print(oddsContrib.sort_values(by=s, ascending=False).head(N)[[s,low,col,'descripcion']])
     print('  ')
     print(f'TOP {N} factores protectores para {s}')
-    print(oddsContrib.sort_values(by=s, ascending=True).head(N)[[s, col,'descripcion']])
+    print(oddsContrib.sort_values(by=s, ascending=True).head(N)[[s, low,col,'descripcion']])
     print('  ')
 print('-----'*N)
 print('  ')
@@ -140,3 +162,20 @@ print(oddsContrib.sort_values(by='ratioM/H', ascending=False).head(N)[['ratioM/H
 #%%
 # oddsContrib.to_csv(config.MODELPATH+'sexSpecificOddsContributions.csv')
 
+print('FACTORES DE RIESGO SIGNIFICATIVOS EN MUJERES: ')
+riskFactors=oddsContrib.loc[(oddsContrib['LowM']>=1) & (oddsContrib.Mujeres>=1)]
+print(riskFactors.sort_values(by='Mujeres', ascending=False)[['Mujeres', 'NMuj','descripcion']])
+
+print('FACTORES DE RIESGO SIGNIFICATIVOS EN HOMBRES: ')
+riskFactors=oddsContrib.loc[(oddsContrib['LowH']>=1) & (oddsContrib.Mujeres>=1)]
+print(riskFactors.sort_values(by='Hombres', ascending=False)[['Hombres', 'NHom','descripcion']])
+
+#%%
+ratioHM=oddsContrib.loc[(oddsContrib['LowratioH/M']>=1) & (oddsContrib['ratioH/M']>=1)]
+print(f'TOP {N} variables cuya presencia acrecienta el riesgo para los hombres más que para las mujeres: ')
+print(oddsContrib.sort_values(by='ratioH/M', ascending=False).head(N)[['ratioH/M','NMuj', 'NHom','descripcion']])
+print('  ')
+
+ratioMH=oddsContrib.loc[(oddsContrib['LowratioM/H']>=1) & (oddsContrib['ratioM/H']>=1)]
+print(f'TOP {N} variables cuya presencia acrecienta el riesgo para las mujeres más que para los hombres: ')
+print(oddsContrib.sort_values(by='ratioM/H', ascending=False).head(N)[['ratioM/H','NMuj', 'NHom','descripcion']])
