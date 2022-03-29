@@ -5,6 +5,7 @@ Created on Tue Mar 29 10:01:15 2022
 
 @author: aolza
 """
+from scipy.stats import norm
 import re
 import os
 import joblib as job
@@ -33,28 +34,48 @@ def translateVariables(df,**kwargs):
      df=pd.merge(df, dictionary, right_index=True, left_index=True)
      return df
  
-def beta_std_error(logModel, X):
+def beta_std_error(logModel, X, eps=1e-20):
+    """ Source:
+        https://stats.stackexchange.com/questions/89484/how-to-compute-the-standard-errors-of-a-logistic-regressions-coefficients
+    """
     # Calculate matrix of predicted class probabilities.
     # Check resLogit.classes_ to make sure that sklearn ordered your classes as expected
     predProbs = logModel.predict_proba(X)
     
     # Design matrix -- add column of 1's at the beginning of your X_train matrix
     X_design = np.hstack([np.ones((X.shape[0], 1)), X])
-    
-    # Initiate matrix of 0's, fill diagonal with each predicted observation's variance
-    V = np.diagflat(np.product(predProbs, axis=1))
+
+    # Diagonal matrix with each predicted observation's p(1-p)
+    V = np.product(predProbs, axis=1) #avoids memory issues using shape (n,) instead of (n,n)
     
     # Covariance matrix
-    # Note that the @-operater does matrix multiplication in Python 3.5+, so if you're running
-    # Python 3.5+, you can replace the covLogit-line below with the more readable:
-    covLogit = np.linalg.inv(X_design.T @ V @ X_design)
+    # * does ordinary multiplication. We can use it because V is diagonal :)
+    MM=X_design.T * V #shape pxn
+    # Note that the @-operator does matrix multiplication in Python 3.5+
+    M= MM@ X_design
+    covLogit = np.linalg.pinv(M) #avoids singularity issues using Moore-Penrose pseudoinverse 
+    del M, MM, V, X_design
     # Standard errors
-    stderr=np.sqrt(np.diag(covLogit))
+    D=np.diag(covLogit).copy() #copy, because the original array is non-mutable (ValueError: assignment destination is read-only)
+    D[np.abs(D) < eps] = 0 # Avoid negative values in the diagonal (a necessary evil)
+    
+    assert all(D>=0), 'Negative vavlues found in the diagonal of the var-cov matrix. Increase eps!!'
+    
+    stderr=np.sqrt(D)
     print("Standard errors: ", stderr)
     # Wald statistic (coefficient / s.e.) ^ 2
     logitParams = np.insert(logModel.coef_, 0, logModel.intercept_)
-    print("Wald statistics: ", (logitParams / np.sqrt(np.diag(covLogit))) ** 2)
-    return stderr
+    waldT=(logitParams / stderr) ** 2
+    print("Wald statistics: ", waldT)
+    p = (1 - norm.cdf(abs(waldT))) * 2
+    return( stderr, p)
+
+def confidence_interval_odds_ratio():
+    """ Source:
+        https://stats.stackexchange.com/questions/354098/calculating-confidence-intervals-for-a-logistic-regression
+     Using the invariance property of the MLE allows us to exponentiate to get the conf.int.
+    """
+    
 #%%
 year=int(input('YEAR TO PREDICT: ')) 
 X,y=getData(year-1)
@@ -73,15 +94,15 @@ separateFeatures=X.columns
 modeloH=job.load(config.MODELPATH+'logisticHombres.joblib')
 modeloM=job.load(config.MODELPATH+'logisticMujeres.joblib')
 
-stderrH=beta_std_error(modeloH, X)
-stderrM=beta_std_error(modeloM, X)
+stderrH,pH=beta_std_error(modeloH, X)
+stderrM,pM=beta_std_error(modeloM, X)
 
 stderrHdict={name:value  for name, value in zip(separateFeatures, stderrH)}
 stderrMdict={name:value  for name, value in zip(separateFeatures, stderrH)}
 
 oddsContribMuj={name:np.exp(value) for name, value in zip(separateFeatures, modeloM.coef_[0])}
 oddsContribHom={name:np.exp(value) for name, value in zip(separateFeatures, modeloH.coef_[0])}
-oddsContrib={name:[muj, hom] for name, muj, hom, stdM, stdH in zip(separateFeatures, 
+oddsContrib={name:[muj, hom, stdM, stdH] for name, muj, hom, stdM, stdH in zip(separateFeatures, 
                                                                    oddsContribMuj.values(), 
                                                                    oddsContribHom.values(),
                                                                    stderrMdict.values(),
