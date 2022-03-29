@@ -48,6 +48,29 @@ def translateVariables(df,**kwargs):
      dictionary.index=dictionary.codigo
      df=pd.merge(df, dictionary, right_index=True, left_index=True)
      return df
+ 
+def beta_std_error(logModel, X, ):
+    # Calculate matrix of predicted class probabilities.
+    # Check resLogit.classes_ to make sure that sklearn ordered your classes as expected
+    predProbs = logModel.predict_proba(X)
+    
+    # Design matrix -- add column of 1's at the beginning of your X_train matrix
+    X_design = np.hstack([np.ones((X.shape[0], 1)), X])
+    
+    # Initiate matrix of 0's, fill diagonal with each predicted observation's variance
+    V = np.diagflat(np.product(predProbs, axis=1))
+    
+    # Covariance matrix
+    # Note that the @-operater does matrix multiplication in Python 3.5+, so if you're running
+    # Python 3.5+, you can replace the covLogit-line below with the more readable:
+    covLogit = np.linalg.inv(X_design.T @ V @ X_design)
+    # Standard errors
+    stderr=np.sqrt(np.diag(covLogit))
+    print("Standard errors: ", stderr)
+    # Wald statistic (coefficient / s.e.) ^ 2
+    logitParams = np.insert(resLogit.coef_, 0, resLogit.intercept_)
+    print("Wald statistics: ", (logitParams / np.sqrt(np.diag(covLogit))) ** 2)
+    return stderr
 #%%
 year=int(input('YEAR TO PREDICT: ')) 
 X,y=getData(year-1)
@@ -150,7 +173,7 @@ for i, group, groupname in zip([1,0],[female,male],sex):
         roc[groupname][model]=plot_roc(fpr, tpr, groupname)
         pr[groupname][model]=plot_pr(prec,rec, groupname, obs, preds)
 
-        recallK,ppvK, specK=performance(preds, obs, K)
+        recallK,ppvK, specK, _=performance(preds, obs, K)
         rocauc=roc_auc_score(obs, preds)
         avg_prec = average_precision_score(obs, preds)
         recall[model]=recallK
@@ -167,6 +190,7 @@ for i, group, groupname in zip([1,0],[female,male],sex):
                              [ppv[model] for model in models])),
                     columns=['Model', 'AUC', 'AP', f'Recall_{K}',f'Specificity_{K}', f'PPV_{K}'])
     table=pd.concat([df, table])
+
 #%%
 fig1, (ax_sep1,ax_joint1, ax_inter1) = plt.subplots(1,3,figsize=(16,8))
 fig2, (ax_sep2,ax_joint2, ax_inter2) = plt.subplots(1,3,figsize=(16,8))
@@ -249,6 +273,46 @@ for i,model in enumerate(models):
     print('PPV for these women is: ',PRECISION['Mujeres'][model][idx])
     print('ANd for men: ',table.PPV_20000.iloc[i])
     
-#%% CALIBRATION CURVES
-for title, preds in zip(['Global', 'Separado', 'Interaccion'], [joint_cal, separate_cal, inter_cal]):
-    cal.plot(preds,filename=title)
+# %% CALIBRATION CURVES
+# for title, preds in zip(['Global', 'Separado', 'Interaccion'], [joint_cal, separate_cal, inter_cal]):
+#     cal.plot(preds,filename=title)
+
+#%% 
+"""
+Si empleamos el modelo global y seleccionamos a los 20000 de mayor riesgo
+(independientemente de si son hombres o mujeres) 
+¿Cual sería el número de hombres y mujeres seleccionados? 
+¿Cual sería, para ese número, la Se y PPV en hombres y mujeres?
+"""
+del pastX, pasty, pastXgroup, pastygroup
+probs=globalmodel.predict_proba(X[features])[:,-1]
+recallK,ppvK, specK, indices=performance(probs, np.where(y[config.COLUMNS]>=1,1,0), K)
+selectedPatients=X.loc[indices]
+selectedResponse=y.loc[indices]
+
+print(f'Número de mujeres entre los {K} de mayor riesgo: ',sum(selectedPatients.FEMALE))
+
+selectedfemale=selectedPatients['FEMALE']==1
+selectedmale=selectedPatients['FEMALE']==0
+probs[indices]
+for i, group, sex, groupname in zip([1,0],[selectedfemale,selectedmale], [female, male],[ 'Mujeres','Hombres']):
+    # SUBSET DATA
+    print(groupname)
+    Xgroup=X.loc[sex]
+    ygroup=y.loc[sex]
+    ytrue=np.where(ygroup[config.COLUMNS]>=1,1,0) #ytrue
+    yy=y.loc[indices].loc[sex]  #selected women (ypred)
+    yy.urgcms=1
+    selectedSex=pd.DataFrame([0]*len(ygroup),index=ygroup.index)
+    selectedSex['yy']=yy.urgcms
+    ypred=selectedSex.yy.fillna(0)
+    
+    from sklearn.metrics import confusion_matrix
+    c=confusion_matrix(y_true=ytrue, y_pred=ypred)
+    print(c)
+    TN, FP, FN, TP=c.ravel()
+    print('TP, FP, FN, TN= ',TP, FP, FN, TN)
+    recall=TP/(FN+TP)
+    ppv=TP/(TP+FP)
+    specificity = TN / (TN+FP)
+    print('Recall, PPV, Spec = ',recall,ppv, specificity)

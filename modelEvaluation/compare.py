@@ -151,7 +151,7 @@ def performance(pred,obs,K):
     ppv=c[1][1]/(c[0][1]+c[1][1])
     specificity = tn / (tn+fp)
     print('Recall, PPV, Spec = ',recall,ppv, specificity)
-    return(recall,ppv, specificity)
+    return(recall,ppv, specificity, newpred)
 
 def parameter_distribution(models,**args):
     model_dict,grid,params,times_selected={},{},{},{}
