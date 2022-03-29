@@ -26,8 +26,7 @@ parser.add_argument('--config_used', type=str, default=argparse.SUPPRESS,
 
 
 args, unknown_args = parser.parse_known_args()
-config_used=Path(args.config_used) if hasattr(args, 'config_used') else Path(input(msg))
-model_name=config_used.stem
+
 # year=args.year
 
 
@@ -35,7 +34,9 @@ sys.path.append('/home/aolza/Desktop/estratificacion/')
 from python_settings import settings as config
 from configurations.utility import configure
 if not config.configured: 
+    config_used=Path(args.config_used) if hasattr(args, 'config_used') else Path(input(msg))
     configuration=configure(config_used,TRACEBACK=False, VERBOSE=True)
+    model_name=config_used.stem
 try:
     experiment_name=config.EXPERIMENT
 except:
