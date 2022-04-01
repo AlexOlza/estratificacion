@@ -15,12 +15,10 @@ import sys
 sys.path.append('/home/aolza/Desktop/estratificacion/')
 import pandas as pd
 #%%
-
-config_used=input('Full path to configuration json file ')
-
 from python_settings import settings as config
 import configurations.utility as util
 if not config.configured: 
+    config_used=input('Full path to configuration json file ')
     configuration=util.configure(config_used)
 # sys.stdout = open(f'{config.ROOTPATH}estratificacion-reports/compare_sex_{config.EXPERIMENT}.md', 'w')
 from modelEvaluation.compare import detect_models, compare, detect_latest, performance

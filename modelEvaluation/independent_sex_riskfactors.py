@@ -27,8 +27,13 @@ from modelEvaluation.predict import generate_filename
 def translateVariables(df,**kwargs):
      dictionaryFile=kwargs.get('file',os.path.join(config.INDISPENSABLEDATAPATH+'diccionarioACG.csv'))
      dictionary=pd.read_csv(dictionaryFile)
-     dictionary.index=dictionary.codigo
-     df=pd.merge(df, dictionary, right_index=True, left_index=True)
+     #Add interaction column codes if present:
+     for column in df.codigo.values:
+        if column.endswith('INTsex'):
+            dictionary=dictionary.append(pd.DataFrame([[column,dictionary.loc[dictionary.codigo==re.sub('INTsex','',column)].descripcion.values[0]]],
+                                           columns=['codigo','descripcion']),
+                                            ignore_index=True)
+     df=pd.merge(df, dictionary, on='codigo')
      return df
  
 def beta_std_error(logModel, X, eps=1e-20):
@@ -134,7 +139,7 @@ if __name__=="__main__":
     Xmuj=X.loc[female]
     oddsContrib['NMuj']=[Xmuj[name].sum() for name in oddsContrib.index]
     oddsContrib['NHom']=[Xhom[name].sum() for name in oddsContrib.index]
-    
+    oddsContrib['codigo']=oddsContrib.index
     oddsContrib=translateVariables(oddsContrib)
     
     """ QUESTION 1:
@@ -153,12 +158,12 @@ if __name__=="__main__":
     print('  ')
     
     #%%
-    # oddsContrib.to_csv(config.MODELPATH+'sexSpecificOddsContributions.csv')
-    
+    oddsContrib.to_csv(config.MODELPATH+'sexSpecificOddsContributions.csv')
+    oddsContrib=pd.read_csv(config.MODELPATH+'sexSpecificOddsContributions.csv')
     print('FACTORES DE RIESGO SIGNIFICATIVOS EN MUJERES: ')
     riskFactors=oddsContrib.loc[(oddsContrib['LowM']>=1) & (oddsContrib.Mujeres>=1)]
-    print(riskFactors.sort_values(by='Mujeres', ascending=False)[['Mujeres', 'NMuj','descripcion']])
+    print(riskFactors.sort_values(by='Mujeres', ascending=False)[['codigo','Mujeres', 'NMuj','descripcion']])
     
     print('FACTORES DE RIESGO SIGNIFICATIVOS EN HOMBRES: ')
     riskFactors=oddsContrib.loc[(oddsContrib['LowH']>=1) & (oddsContrib.Mujeres>=1)]
-    print(riskFactors.sort_values(by='Hombres', ascending=False)[['Hombres', 'NHom','descripcion']])
+    print(riskFactors.sort_values(by='Hombres', ascending=False)[['codigo','Hombres', 'NHom','descripcion']])
