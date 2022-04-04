@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
+OBJECTIVE:
+    Compare model performance for men and women
 Created on Fri Mar 18 13:13:37 2022
 
 @author: aolza
@@ -10,19 +12,17 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.metrics import average_precision_score, roc_auc_score, RocCurveDisplay,roc_curve, auc,precision_recall_curve, PrecisionRecallDisplay
-from modelEvaluation.predict import generate_filename
 import sys
 sys.path.append('/home/aolza/Desktop/estratificacion/')
 import pandas as pd
 #%%
-
-config_used=input('Full path to configuration json file ')
-
 from python_settings import settings as config
 import configurations.utility as util
 if not config.configured: 
+    experiment=input('Experiment: ')
+    config_used=os.path.join(os.environ['USEDCONFIG_PATH'],f'{experiment}/logisticMujeres.json')
     configuration=util.configure(config_used)
-# sys.stdout = open(f'{config.ROOTPATH}estratificacion-reports/compare_sex_{config.EXPERIMENT}.md', 'w')
+
 from modelEvaluation.compare import detect_models, compare, detect_latest, performance
 import modelEvaluation.calibrate as cal
 from dataManipulation.dataPreparation import getData
@@ -41,25 +41,14 @@ def plot_pr(precision, recall, groupname, y, pred):
                                      estimator_name=groupname,
                                      average_precision=avg_prec)
     return display
-def beta_differences(modelname1, modelname2, features):
-    m1=job.load(config.MODELPATH+modelname1)
-    m2=job.load(config.MODELPATH+modelname2)
-    assert m1.n_features_in_==m2.n_features_in_, 'Models with different number of predictors!'
-    assert m1.n_features_in_==len(features)
-    diff=m1.coef_-m2.coef_
-    ratio=m1.coef_/(m2.coef_+1e-14)
-    timesLargerForMen={name:np.exp(value) for name, value in zip(features, diff[0])}
-    ratio={name:value for name, value in zip(features, ratio[0])}
-    return(timesLargerForMen, ratio,m1,m2)
 
-def top_K_dict(d, K, reverse=True):
-    """ a) create a list of the dict's keys and values; 
-     b) return the key with the max value"""  
-    items=sorted(d.items(), key=lambda x: x[1], reverse=reverse)
-    if all([v>=0 for v in d.values()]):
-        return items[:K]
-    else:
-        return items[:K]+items[-K:]
+def translateVariables(df,**kwargs):
+     dictionaryFile=kwargs.get('file',os.path.join(config.INDISPENSABLEDATAPATH+'diccionarioACG.csv'))
+     dictionary=pd.read_csv(dictionaryFile)
+     dictionary.index=dictionary.codigo
+     df=pd.merge(df, dictionary, right_index=True, left_index=True)
+     return df
+ 
 #%%
 year=int(input('YEAR TO PREDICT: ')) 
 X,y=getData(year-1)
@@ -162,7 +151,7 @@ for i, group, groupname in zip([1,0],[female,male],sex):
         roc[groupname][model]=plot_roc(fpr, tpr, groupname)
         pr[groupname][model]=plot_pr(prec,rec, groupname, obs, preds)
 
-        recallK,ppvK, specK=performance(preds, obs, K)
+        recallK,ppvK, specK, _=performance(preds, obs, K)
         rocauc=roc_auc_score(obs, preds)
         avg_prec = average_precision_score(obs, preds)
         recall[model]=recallK
@@ -179,9 +168,8 @@ for i, group, groupname in zip([1,0],[female,male],sex):
                              [ppv[model] for model in models])),
                     columns=['Model', 'AUC', 'AP', f'Recall_{K}',f'Specificity_{K}', f'PPV_{K}'])
     table=pd.concat([df, table])
+
 #%%
-axhist.legend(prop={'size': 10})
-axhist2.legend(prop={'size': 10})
 fig1, (ax_sep1,ax_joint1, ax_inter1) = plt.subplots(1,3,figsize=(16,8))
 fig2, (ax_sep2,ax_joint2, ax_inter2) = plt.subplots(1,3,figsize=(16,8))
 for groupname in sex:
@@ -193,50 +181,9 @@ for groupname in sex:
         ax.set_title(model)
 fig1.savefig(os.path.join(config.FIGUREPATH,'rocCurve.png'))
 fig2.savefig(os.path.join(config.FIGUREPATH,'prCurve.png'))
+plt.show()
 print(table.to_markdown(index=False,))
 #%%
-interFeatures=X.columns #preserves the order
-globalFeatures=features #original columns (without interaction terms)
-separateFeatures=[f for f in features if not f=='FEMALE'] #for the separate models
-
-timesLargerForMen,ratio,m1,m2=beta_differences('logisticHombres.joblib', 'logisticMujeres.joblib',
-                            separateFeatures)
-oddsContribMuj={name:np.exp(value) for name, value in zip(separateFeatures, m2.coef_[0])}
-oddsContribHom={name:np.exp(value) for name, value in zip(separateFeatures, m1.coef_[0])}
-oddsContribGlobal={name:np.exp(value) for name, value in zip(globalFeatures, globalmodel.coef_[0])}
-oddsContribInter={name:np.exp(value) for name, value in zip(interFeatures, interactionmodel.coef_[0])}
-print('Global contrib of FEMALE variable is: ', oddsContribGlobal['FEMALE'])
-
-N=5
-print(f'TOP {N} positive and negative coefficients for women')
-print(top_K_dict(oddsContribMuj, N))
-print(top_K_dict(oddsContribMuj, N, reverse=False))
-print('  ')
-print(f'TOP {N} positive and negative coefficients for men')
-print(top_K_dict(oddsContribHom, N))
-print(top_K_dict(oddsContribHom, N, reverse=False))
-print('-----'*5)
-print('  ')
-print(f'TOP {N} variables that increase the ODDS for men to be hospitalized more prominently than for women: ')
-print(top_K_dict(timesLargerForMen, N))
-print('  ')
-print(f'TOP {N} variables that DECREASE the ODDS for men to be hospitalized more prominently than for women: ')
-print(top_K_dict(timesLargerForMen, N, reverse=False))
-
-oddsContrib={name:[muj, hom] for name, muj, hom in zip(features, oddsContribMuj.values(), oddsContribHom.values())}
-oddsContrib=pd.DataFrame.from_dict(oddsContrib,orient='index',columns=['Mujeres', 'Hombres'])
-oddsContrib['Global']=pd.Series(oddsContribGlobal)
-oddsContrib['Interaccion']=pd.Series(oddsContribInter)
-femaleContrib=pd.Series([np.nan, np.nan , oddsContribGlobal['FEMALE'],oddsContribInter['FEMALE']],index=['Mujeres', 'Hombres', 'Global', 'Interaccion'],name='FEMALE')
-oddsContrib.loc['FEMALE']=femaleContrib
-Xhom=X.loc[male]
-Xmuj=X.loc[female]
-oddsContrib['NMuj']=[Xmuj[name].sum() for name in oddsContrib.index]
-oddsContrib['NHom']=[Xhom[name].sum() for name in oddsContrib.index]
-
-
-
-oddsContrib.to_csv(config.MODELPATH+'sexSpecificOddsContributions.csv')
 #%%
 for i,model in enumerate(models):
     print(' ')
@@ -256,6 +203,46 @@ for i,model in enumerate(models):
     print('PPV for these women is: ',PRECISION['Mujeres'][model][idx])
     print('ANd for men: ',table.PPV_20000.iloc[i])
     
-#%% CALIBRATION CURVES
+# %% CALIBRATION CURVES
 for title, preds in zip(['Global', 'Separado', 'Interaccion'], [joint_cal, separate_cal, inter_cal]):
     cal.plot(preds,filename=title)
+
+#%% 
+"""
+Si empleamos el modelo global y seleccionamos a los 20000 de mayor riesgo
+(independientemente de si son hombres o mujeres) 
+¿Cual sería el número de hombres y mujeres seleccionados? 
+¿Cual sería, para ese número, la Se y PPV en hombres y mujeres?
+"""
+del pastX, pasty, pastXgroup, pastygroup
+probs=globalmodel.predict_proba(X[features])[:,-1]
+recallK,ppvK, specK, indices=performance(probs, np.where(y[config.COLUMNS]>=1,1,0), K)
+selectedPatients=X.loc[indices]
+selectedResponse=y.loc[indices]
+
+print(f'Número de mujeres entre los {K} de mayor riesgo: ',sum(selectedPatients.FEMALE))
+
+selectedfemale=selectedPatients['FEMALE']==1
+selectedmale=selectedPatients['FEMALE']==0
+probs[indices]
+for i, group, sex, groupname in zip([1,0],[selectedfemale,selectedmale], [female, male],[ 'Mujeres','Hombres']):
+    # SUBSET DATA
+    print(groupname)
+    Xgroup=X.loc[sex]
+    ygroup=y.loc[sex]
+    ytrue=np.where(ygroup[config.COLUMNS]>=1,1,0) #ytrue
+    yy=y.loc[indices].loc[sex]  #selected women (ypred)
+    yy.urgcms=1
+    selectedSex=pd.DataFrame([0]*len(ygroup),index=ygroup.index)
+    selectedSex['yy']=yy.urgcms
+    ypred=selectedSex.yy.fillna(0)
+    
+    from sklearn.metrics import confusion_matrix
+    c=confusion_matrix(y_true=ytrue, y_pred=ypred)
+    print(c)
+    TN, FP, FN, TP=c.ravel()
+    print('TP, FP, FN, TN= ',TP, FP, FN, TN)
+    recall=TP/(FN+TP)
+    ppv=TP/(TP+FP)
+    specificity = TN / (TN+FP)
+    print('Recall, PPV, Spec = ',recall,ppv, specificity)

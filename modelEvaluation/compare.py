@@ -39,17 +39,17 @@ parser.add_argument('--nested','-n', dest='nested', action='store_true', default
 parser.add_argument('--all','-a', dest='all', action='store_true', default=True,
                     help='Compare all models with the same algorithm?')
 parser.add_argument('--config_used', type=str, default=argparse.SUPPRESS,
-                help='Full path to configuration json file')
+                help='Full path to configuration json file: ')
 
 args = parser.parse_args()
 
-config_used=args.config_used if hasattr(args, 'config_used') else input('Full path to configuration json file')
-
 from python_settings import settings as config
-import configurations.utility as util
-if not config.configured: 
-    configuration=util.configure(config_used,TRACEBACK=True, VERBOSE=True)
 
+if not config.configured: 
+    import configurations.utility as util
+    config_used=args.config_used if hasattr(args, 'config_used') else input('Full path to configuration json file...')
+    configuration=util.configure(config_used,TRACEBACK=True, VERBOSE=True)
+import configurations.utility as util
 from modelEvaluation.predict import predict, generate_filename
 from dataManipulation.dataPreparation import getData
 #%%
@@ -151,7 +151,7 @@ def performance(pred,obs,K):
     ppv=c[1][1]/(c[0][1]+c[1][1])
     specificity = tn / (tn+fp)
     print('Recall, PPV, Spec = ',recall,ppv, specificity)
-    return(recall,ppv, specificity)
+    return(recall,ppv, specificity, newpred)
 
 def parameter_distribution(models,**args):
     model_dict,grid,params,times_selected={},{},{},{}
