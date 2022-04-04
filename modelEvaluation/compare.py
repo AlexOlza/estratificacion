@@ -182,7 +182,7 @@ def parameter_distribution(models,**args):
         plt.figure()
         times_selected[parameter].plot(kind='bar',title=parameter, rot=0)
 
-def boxplots(df, year, K, parent_metrics=None, **kwargs):
+def boxplots(df, year, K, parent_metrics=None, parentNeural=False, **kwargs):
     path=kwargs.get('path',config.FIGUREPATH)
     name=kwargs.get('name','')
     if not parent_metrics: #we have to compute them
@@ -192,17 +192,27 @@ def boxplots(df, year, K, parent_metrics=None, **kwargs):
         logistic_predictions=pd.read_csv(logistic_predfile)
         auc=roc_auc_score(np.where(logistic_predictions.OBS>=1,1,0), logistic_predictions.PRED)
         recall, ppv, _, _= performance(logistic_predictions.PRED, logistic_predictions.OBS,K)
-        parent_metrics={'Score':auc,'Recall_{0}'.format(K):recall,'PPV_{0}'.format(K):ppv}
+        parent_metrics={'Score':auc,
+                        f'Recall_{K}': recall,
+                        f'PPV_{K}':ppv}
+        
+    parent_metrics[f'F1_{K}'] = 2*parent_metrics[f'Recall_{K}']*parent_metrics[f'PPV_{K}']/(parent_metrics[f'Recall_{K}']+parent_metrics[f'PPV_{K}'])
     df['Algorithm']=[re.sub('_|[0-9]', '', model) for model in df['Model'].values]
-    for column in ['Score', 'Recall_{0}'.format(K), 'PPV_{0}'.format(K)]:
+    df[f'F1_{K}']=2*df[f'Recall_{K}']*df[f'PPV_{K}']*(df[f'Recall_{K}']+df[f'PPV_{K}'])
+   
+    for column in ['Score', f'Recall_{K}', f'PPV_{K}', f'F1_{K}']:
         print(column)
         fig, ax = plt.subplots(figsize=(10,8))
         plt.suptitle('')
 
         df.boxplot(column=column, by='Algorithm', ax=ax)
         for model, value in zip(parent_metrics['Model'], parent_metrics[column]):
-            if any(['logistic' in model,'neural' in model]): #exclude other algorithms
-                plt.axhline(y = value, linestyle = '-', label=model, color=next(ax._get_lines.prop_cycler)['color'])
+            if parentNeural:
+                if any(['logistic' in model,'neural' in model]): #exclude other algorithms
+                    plt.axhline(y = value, linestyle = '-', label=model, color=next(ax._get_lines.prop_cycler)['color'])
+            else:
+                if any(['logistic' in model]): #exclude other algorithms
+                    plt.axhline(y = value, linestyle = '-', label=model, color='r')
         plt.legend()
         plt.show()
 
