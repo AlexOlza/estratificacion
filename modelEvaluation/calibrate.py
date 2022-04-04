@@ -16,7 +16,8 @@ from python_settings import settings as config
 import configurations.utility as util
 from modelEvaluation.predict import predict, generate_filename
 from modelEvaluation.compare import detect_models, detect_latest
-util.configure('configurations.cluster.logistic')
+if not config.configured:
+    util.configure('configurations.cluster.logistic')
 from dataManipulation.dataPreparation import getData
 from modelEvaluation.reliableDiagram import reliabilityConsistency
 np.random.seed(config.SEED)
@@ -43,11 +44,13 @@ def sample(data,uncal):
     return(idx,unique)
 
 def calibrate(model_name,yr,**kwargs):
-    calibFilename=generate_filename(model_name,yr, calibrated=True)
+    filename=kwargs.get('filename',model_name)
+    calibFilename=generate_filename(filename,yr, calibrated=True)
     if Path(calibFilename).is_file():
         util.vprint('Calibrated predictions found; loading')
         p_calibrated=pd.read_csv(calibFilename)
         return(p_calibrated)
+    predictors=kwargs.get('predictors',config.PREDICTORREGEX)
     pastX=kwargs.get('pastX',None)
     pastY=kwargs.get('pastY',None)
     presentX=kwargs.get('presentX',None)
@@ -58,8 +61,12 @@ def calibrate(model_name,yr,**kwargs):
         presentX,presentY=getData(yr-1)
 
     #This reads the prediction files, or creates them if not present
-    pastPred, _= predict(model_name,config.EXPERIMENT,yr-1, X=pastX, y=pastY)
-    pred, _= predict(model_name,config.EXPERIMENT,yr, X=presentX, y=presentY)
+    pastPred, _= predict(model_name,config.EXPERIMENT,yr-1,
+                         filename=filename,
+                         X=pastX, y=pastY, predictors=predictors)
+    pred, _= predict(model_name,config.EXPERIMENT,yr,
+                     filename=filename,
+                     X=presentX, y=presentY, predictors=predictors)
     
     pastPred.sort_values(by='PATIENT_ID',inplace=True)
     pastPred.reset_index(drop=True,inplace=True)
@@ -87,7 +94,10 @@ def calibrate(model_name,yr,**kwargs):
     util.vprint('Saved ',calibFilename)
     return(pred)
 
-def plot(p):
+def plot(p, **kwargs):
+    path=kwargs.get('path',config.FIGUREPATH)
+    filename=kwargs.get('filename','')
+    util.makeAllPaths()
     from matplotlib.gridspec import GridSpec
     names=list(p.keys())
     fig=plt.figure(1,figsize=(15, 10))
@@ -158,6 +168,9 @@ def plot(p):
     gs.tight_layout(fig)
     gs2.tight_layout(fig2)
     plt.show()
+    fig.savefig(os.path.join(path,filename+'BeforeCal.png'), bbox_inches = 'tight')
+    fig2.savefig(os.path.join(path,filename+'AfterCal.png'), bbox_inches = 'tight')
+    
 
 #%%
 if __name__=='__main__':

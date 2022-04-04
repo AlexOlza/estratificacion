@@ -36,20 +36,20 @@ parser.add_argument('--year', '-y', type=int,default=argparse.SUPPRESS,
                     help='The year for which you want to compare the predictions.')
 parser.add_argument('--nested','-n', dest='nested', action='store_true', default=False,
                     help='Are you comparing nested models with the same algorithm?')
-parser.add_argument('--all','-a', dest='all', action='store_true', default=False,
+parser.add_argument('--all','-a', dest='all', action='store_true', default=True,
                     help='Compare all models with the same algorithm?')
 parser.add_argument('--config_used', type=str, default=argparse.SUPPRESS,
-                help='Full path to configuration json file')
+                help='Full path to configuration json file: ')
 
 args = parser.parse_args()
 
-config_used=args.config_used if hasattr(args, 'config_used') else input('Full path to configuration json file')
-
 from python_settings import settings as config
-import configurations.utility as util
-if not config.configured: 
-    configuration=util.configure(config_used,TRACEBACK=True, VERBOSE=True)
 
+if not config.configured: 
+    import configurations.utility as util
+    config_used=args.config_used if hasattr(args, 'config_used') else input('Full path to configuration json file...')
+    configuration=util.configure(config_used,TRACEBACK=True, VERBOSE=True)
+import configurations.utility as util
 from modelEvaluation.predict import predict, generate_filename
 from dataManipulation.dataPreparation import getData
 #%%
@@ -149,8 +149,9 @@ def performance(pred,obs,K):
     print(' tn, fp, fn, tp =',tn, fp, fn, tp)
     recall=c[1][1]/(c[1][0]+c[1][1])
     ppv=c[1][1]/(c[0][1]+c[1][1])
-    print('Recall, Positive Predictive Value = ',recall,ppv)
-    return(recall,ppv)
+    specificity = tn / (tn+fp)
+    print('Recall, PPV, Spec = ',recall,ppv, specificity)
+    return(recall,ppv, specificity, newpred)
 
 def parameter_distribution(models,**args):
     model_dict,grid,params,times_selected={},{},{},{}
@@ -181,7 +182,9 @@ def parameter_distribution(models,**args):
         plt.figure()
         times_selected[parameter].plot(kind='bar',title=parameter, rot=0)
 
-def boxplots(df, year, K, parent_metrics=None):
+def boxplots(df, year, K, parent_metrics=None, **kwargs):
+    path=kwargs.get('path',config.FIGUREPATH)
+    name=kwargs.get('name','')
     if not parent_metrics: #we have to compute them
         parent_models=detect_models(re.sub('hyperparameter_variability_|fixsample_','',config.MODELPATH))
         logistic_model=[i for i in detect_latest(parent_models) if 'logistic' in i][0]
@@ -209,11 +212,10 @@ if __name__=='__main__':
     year=int(input('YEAR TO PREDICT: ')) if not hasattr(args, 'year') else args.year
     nested=eval(input('NESTED MODEL COMPARISON? (True/False) ')) if not hasattr(args, 'nested') else args.nested
     all_models=eval(input('COMPARE ALL MODELS? (True/False) ')) if not hasattr(args, 'all') else args.all
-    X,y=getData(year-1)
+    
     available_models=detect_models()
     
-    if nested:
-        all_predictions,metrics=compare_nested(available_models,X,y,year)
+    if nested:   
         selected=sorted([m for m in available_models if ('nested' in m)])
     elif all_models:
         selected=available_models
@@ -222,30 +224,37 @@ if __name__=='__main__':
     
     if Path(config.PREDPATH+'/metrics.csv').is_file():
         available_metrics=pd.read_csv(config.PREDPATH+'/metrics.csv')
-        if all([s in available_metrics.Model.values for s in selected]):
-            print('All metrics are available')
-            print(available_metrics)
-            boxplots(available_metrics, year, K=20000)
-            exit(1)
     else:
-        available_metrics=pd.DataFrame()
-
-    if not nested:
-        all_predictions,metrics=compare(selected,X,y,year)
-    all_predictions=update_all_preds(all_predictions,selected)
-    
-
-    if nested:
-        variable_groups=[r'SEX+ AGE','+ EDC_','+ RXMG_','+ ACG']
-        score,recall,ppv=[list(array.values()) for array in list(metrics.values())]
-        print(pd.DataFrame(list(zip(selected,variable_groups,score,recall,ppv)),columns=['Model','Predictors']+list(metrics.keys())).to_markdown(index=False))
+        available_metrics=pd.DataFrame.from_dict({'Model':[]})
+    if all([s in available_metrics.Model.values for s in selected]):
+        print('All metrics are available')
+        print(available_metrics)
+        available_metrics['Algorithm']=[re.sub('_|[0-9]', '', model) for model in available_metrics['Model'].values]
+        print(available_metrics.groupby('Algorithm').describe().transpose())
+        parent_metrics=pd.read_csv(re.sub('hyperparameter_variability_|fixsample_','',config.PREDPATH+'/metrics.csv')).to_dict('list')
+        boxplots(available_metrics, year, K=20000, parent_metrics=parent_metrics)
     else:
-        score,recall,ppv=[list(array.values()) for array in list(metrics.values())]
-        df=pd.DataFrame(list(zip(selected,score,recall,ppv)),columns=['Model']+list(metrics.keys()))
-        print(df.to_markdown(index=False,))
-    
-    df=pd.concat(df, available_metrics, ignore_index=True, axis=0)
-    df.to_csv(config.PREDPATH+'/metrics.csv', index=False)
+        selected=[s for s in selected if not (s in available_metrics.Model.values)]
+        X,y=getData(year-1)
 
-    parent_metrics=pd.read_csv(re.sub('hyperparameter_variability_|fixsample_','',config.PREDPATH+'/metrics.csv')).to_dict('list')
-    boxplots(df, year, K=20000, parent_metrics=parent_metrics)
+        if not nested:
+            all_predictions,metrics=compare(selected,X,y,year)
+        all_predictions=update_all_preds(all_predictions,selected)
+        
+    
+        if nested:
+            all_predictions,metrics=compare_nested(available_models,X,y,year)
+            variable_groups=[r'SEX+ AGE','+ EDC_','+ RXMG_','+ ACG']
+            score,recall,ppv=[list(array.values()) for array in list(metrics.values())]
+            print(pd.DataFrame(list(zip(selected,variable_groups,score,recall,ppv)),columns=['Model','Predictors']+list(metrics.keys())).to_markdown(index=False))
+        else:
+            score,recall,ppv=[list(array.values()) for array in list(metrics.values())]
+            df=pd.DataFrame(list(zip(selected,score,recall,ppv)),columns=['Model']+list(metrics.keys()))
+            print(df.to_markdown(index=False,))
+        
+        df=pd.concat([df, available_metrics], ignore_index=True, axis=0)
+        df.to_csv(config.PREDPATH+'/metrics.csv', index=False)
+    
+        parent_metrics=pd.read_csv(re.sub('hyperparameter_variability_|fixsample_','',config.PREDPATH+'/metrics.csv')).to_dict('list')
+        boxplots(df, year, K=20000, parent_metrics=parent_metrics)
+        print(df.groupby('Algorithm').describe().transpose())

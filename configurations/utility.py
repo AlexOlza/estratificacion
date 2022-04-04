@@ -28,6 +28,7 @@ def configure(configname=None,**kwargs):
         return None
     if not configname:
         configname=input('Enter configuration json file path: ')
+    configname=str(configname)
     if configname.endswith('.json'):
         with open(configname) as c:
             configuration=json.load(c)
@@ -115,7 +116,7 @@ def savemodel(config,model,**kwargs):
         os.mkdir(config.MODELPATH)
     modelname=kwargs.get('name',config.ALGORITHM+NOW)
     modelfilename=modelname+'.joblib'
-    configname=config.USEDCONFIGPATH+modelname+'.json'
+    configname=os.path.join(config.USEDCONFIGPATH,modelname+'.json')
     print('configname',configname)
     os.chdir(config.MODELPATH)
     print('dump',config.MODELPATH+modelfilename)

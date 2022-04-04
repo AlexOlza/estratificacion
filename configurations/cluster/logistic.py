@@ -35,7 +35,6 @@ CONFIGNAME='logistic.py'
 USEDCONFIGPATH+=EXPERIMENT+'/'
 MODELPATH=MODELSPATH+EXPERIMENT+'/'
 PREDPATH=os.path.join(OUTPATH,EXPERIMENT)
-# PREDFILES={yr: os.path.join(PREDPATH,'{1}{0}.csv'.format(yr,ALGORITHM)) for yr in [2016,2017,2018]} obsolete
-
+FIGUREPATH=os.path.join(ROOTPATH,'figures',EXPERIMENT)
 
 

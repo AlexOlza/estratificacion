@@ -26,8 +26,7 @@ parser.add_argument('--config_used', type=str, default=argparse.SUPPRESS,
 
 
 args, unknown_args = parser.parse_known_args()
-config_used=Path(args.config_used) if hasattr(args, 'config_used') else Path(input(msg))
-model_name=config_used.stem
+
 # year=args.year
 
 
@@ -35,34 +34,37 @@ sys.path.append('/home/aolza/Desktop/estratificacion/')
 from python_settings import settings as config
 from configurations.utility import configure
 if not config.configured: 
+    config_used=Path(args.config_used) if hasattr(args, 'config_used') else Path(input(msg))
     configuration=configure(config_used,TRACEBACK=False, VERBOSE=True)
+    model_name=config_used.stem
 try:
     experiment_name=config.EXPERIMENT
 except:
     experiment_name=input('EXPERIMENT NAME (example: urgcms_excl_nbinj): ')
 
 from dataManipulation.dataPreparation import getData
-
+import os
 #%%     FUNCTIONS
 def generate_filename(model_name,yr, calibrated=False):
     if calibrated:
-        fname=config.PREDPATH+'/{0}_calibrated_{1}.csv'.format(model_name,yr)
+        fname=os.path.join(config.PREDPATH,'{0}_calibrated_{1}.csv'.format(model_name,yr))
     else: 
-        fname=config.PREDPATH+'/{0}__{1}.csv'.format(model_name,yr)
+        fname=os.path.join(config.PREDPATH,'{0}__{1}.csv'.format(model_name,yr))
     return fname
 def predict_save(yr,model,model_name,X,y,**kwargs):
     columns=kwargs.get('columns',config.COLUMNS[0])
     verbose=kwargs.get('verbose',config.VERBOSE)
     predictors=kwargs.get('predictors',config.PREDICTORREGEX)
-    X=X.filter(regex=predictors)
-    print(predictors, len(X.columns))
+    filename=kwargs.get('filename',model_name)
+    # X=X.filter(regex=predictors)
+    # print(predictors, len(X.filter(regex=predictors).columns))
     from more_itertools import sliced
     CHUNK_SIZE = 50000 #TODO experiment with this to try to speed up prediction
     
     index_slices = sliced(range(len(X)), CHUNK_SIZE)
     i=0
     n=len(X)/CHUNK_SIZE
-    filename=generate_filename(model_name,yr)
+    filename=generate_filename(filename,yr)
     print('predfilename ',filename)
     if 'neural' in model_name:
         pred=model.predict
@@ -92,7 +94,8 @@ def predict_save(yr,model,model_name,X,y,**kwargs):
 
 def predict(model_name,experiment_name,year,**kwargs):
     predictors=kwargs.get('predictors',config.PREDICTORREGEX)
-    modelfilename=f'{config.MODELPATH}/{model_name}'
+    filename=kwargs.get('filename',model_name)
+    modelfilename=os.path.join(config.MODELPATH,model_name)
     if 'neural' in model_name:
         load=keras.models.load_model
         if model_name=='neural_AGESEX':
@@ -111,9 +114,11 @@ def predict(model_name,experiment_name,year,**kwargs):
     Yy=kwargs.get('y',None)
     if (not isinstance(Xx,pd.DataFrame)) or (not isinstance(Yy,pd.DataFrame)):
         Xx,Yy=getData(year-1,predictors=predictors)
-    predFilename=generate_filename(model_name,year)
+    predFilename=generate_filename(filename,year)
     if not Path(predFilename).is_file():
-        predict_save(year, model,model_name, Xx, Yy, predictors=predictors, verbose=False)
+        predict_save(year, model,model_name, Xx, Yy, 
+                     filename=filename,
+                     predictors=predictors, verbose=False)
     probs=pd.read_csv(predFilename)
     print(probs.head())
     if 'COSTE_TOTAL_ANO2' in config.COLUMNS:
