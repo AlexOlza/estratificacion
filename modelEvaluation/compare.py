@@ -23,7 +23,7 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import roc_auc_score
 import sys
 sys.path.append('/home/aolza/Desktop/estratificacion/')
-
+import os
 import pandas as pd
 from pathlib import Path
 import re
@@ -47,7 +47,7 @@ from python_settings import settings as config
 
 if not config.configured: 
     import configurations.utility as util
-    config_used=args.config_used if hasattr(args, 'config_used') else input('Full path to configuration json file...')
+    config_used=args.config_used if hasattr(args, 'config_used') else os.path.join(os.environ['USEDCONFIG_PATH'],input('Experiment...'),input('Model...')+'.json')
     configuration=util.configure(config_used,TRACEBACK=True, VERBOSE=True)
 import configurations.utility as util
 from modelEvaluation.predict import predict, generate_filename
@@ -100,7 +100,7 @@ def compare(selected,X,y,year,experiment_name=Path(config.MODELPATH).parts[-1],*
             except:
                 all_predictions=probs
             all_predictions.rename(columns={'PRED': 'PRED_{0}'.format(m)}, inplace=True)
-            metrics['Recall_{0}'.format(K)][m],metrics['PPV_{0}'.format(K)][m]=performance(all_predictions['PRED_{0}'.format(m)],all_predictions.OBS,K)
+            metrics['Recall_{0}'.format(K)][m],metrics['PPV_{0}'.format(K)][m], _, _=performance(all_predictions['PRED_{0}'.format(m)],all_predictions.OBS,K)
         except Exception as exc:
             print('Something went wrong for model ', m)
             print(traceback.format_exc())
@@ -191,7 +191,7 @@ def boxplots(df, year, K, parent_metrics=None, **kwargs):
         logistic_predfile=re.sub('hyperparameter_variability_|fixsample_','',generate_filename(logistic_model,year))
         logistic_predictions=pd.read_csv(logistic_predfile)
         auc=roc_auc_score(np.where(logistic_predictions.OBS>=1,1,0), logistic_predictions.PRED)
-        recall, ppv= performance(logistic_predictions.PRED, logistic_predictions.OBS,K)
+        recall, ppv, _, _= performance(logistic_predictions.PRED, logistic_predictions.OBS,K)
         parent_metrics={'Score':auc,'Recall_{0}'.format(K):recall,'PPV_{0}'.format(K):ppv}
     df['Algorithm']=[re.sub('_|[0-9]', '', model) for model in df['Model'].values]
     for column in ['Score', 'Recall_{0}'.format(K), 'PPV_{0}'.format(K)]:
@@ -235,6 +235,7 @@ if __name__=='__main__':
         boxplots(available_metrics, year, K=20000, parent_metrics=parent_metrics)
     else:
         selected=[s for s in selected if not (s in available_metrics.Model.values)]
+        
         X,y=getData(year-1)
 
         if not nested:
