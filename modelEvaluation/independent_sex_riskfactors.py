@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
+OBJECTIVE:
+    Identify risk factors for men and for women
+    using independent models
 Created on Tue Mar 29 15:52:00 2022
 
 @author: aolza
@@ -19,7 +22,8 @@ import pandas as pd
 from python_settings import settings as config
 import configurations.utility as util
 if not config.configured: 
-    config_used=input('Full path to configuration json file...: ')
+    experiment=input('Experiment: ')
+    config_used=os.path.join(os.environ['USEDCONFIG_PATH'],f'{experiment}/logisticMujeres.json')
     configuration=util.configure(config_used)
 from dataManipulation.dataPreparation import getData
 from modelEvaluation.predict import generate_filename
@@ -60,9 +64,7 @@ def beta_std_error(logModel, X, eps=1e-20):
     # Standard errors
     D=np.diag(covLogit).copy() #copy, because the original array is non-mutable (ValueError: assignment destination is read-only)
     D[np.abs(D) < eps] = 0 # Avoid negative values in the diagonal (a necessary evil)
-    
-    assert all(D>=0), 'Negative values found in the diagonal of the var-cov matrix. Increase eps!!'
-    
+
     stderr=np.sqrt(D)
     print("Standard errors: ", stderr)
     # Wald statistic (coefficient / s.e.) ^ 2

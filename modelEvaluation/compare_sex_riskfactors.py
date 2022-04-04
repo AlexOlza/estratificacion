@@ -1,6 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
+OBJECTIVE:
+    Identify which variables have the most different effect
+    for men and women
+
+PROCEDURE:
+    Those variables have the biggest positive and negative
+    coefficients for the interaction term with sex.
+    The exponential of each coefficient (expb) means that
+    the odds of hospitalization for women with that disease
+    is expb times higher
+    than that of a man with the same disease.
+
 Created on Tue Mar 29 10:01:15 2022
 
 @author: aolza
@@ -19,8 +31,8 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import average_precision_score, roc_auc_score, RocCurveDisplay,roc_curve, auc,precision_recall_curve, PrecisionRecallDisplay
 
 #%% CONFIGURE 
-
-config_used='/home/aolza/Desktop/estratificacion/configurations/used/edc_urgcms_excl_nbinj/logisticSexInteraction.json'
+experiment=input('Experiment: ')
+config_used=os.path.join(os.environ['USEDCONFIG_PATH'],f'{experiment}/logisticSexInteraction.json')
 
 from python_settings import settings as config
 import configurations.utility as util
@@ -32,7 +44,7 @@ from modelEvaluation.predict import generate_filename
 from modelEvaluation.independent_sex_riskfactors import beta_std_error, confidence_interval_odds_ratio
 
 #%%
-""" QUESTION 2:
+"""
     WHICH VARIABLES DIFFER THE MOST WHEN PRESENT IN MEN VS WOMEN?
 """
 filename=os.path.join(config.PREDPATH, f'{config.ALGORITHM}_sexSpecificVariables.csv')

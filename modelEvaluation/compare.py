@@ -46,7 +46,6 @@ args = parser.parse_args()
 from python_settings import settings as config
 
 if not config.configured: 
-    print('compare says')
     import configurations.utility as util
     config_used=args.config_used if hasattr(args, 'config_used') else input('Full path to configuration json file...')
     configuration=util.configure(config_used,TRACEBACK=True, VERBOSE=True)
