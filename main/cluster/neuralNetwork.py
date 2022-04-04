@@ -89,7 +89,7 @@ print('Seed ', seed_hparam)
 
 if not args.random_tuner:
     name=re.sub('neuralNetwork','neuralNetworkBayesian',model_name)
-    name=name+'CLR' if cyclic else name
+    name=re.sub('neuralNetworkBayesian','neuralNetworkBayesianCLR',name) if cyclic else name
     model_name=config.MODELPATH+name
     print('Tuner: BayesianOptimization')
     tuner = config.MyBayesianTuner(X_train, y_train.reshape(-1,1),X_test, y_test.reshape(-1,1),
@@ -103,7 +103,7 @@ if not args.random_tuner:
                      project_name=name)
 else:
     name=re.sub('neuralNetwork','neuralNetworkRandom',model_name)
-    name=name+'CLR' if cyclic else name
+    name=re.sub('neuralNetworkRandom','neuralNetworkRandomCLR',name) if cyclic else name
     model_name=config.MODELPATH+name
     print('Tuner: Random')
     tuner = config.MyRandomTuner(X_train, y_train.reshape(-1,1),X_test, y_test.reshape(-1,1),
@@ -115,7 +115,7 @@ else:
                  directory=model_name+'_search',
                  project_name=name)
   
-tuner.search(epochs=20)
+tuner.search(epochs=30)
 print('---------------------------------------------------'*5)
 print('SEARCH SPACE SUMMARY:')
 print(tuner.search_space_summary())  
@@ -141,8 +141,8 @@ if cyclic:
 print('Best hyperparameters:')
 print(best_hp_)
 print('---------------------------------------------------'*5)
-print('Retraining:')
-config.keras_code(X,y,X_train,y_train, epochs=30,**best_hp_,
-                  callbacks=callbacks, save=True, saving_path=model_name, verbose=1)
+print('Retraining (70 epochs):')
+config.keras_code(X,y,X_train,y_train, epochs=70,**best_hp_,
+                  callbacks=callbacks, save=True, saving_path=model_name, verbose=2)
 util.saveconfig(config,config.USEDCONFIGPATH+model_name.split('/')[-1]+'.json')
 print('Saved ')
