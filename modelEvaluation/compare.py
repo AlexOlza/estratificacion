@@ -195,10 +195,10 @@ def boxplots(df, year, K, parent_metrics=None, parentNeural=False, **kwargs):
         parent_metrics={'Score':auc,
                         f'Recall_{K}': recall,
                         f'PPV_{K}':ppv}
-        
-    parent_metrics[f'F1_{K}'] = 2*parent_metrics[f'Recall_{K}']*parent_metrics[f'PPV_{K}']/(parent_metrics[f'Recall_{K}']+parent_metrics[f'PPV_{K}'])
+    parent_df=pd.DataFrame(parent_metrics)   
+    parent_metrics[f'F1_{K}'] = 2*parent_df[f'Recall_{K}']*parent_df[f'PPV_{K}']/(parent_df[f'Recall_{K}']+parent_df[f'PPV_{K}'])
     df['Algorithm']=[re.sub('_|[0-9]', '', model) for model in df['Model'].values]
-    df[f'F1_{K}']=2*df[f'Recall_{K}']*df[f'PPV_{K}']*(df[f'Recall_{K}']+df[f'PPV_{K}'])
+    df[f'F1_{K}']=2*df[f'Recall_{K}']*df[f'PPV_{K}']/(df[f'Recall_{K}']+df[f'PPV_{K}'])
    
     for column in ['Score', f'Recall_{K}', f'PPV_{K}', f'F1_{K}']:
         print(column)
@@ -214,6 +214,7 @@ def boxplots(df, year, K, parent_metrics=None, parentNeural=False, **kwargs):
                 if any(['logistic' in model]): #exclude other algorithms
                     plt.axhline(y = value, linestyle = '-', label=model, color='r')
         plt.legend()
+        plt.savefig(os.path.join(path,f'hyperparameter_variability_{column}.png'))
         plt.show()
 
 

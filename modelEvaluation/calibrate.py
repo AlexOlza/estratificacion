@@ -14,10 +14,12 @@ from sklearn.metrics import brier_score_loss
 #IMPORTS FROM THIS PROJECT
 from python_settings import settings as config
 import configurations.utility as util
+if not config.configured:
+    config_used=os.path.join(os.environ['USEDCONFIG_PATH'],input('Experiment...'),input('Model...')+'.json')
+    configuration=util.configure(config_used)
+
 from modelEvaluation.predict import predict, generate_filename
 from modelEvaluation.compare import detect_models, detect_latest
-if not config.configured:
-    util.configure('configurations.cluster.logistic')
 from dataManipulation.dataPreparation import getData
 from modelEvaluation.reliableDiagram import reliabilityConsistency
 np.random.seed(config.SEED)
@@ -46,6 +48,7 @@ def sample(data,uncal):
 def calibrate(model_name,yr,**kwargs):
     filename=kwargs.get('filename',model_name)
     calibFilename=generate_filename(filename,yr, calibrated=True)
+    uncalFilename=generate_filename(filename,yr, calibrated=False)
     if Path(calibFilename).is_file():
         util.vprint('Calibrated predictions found; loading')
         p_calibrated=pd.read_csv(calibFilename)
@@ -92,6 +95,12 @@ def calibrate(model_name,yr,**kwargs):
     util.vprint('Number of unique probabilities after PCHIP: ',len(set(p_calibrated)))
     pred.to_csv(calibFilename,index=False)
     util.vprint('Saved ',calibFilename)
+    uncalFilenames=[generate_filename(filename,yr, calibrated=False),
+                   generate_filename(filename,yr-1, calibrated=False)]
+    for f in uncalFilenames:
+        if Path(f).is_file():
+            Path(f).unlink()
+            print(f'Deleted {f}')
     return(pred)
 
 def plot(p, **kwargs):
@@ -179,11 +188,14 @@ if __name__=='__main__':
 
     pastX,pastY=getData(year-2)
     presentX,presentY=getData(year-1)
-    models=detect_latest(detect_models())
+    models=detect_models()
     p={}
     for model_name in models:
         print(model_name)
-        p[model_name]=calibrate(model_name,year,
-                pastX=pastX,pastY=pastY,presentX=presentX,presentY=presentY)
-        print(p[model_name].describe())
+        try:
+            p[model_name]=calibrate(model_name,year,
+                    pastX=pastX,pastY=pastY,presentX=presentX,presentY=presentY)
+            print(p[model_name].describe())
+        except:
+            print('SOMETHING WENT WRONG')
     plot(p)
