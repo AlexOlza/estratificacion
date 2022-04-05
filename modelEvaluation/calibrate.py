@@ -47,68 +47,71 @@ def sample(data,uncal):
     return(idx,unique)
 
 def calibrate(model_name,yr,**kwargs):
-    filename=kwargs.get('filename',model_name)
-    calibFilename=generate_filename(filename,yr, calibrated=True)
-    uncalFilename=generate_filename(filename,yr, calibrated=False)
-    if Path(calibFilename).is_file():
-        util.vprint('Calibrated predictions found; loading')
-        p_calibrated=pd.read_csv(calibFilename)
-        return(p_calibrated)
-    predictors=kwargs.get('predictors',config.PREDICTORREGEX)
-    pastX=kwargs.get('pastX',None)
-    pastY=kwargs.get('pastY',None)
-    presentX=kwargs.get('presentX',None)
-    presentY=kwargs.get('presentY',None)
-    if (not isinstance(pastX,pd.DataFrame)) or (not isinstance(pastY,pd.DataFrame)):
-        pastX,pastY=getData(yr-2)
-    if (not isinstance(presentX,pd.DataFrame)) or (not isinstance(presentY,pd.DataFrame)):
-        presentX,presentY=getData(yr-1)
-
-    #This reads the prediction files, or creates them if not present
-    pastPred, _= predict(model_name,config.EXPERIMENT,yr-1,
+    try:
+        filename=kwargs.get('filename',model_name)
+        experiment_name=kwargs.get('experiment_name',config.EXPERIMENT)
+        calibFilename=generate_filename(filename,yr, calibrated=True)
+        uncalFilename=generate_filename(filename,yr, calibrated=False)
+        if Path(calibFilename).is_file():
+            util.vprint('Calibrated predictions found; loading')
+            p_calibrated=pd.read_csv(calibFilename)
+            return(p_calibrated)
+        predictors=kwargs.get('predictors',config.PREDICTORREGEX)
+        pastX=kwargs.get('pastX',None)
+        pastY=kwargs.get('pastY',None)
+        presentX=kwargs.get('presentX',None)
+        presentY=kwargs.get('presentY',None)
+        if (not isinstance(pastX,pd.DataFrame)) or (not isinstance(pastY,pd.DataFrame)):
+            pastX,pastY=getData(yr-2)
+        if (not isinstance(presentX,pd.DataFrame)) or (not isinstance(presentY,pd.DataFrame)):
+            presentX,presentY=getData(yr-1)
+    
+        #This reads the prediction files, or creates them if not present
+        pastPred, _= predict(model_name,experiment_name,yr-1,
+                             filename=filename,
+                             X=pastX, y=pastY, predictors=predictors)
+        pred, _= predict(model_name,experiment_name,yr,
                          filename=filename,
-                         X=pastX, y=pastY, predictors=predictors)
-    pred, _= predict(model_name,config.EXPERIMENT,yr,
-                     filename=filename,
-                     X=presentX, y=presentY, predictors=predictors)
+                         X=presentX, y=presentY, predictors=predictors)
+        
+        pastPred.sort_values(by='PATIENT_ID',inplace=True)
+        pastPred.reset_index(drop=True,inplace=True)
+        
+        p_train, _ , y_train, _ = train_test_split(pastPred.PRED.values, np.where(pastPred.OBS>=1,1,0).ravel(),
+                                                            test_size=0.33, random_state=config.SEED)
+        
+        ir = IsotonicRegression(y_min=0, y_max=1, out_of_bounds = 'clip' )	
+        ir.fit( p_train, y_train )
+        
+        pred.sort_values(by='PATIENT_ID',inplace=True)
+        pred.reset_index(drop=True,inplace=True)
+        p_uncal=pred.PRED
+        p_calibrated_iso = ir.transform( p_uncal )
+        util.vprint('Number of unique probabilities after isotonic regression: ',len(set(p_calibrated_iso )))
+        
+        idx,p_sample=sample(p_calibrated_iso,p_uncal)
+        p_uncal_sample=p_uncal[idx]
     
-    pastPred.sort_values(by='PATIENT_ID',inplace=True)
-    pastPred.reset_index(drop=True,inplace=True)
-    
-    p_train, _ , y_train, _ = train_test_split(pastPred.PRED.values, np.where(pastPred.OBS>=1,1,0).ravel(),
-                                                        test_size=0.33, random_state=config.SEED)
-    
-    ir = IsotonicRegression(y_min=0, y_max=1, out_of_bounds = 'clip' )	
-    ir.fit( p_train, y_train )
-    
-    pred.sort_values(by='PATIENT_ID',inplace=True)
-    pred.reset_index(drop=True,inplace=True)
-    p_uncal=pred.PRED
-    p_calibrated_iso = ir.transform( p_uncal )
-    util.vprint('Number of unique probabilities after isotonic regression: ',len(set(p_calibrated_iso )))
-    
-    idx,p_sample=sample(p_calibrated_iso,p_uncal)
-    p_uncal_sample=p_uncal[idx]
-
-    pchip=PchipInterpolator(p_uncal_sample.values, p_sample, axis=0, extrapolate=False) 
-    p_calibrated=pchip(p_uncal)
-    
-    util.vprint('Number of invalid probabilities (set to 1): ',sum(p_calibrated>1))
-    util.vprint('Number of invalid probabilities (set to 0): ',sum(p_calibrated<0))
-    util.vprint('Number of unique probabilities after PCHIP: ',len(set(p_calibrated)))
-    p_calibrated[(p_calibrated>1)]=1
-    p_calibrated[(p_calibrated<0)]=0
-    pred['PREDCAL']=p_calibrated
-    pred.to_csv(calibFilename,index=False)
-    util.vprint('Saved ',calibFilename)
-    uncalFilenames=[generate_filename(filename,yr, calibrated=False),
-                   generate_filename(filename,yr-1, calibrated=False)]
-    for f in uncalFilenames:
-        if Path(f).is_file():
-            Path(f).unlink()
-            print(f'Deleted {f}')
-    return(pred)
-
+        pchip=PchipInterpolator(p_uncal_sample.values, p_sample, axis=0, extrapolate=False) 
+        p_calibrated=pchip(p_uncal)
+        
+        util.vprint('Number of invalid probabilities (set to 1): ',sum(p_calibrated>1))
+        util.vprint('Number of invalid probabilities (set to 0): ',sum(p_calibrated<0))
+        util.vprint('Number of unique probabilities after PCHIP: ',len(set(p_calibrated)))
+        p_calibrated[(p_calibrated>1)]=1
+        p_calibrated[(p_calibrated<0)]=0
+        pred['PREDCAL']=p_calibrated
+        pred.to_csv(calibFilename,index=False)
+        util.vprint('Saved ',calibFilename)
+        uncalFilenames=[generate_filename(filename,yr, calibrated=False),
+                       generate_filename(filename,yr-1, calibrated=False)]
+        for f in uncalFilenames:
+            if Path(f).is_file():
+                Path(f).unlink()
+                print(f'Deleted {f}')
+        return(pred)
+    except:
+        return None
 def plot(p, **kwargs):
     path=kwargs.get('path',config.FIGUREPATH)
     filename=kwargs.get('filename','')
