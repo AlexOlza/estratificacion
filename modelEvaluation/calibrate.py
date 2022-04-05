@@ -1,6 +1,7 @@
 
 # IMPORTS FROM EXTERNAL LIBRARIES
 import os
+import re
 from pathlib import Path
 import numpy as np
 import matplotlib.pyplot as plt
@@ -77,7 +78,7 @@ def calibrate(model_name,yr,**kwargs):
     p_train, _ , y_train, _ = train_test_split(pastPred.PRED.values, np.where(pastPred.OBS>=1,1,0).ravel(),
                                                         test_size=0.33, random_state=config.SEED)
     
-    ir = IsotonicRegression( out_of_bounds = 'clip' )	
+    ir = IsotonicRegression(y_min=0, y_max=1, out_of_bounds = 'clip' )	
     ir.fit( p_train, y_train )
     
     pred.sort_values(by='PATIENT_ID',inplace=True)
@@ -89,10 +90,15 @@ def calibrate(model_name,yr,**kwargs):
     idx,p_sample=sample(p_calibrated_iso,p_uncal)
     p_uncal_sample=p_uncal[idx]
 
-    pchip=PchipInterpolator(p_uncal_sample.values, p_sample, axis=0, extrapolate=True) 
+    pchip=PchipInterpolator(p_uncal_sample.values, p_sample, axis=0, extrapolate=False) 
     p_calibrated=pchip(p_uncal)
-    pred['PREDCAL']=p_calibrated
+    
+    util.vprint('Number of invalid probabilities (set to 1): ',sum(p_calibrated>1))
+    util.vprint('Number of invalid probabilities (set to 0): ',sum(p_calibrated<0))
     util.vprint('Number of unique probabilities after PCHIP: ',len(set(p_calibrated)))
+    p_calibrated[(p_calibrated>1)]=1
+    p_calibrated[(p_calibrated<0)]=0
+    pred['PREDCAL']=p_calibrated
     pred.to_csv(calibFilename,index=False)
     util.vprint('Saved ',calibFilename)
     uncalFilenames=[generate_filename(filename,yr, calibrated=False),
@@ -190,11 +196,52 @@ if __name__=='__main__':
     presentX,presentY=getData(year-1)
     models=detect_models()
     p={}
+    brier_before,brier_after={},{}
     for model_name in models:
         print(model_name)
         try:
-            p[model_name]=calibrate(model_name,year,
-                    pastX=pastX,pastY=pastY,presentX=presentX,presentY=presentY)
+            # p[model_name]=calibrate(model_name,year,
+            #         pastX=pastX,pastY=pastY,presentX=presentX,presentY=presentY)
+            brier_before[model_name]=brier_score_loss(np.where(p[model_name].OBS>=1,1,0), p[model_name].PRED)
+            brier_after[model_name]=brier_score_loss(np.where(p[model_name].OBS>=1,1,0), p[model_name].PREDCAL)
         except:
             print('SOMETHING WENT WRONG')
-    plot(p)
+            p[model_name]=calibrate(model_name,year,
+                    pastX=pastX,pastY=pastY,presentX=presentX,presentY=presentY)
+            brier_before[model_name]=brier_score_loss(np.where(p[model_name].OBS>=1,1,0), p[model_name].PRED)
+            brier_after[model_name]=brier_score_loss(np.where(p[model_name].OBS>=1,1,0), p[model_name].PREDCAL)
+    
+    # For each algorithm, select the models with the 25th percentile, median and 75th percentile of Brier score
+    algorithms=list(set(['_'.join(re.findall('[^\d+_\d+]+',model)) for model in  p.keys()]))
+    
+    brier_after_alg=pd.DataFrame({'Model':brier_after.keys(),
+                     'Brier':brier_after.values(),
+                     'Algorithm':['_'.join(re.findall('[^\d+_\d+]+',model)) for model in  p.keys()]}
+                                 )
+    
+    def q1(x):
+        return x.quantile(0.25,interpolation='nearest')
+
+    def q2(x):
+        return x.quantile(0.5,interpolation='nearest')
+    
+    def q3(x):
+        return x.quantile(0.75,interpolation='nearest')
+
+    brierdist=brier_after_alg.groupby(['Algorithm']).Brier.agg([ q1, q2, q3]).stack(level=0)
+    print('Brier score distribution per algorithm: ')
+    print(brierdist)
+
+    low, median, high = {},{},{}
+    selected_models=[]
+    for alg in algorithms:
+        perc25=brierdist.loc[alg]['q1']
+        perc50=brierdist.loc[alg]['q2']
+        perc75=brierdist.loc[alg]['q3']
+        low[alg]=list(brier_after.keys())[list(brier_after.values()).index(perc25)]
+        median[alg]=list(brier_after.keys())[list(brier_after.values()).index(perc50)]
+        high[alg]=list(brier_after.keys())[list(brier_after.values()).index(perc75)]
+        selected_models+=[low[alg],median[alg],high[alg]]
+    models_to_plot={k: v for k, v in p.items() if k in selected_models}
+
+    plot(models_to_plot)
