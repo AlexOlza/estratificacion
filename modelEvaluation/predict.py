@@ -115,12 +115,19 @@ def predict(model_name,experiment_name,year,**kwargs):
     if (not isinstance(Xx,pd.DataFrame)) or (not isinstance(Yy,pd.DataFrame)):
         Xx,Yy=getData(year-1,predictors=predictors)
     predFilename=generate_filename(filename,year)
-    if not Path(predFilename).is_file():
+    calibFilename=generate_filename(filename,year, calibrated=True)
+    if (not Path(predFilename).is_file()) and (not Path(calibFilename).is_file()) :
         predict_save(year, model,model_name, Xx, Yy, 
                      filename=filename,
                      predictors=predictors, verbose=False)
-    probs=pd.read_csv(predFilename)
-    print(probs.head())
+        
+    if Path(calibFilename).is_file():
+        print('Calibrated predictions found; loading')
+        probs=pd.read_csv(calibFilename) 
+        probs=probs[['PATIENT_ID', 'PRED', 'OBS']]
+    else:
+        probs=pd.read_csv(predFilename) 
+        
     if 'COSTE_TOTAL_ANO2' in config.COLUMNS:
         score=r2_score(probs.OBS, probs.PRED)
     else:

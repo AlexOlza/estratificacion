@@ -195,7 +195,6 @@ if __name__=='__main__':
         try:
             p[model_name]=calibrate(model_name,year,
                     pastX=pastX,pastY=pastY,presentX=presentX,presentY=presentY)
-            print(p[model_name].describe())
         except:
             print('SOMETHING WENT WRONG')
     plot(p)
