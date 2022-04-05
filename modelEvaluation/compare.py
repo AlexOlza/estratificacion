@@ -20,7 +20,7 @@ Created on Tue Dec 14 16:13:19 2021
 """
 
 import matplotlib.pyplot as plt
-from sklearn.metrics import roc_auc_score
+from sklearn.metrics import roc_auc_score, brier_score_loss
 import sys
 sys.path.append('/home/aolza/Desktop/estratificacion/')
 import os
@@ -52,6 +52,7 @@ if not config.configured:
 import configurations.utility as util
 from modelEvaluation.predict import predict, generate_filename
 from dataManipulation.dataPreparation import getData
+from modelEvaluation.calibrate import calibrate
 #%%
 def detect_models(modelpath=config.MODELPATH):
     available_models=[x.stem for x in Path(modelpath).glob('./*') if x.is_file() and x.suffix in ['.joblib']]
@@ -80,58 +81,32 @@ def compare_nested(available_models,X,y,year):
     predictors={}
     for i in range(1,len(variable_groups)+1):
         predictors[available_models[i-1]]=r'|'.join(variable_groups[:i])
-    all_predictions,metrics=compare(available_models,X,y,year,predictors=predictors)
-    return(all_predictions,metrics)
+    metrics=compare(available_models,X,y,year,predictors=predictors)
+    return(metrics)
 
 def compare(selected,X,y,year,experiment_name=Path(config.MODELPATH).parts[-1],**kwargs):
     import traceback
     K=kwargs.get('K',20000)
     predictors=kwargs.get('predictors',{m:config.PREDICTORREGEX for m in selected})
     metrics={'Score':{},'Recall_{0}'.format(K):{},'PPV_{0}'.format(K):{}}
-    all_predictions=pd.DataFrame()
     for m in selected:
         try:
-            probs,auc=predict(m,experiment_name,year,X=X,y=y,predictors=predictors[m])
-            if (probs is None) and (auc is None):#If model not found
+            probs=calibrate(m,year,experiment_name=experiment_name,presentX=X,presentY=y,predictors=predictors[m])
+            if (probs is None):#If model not found
                 continue
-            metrics['Score'][m]=auc
-            try:  
-                all_predictions=pd.merge(all_predictions,probs,on=['PATIENT_ID','OBS'],how='inner')
-            except:
-                all_predictions=probs
-            all_predictions.rename(columns={'PRED': 'PRED_{0}'.format(m)}, inplace=True)
-            metrics['Recall_{0}'.format(K)][m],metrics['PPV_{0}'.format(K)][m], _, _=performance(all_predictions['PRED_{0}'.format(m)],all_predictions.OBS,K)
+            metrics['Score'][m]=roc_auc_score(np.where(probs.OBS>=1,1,0), probs.PREDCAL)
+            metrics['Recall_{0}'.format(K)][m],metrics['PPV_{0}'.format(K)][m], _, _=performance(np.where(probs.OBS>=1,1,0), probs.PREDCAL,K)
+            metrics['Brier'][m]=brier_score_loss(np.where(probs.OBS>=1,1,0), probs.PREDCAL)
         except Exception as exc:
             print('Something went wrong for model ', m)
             print(traceback.format_exc())
             print(exc)
-        # selected=[m for m in available_models if ('nested' in m)]
-        # selected.sort()
-    return(all_predictions,metrics)
-def update_all_preds(all_predictions,selected):
-    #Save if necessary
-    all_preds='{0}/all_preds.csv'.format(config.PREDPATH) #Filename
-    if Path('{0}/all_preds.csv'.format(config.PREDPATH)).is_file():
-        print('all_preds.csv located')
-        saved=pd.read_csv(all_preds,nrows=3)
-        common_cols=list(set(saved.columns).intersection(set(all_predictions.columns)))
-        if (set(all_predictions.columns)-set(saved.columns)):#if any of our columns is not already saved
-            print('Adding new columns')
-            saved=pd.read_csv(all_preds)
-            all_predictions=pd.merge(all_predictions,
-                                     saved,
-                                     on=common_cols,
-                                     how='inner')
-            all_predictions.to_csv('{0}/all_preds.csv'.format(config.PREDPATH),index=False)
-        else:
-            print('No new columns to add.')
-    else:
-        all_predictions.to_csv('{0}/all_preds.csv'.format(config.PREDPATH),index=False)
-        print('Saved ' '{0}/all_preds.csv'.format(config.PREDPATH))
-    return(all_predictions)
+
+    return(metrics)
+
 import numpy as np
 from sklearn.metrics import confusion_matrix
-def performance(pred,obs,K): 
+def performance(obs,pred,K): 
     orderedPred=sorted(pred,reverse=True)
     orderedObs=sorted(obs,reverse=True)
     cutoff=orderedPred[K-1]
@@ -250,12 +225,12 @@ if __name__=='__main__':
         X,y=getData(year-1)
 
         if not nested:
-            all_predictions,metrics=compare(selected,X,y,year)
-        all_predictions=update_all_preds(all_predictions,selected)
+            metrics=compare(selected,X,y,year)
+
         
     
         if nested:
-            all_predictions,metrics=compare_nested(available_models,X,y,year)
+            metrics=compare_nested(available_models,X,y,year)
             variable_groups=[r'SEX+ AGE','+ EDC_','+ RXMG_','+ ACG']
             score,recall,ppv=[list(array.values()) for array in list(metrics.values())]
             print(pd.DataFrame(list(zip(selected,variable_groups,score,recall,ppv)),columns=['Model','Predictors']+list(metrics.keys())).to_markdown(index=False))
