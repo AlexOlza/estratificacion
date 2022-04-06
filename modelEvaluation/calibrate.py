@@ -2,6 +2,7 @@
 # IMPORTS FROM EXTERNAL LIBRARIES
 import os
 import re
+import traceback
 from pathlib import Path
 import numpy as np
 import matplotlib.pyplot as plt
@@ -20,7 +21,7 @@ if not config.configured:
     configuration=util.configure(config_used)
 
 from modelEvaluation.predict import predict, generate_filename
-from modelEvaluation.compare import detect_models, detect_latest
+from modelEvaluation.detect import detect_models, detect_latest
 from dataManipulation.dataPreparation import getData
 from modelEvaluation.reliableDiagram import reliabilityConsistency
 np.random.seed(config.SEED)
@@ -110,9 +111,12 @@ def calibrate(model_name,yr,**kwargs):
                 Path(f).unlink()
                 print(f'Deleted {f}')
         return(pred)
-    except:
+    except Exception as exc:
+        print('SOMETHING WENT WRONG (calibrate)')
+        print(traceback.format_exc())
+        print(exc)
         return None
-def plot(p, **kwargs):
+def plot(p, consistency_bars=True, **kwargs):
     path=kwargs.get('path',config.FIGUREPATH)
     filename=kwargs.get('filename','')
     util.makeAllPaths()
@@ -163,8 +167,8 @@ def plot(p, **kwargs):
             df['N']=bintot[bintot!=0]
             print('\n')
 
-
-            reliabilityConsistency(probs, obs, nbins=20, nboot=100, ax=axTop, seed=config.SEED,color=col)
+            if consistency_bars:
+                reliabilityConsistency(probs, obs, nbins=20, nboot=100, ax=axTop, seed=config.SEED,color=col)
             
             axHist.hist(probs, range=(0, 1), bins=unique,
                     histtype="step", lw=2,color=col)
@@ -244,7 +248,7 @@ if __name__=='__main__':
         low[alg]=list(brier_after.keys())[list(brier_after.values()).index(perc25)]
         median[alg]=list(brier_after.keys())[list(brier_after.values()).index(perc50)]
         high[alg]=list(brier_after.keys())[list(brier_after.values()).index(perc75)]
-        selected_models+=[low[alg],median[alg],high[alg]]
-    models_to_plot={k: v for k, v in p.items() if k in selected_models}
-
-    plot(models_to_plot)
+        selected_models=[low[alg],median[alg],high[alg]]
+        models_to_plot={k: v for k, v in p.items() if k in selected_models}
+    
+        plot(models_to_plot,consistency_bars=False, filename=alg)

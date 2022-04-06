@@ -52,28 +52,9 @@ if not config.configured:
 import configurations.utility as util
 from modelEvaluation.predict import predict, generate_filename
 from dataManipulation.dataPreparation import getData
+from modelEvaluation.detect import detect_models, detect_latest
 from modelEvaluation.calibrate import calibrate
 #%%
-def detect_models(modelpath=config.MODELPATH):
-    available_models=[x.stem for x in Path(modelpath).glob('./*') if x.is_file() and x.suffix in ['.joblib']]
-    available_models+=[x.stem for x in Path(modelpath).glob('./neural*') if x.is_dir() or x.suffix in['.joblib', '.pb']] #this can be a file or directory
-    print('Available models are:')
-    print(available_models)
-    return(available_models)
-
-def detect_latest(available_models): 
-    if len(available_models)==1:
-        print('There is only one model')
-        return(available_models)
-    print('Selecting latest models per algorithm:')
-    ids = [int(''.join(re.findall('\d+',model))) for model in available_models]
-    algorithms=['_'.join(re.findall('[^\d+_\d+]+',model)) for model in available_models]
-    df=pd.DataFrame(list(zip(algorithms,ids,[i for i in range(len(ids))])),columns=['algorithm','id','i'])
-    selected=df.loc[~(df.algorithm.str.startswith('nested'))].groupby(['algorithm']).apply(lambda x: x.loc[x.id == x.id.max()].i).to_numpy()
-    selected=[available_models[i] for i in selected.ravel()]
-    print(selected)
-    return(selected)
-
 def compare_nested(available_models,X,y,year):
     available_models=[m for m in available_models if ('nested' in m)]
     available_models.sort()
@@ -88,14 +69,14 @@ def compare(selected,X,y,year,experiment_name=Path(config.MODELPATH).parts[-1],*
     import traceback
     K=kwargs.get('K',20000)
     predictors=kwargs.get('predictors',{m:config.PREDICTORREGEX for m in selected})
-    metrics={'Score':{},'Recall_{0}'.format(K):{},'PPV_{0}'.format(K):{}}
+    metrics={'Score':{},f'Recall_{K}':{},f'PPV_{K}':{}, 'Brier':{}}
     for m in selected:
         try:
             probs=calibrate(m,year,experiment_name=experiment_name,presentX=X,presentY=y,predictors=predictors[m])
             if (probs is None):#If model not found
                 continue
             metrics['Score'][m]=roc_auc_score(np.where(probs.OBS>=1,1,0), probs.PREDCAL)
-            metrics['Recall_{0}'.format(K)][m],metrics['PPV_{0}'.format(K)][m], _, _=performance(np.where(probs.OBS>=1,1,0), probs.PREDCAL,K)
+            metrics[f'Recall_{K}'][m],metrics[f'PPV_{K}'][m], _, _=performance(np.where(probs.OBS>=1,1,0), probs.PREDCAL,K)
             metrics['Brier'][m]=brier_score_loss(np.where(probs.OBS>=1,1,0), probs.PREDCAL)
         except Exception as exc:
             print('Something went wrong for model ', m)
@@ -110,8 +91,8 @@ def performance(obs,pred,K):
     orderedPred=sorted(pred,reverse=True)
     orderedObs=sorted(obs,reverse=True)
     cutoff=orderedPred[K-1]
-    print('Cutoff value ({0} values): {1}'.format(K, cutoff))
-    print('Observed cutoff value ({0} values): {1}'.format(K, orderedObs[K-1]))
+    print(f'Cutoff value ({K} values): {cutoff}')
+    print(f'Observed cutoff value ({K} values): {orderedObs[K-1]}')
     newpred=pred>=cutoff
     print('Length of selected list ',sum(newpred))
     if 'COSTE_TOTAL_ANO2' in config.COLUMNS: #maybe better: not all([int(i)==i for i in obs])
@@ -160,24 +141,30 @@ def parameter_distribution(models,**args):
 def boxplots(df, year, K, parent_metrics=None, parentNeural=False, **kwargs):
     path=kwargs.get('path',config.FIGUREPATH)
     name=kwargs.get('name','')
+    X=kwargs.get('X',None)
+    y=kwargs.get('y',None)
     if not parent_metrics: #we have to compute them
-        parent_models=detect_models(re.sub('hyperparameter_variability_|fixsample_','',config.MODELPATH))
-        logistic_model=[i for i in detect_latest(parent_models) if 'logistic' in i][0]
-        logistic_predfile=re.sub('hyperparameter_variability_|fixsample_','',generate_filename(logistic_model,year))
-        logistic_predictions=pd.read_csv(logistic_predfile)
+        parent_models=[i for i in detect_models(re.sub('hyperparameter_variability_|fixsample_','',config.MODELPATH))  if 'logistic' in i]
+        logistic_model=[i for i in detect_latest(parent_models) if 'logistic2022' in i][0]
+        # logistic_predfile=re.sub('hyperparameter_variability_|fixsample_','',generate_filename(logistic_model,year, calibrated=True))
+        # logistic_predictions=pd.read_csv(logistic_predfile)
+        logistic_predictions=calibrate(logistic_model, year,experiment_name=re.sub('hyperparameter_variability_|fixsample_','',config.EXPERIMENT), presentX=X, presentY=y)
         auc=roc_auc_score(np.where(logistic_predictions.OBS>=1,1,0), logistic_predictions.PRED)
-        recall, ppv, _, _= performance(logistic_predictions.PRED, logistic_predictions.OBS,K)
-        parent_metrics={'Score':auc,
-                        f'Recall_{K}': recall,
-                        f'PPV_{K}':ppv}
-    parent_df=pd.DataFrame(parent_metrics)   
+        brier=brier_score_loss(np.where(logistic_predictions.OBS>=1,1,0), logistic_predictions.PREDCAL)
+        recall, ppv, _, _= performance(logistic_predictions.OBS,logistic_predictions.PRED, K)
+        parent_metrics={'Model':[logistic_model],
+                        'Score':[auc],
+                        f'Recall_{K}': [recall],
+                        f'PPV_{K}':[ppv],
+                        'Brier':[brier]}
+    parent_df=pd.DataFrame.from_dict(parent_metrics)   
     parent_metrics[f'F1_{K}'] = 2*parent_df[f'Recall_{K}']*parent_df[f'PPV_{K}']/(parent_df[f'Recall_{K}']+parent_df[f'PPV_{K}'])
     df['Algorithm']=[re.sub('_|[0-9]', '', model) for model in df['Model'].values]
     df[f'F1_{K}']=2*df[f'Recall_{K}']*df[f'PPV_{K}']/(df[f'Recall_{K}']+df[f'PPV_{K}'])
    
-    for column in ['Score', f'Recall_{K}', f'PPV_{K}', f'F1_{K}']:
+    for column in ['Score', f'Recall_{K}', f'PPV_{K}','Brier',f'F1_{K}']:
         print(column)
-        fig, ax = plt.subplots(figsize=(10,8))
+        fig, ax = plt.subplots(figsize=(8,12))
         plt.suptitle('')
 
         df.boxplot(column=column, by='Algorithm', ax=ax)
@@ -204,11 +191,11 @@ if __name__=='__main__':
     if nested:   
         selected=sorted([m for m in available_models if ('nested' in m)])
     elif all_models:
-        selected=available_models
+        selected=[m for m in available_models if not ('nested' in m)]
     else:
         selected=detect_latest(available_models)
     
-    if Path(config.PREDPATH+'/metrics.csv').is_file():
+    if Path(config.PREDPATH+'/ssssssmetrics.csv').is_file():
         available_metrics=pd.read_csv(config.PREDPATH+'/metrics.csv')
     else:
         available_metrics=pd.DataFrame.from_dict({'Model':[]})
@@ -227,21 +214,19 @@ if __name__=='__main__':
         if not nested:
             metrics=compare(selected,X,y,year)
 
-        
-    
         if nested:
             metrics=compare_nested(available_models,X,y,year)
             variable_groups=[r'SEX+ AGE','+ EDC_','+ RXMG_','+ ACG']
-            score,recall,ppv=[list(array.values()) for array in list(metrics.values())]
+            score,recall,ppv, brier=[list(array.values()) for array in list(metrics.values())]
             print(pd.DataFrame(list(zip(selected,variable_groups,score,recall,ppv)),columns=['Model','Predictors']+list(metrics.keys())).to_markdown(index=False))
         else:
-            score,recall,ppv=[list(array.values()) for array in list(metrics.values())]
-            df=pd.DataFrame(list(zip(selected,score,recall,ppv)),columns=['Model']+list(metrics.keys()))
+            score,recall,ppv, brier=[list(array.values()) for array in list(metrics.values())]
+            df=pd.DataFrame(list(zip(selected,score,recall,ppv, brier)),columns=['Model']+list(metrics.keys()))
             print(df.to_markdown(index=False,))
         
         df=pd.concat([df, available_metrics], ignore_index=True, axis=0)
         df.to_csv(config.PREDPATH+'/metrics.csv', index=False)
     
-        parent_metrics=pd.read_csv(re.sub('hyperparameter_variability_|fixsample_','',config.PREDPATH+'/metrics.csv')).to_dict('list')
-        boxplots(df, year, K=20000, parent_metrics=parent_metrics)
+        # parent_metrics=pd.read_csv(re.sub('hyperparameter_variability_|fixsample_','',config.PREDPATH+'/metrics.csv')).to_dict('list')
+        boxplots(df, year, K=20000, X=X, y=y)
         print(df.groupby('Algorithm').describe().transpose())

@@ -91,11 +91,11 @@ def predict_save(yr,model,model_name,X,y,**kwargs):
                 del element
 
     print('saved',filename) 
-
+import re
 def predict(model_name,experiment_name,year,**kwargs):
     predictors=kwargs.get('predictors',config.PREDICTORREGEX)
     filename=kwargs.get('filename',model_name)
-    modelfilename=os.path.join(config.MODELPATH,model_name)
+    modelfilename=os.path.join(re.sub(config.EXPERIMENT,experiment_name,config.MODELPATH),model_name)
     if 'neural' in model_name:
         load=keras.models.load_model
         if model_name=='neural_AGESEX':
