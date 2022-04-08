@@ -20,7 +20,7 @@ Created on Tue Dec 14 16:13:19 2021
 """
 
 import matplotlib.pyplot as plt
-from sklearn.metrics import roc_auc_score, brier_score_loss
+from sklearn.metrics import roc_auc_score,average_precision_score, brier_score_loss,RocCurveDisplay,roc_curve, auc,precision_recall_curve, PrecisionRecallDisplay
 import sys
 sys.path.append('/home/aolza/Desktop/estratificacion/')
 import os
@@ -179,7 +179,56 @@ def boxplots(df, year, K, parent_metrics=None, parentNeural=False, **kwargs):
         plt.savefig(os.path.join(path,f'hyperparameter_variability_{column}.png'))
         plt.show()
 
+def roc_pr_curves(modelDict, yr, parent_model, **kwargs):
+    # load logistic predictions
+    parent=calibrate(parent_model, yr)
+    models, roc, pr={},{},{}
+    # load models predictions
+    for label,  model in modelDict.items(): 
+        print( label,  model)
+        models[label]=calibrate(model, yr)
+        obs=np.where(models[label].OBS>=1,1,0)
+        fpr, tpr, _ = roc_curve(obs, models[label].PREDCAL)
+        prec, rec, _ = precision_recall_curve(obs, models[label].PREDCAL)
+        roc_auc = auc(fpr, tpr)
+        avg_prec = average_precision_score(obs, models[label].PREDCAL)
+        pr[label]=PrecisionRecallDisplay(prec, rec, 
+                                     estimator_name=label,
+                                     average_precision=avg_prec)
+        roc[label]= RocCurveDisplay(fpr=fpr, tpr=tpr, roc_auc=roc_auc,
+                      estimator_name=label)
+    return(roc, pr)
 
+
+def model_percentiles(df,metric,plot,*args, **kwargs):
+    def q1(x):
+        return x.quantile(0.05,interpolation='nearest')
+
+    def q2(x):
+        return x.quantile(0.5,interpolation='nearest')
+    
+    def q3(x):
+        return x.quantile(0.95,interpolation='nearest')
+
+    brierdist=df.groupby(['Algorithm'])[metric].agg([ q1, q2, q3]).stack(level=0)
+    print(f'{metric} distribution per algorithm: ')
+    print(brierdist)
+    roc, pr={},{}
+    low, median, high = {},{},{}
+    models_to_plot={}
+    selected_models=[]
+    for alg in df.Algorithm.unique():
+        df_alg=df.loc[df.Algorithm==alg].to_dict(orient='list')
+        perc25=brierdist.loc[alg]['q1']
+        perc50=brierdist.loc[alg]['q2']
+        perc75=brierdist.loc[alg]['q3']
+        low[alg]=list(df_alg['Model'])[list(df_alg[metric]).index(perc25)]
+        median[alg]=list(df_alg['Model'])[list(df_alg[metric]).index(perc50)]
+        high[alg]=list(df_alg['Model'])[list(df_alg[metric]).index(perc75)]
+        # selected_models=[low[alg],median[alg],high[alg]]
+        models_to_plot[alg]={'Perc. 05':low[alg],'Perc. 50':median[alg],'Perc. 95':high[alg]}
+        roc[alg], pr[alg] = plot(models_to_plot[alg],*args, **kwargs)
+    return(roc, pr)
 #%%
 if __name__=='__main__':
     year=int(input('YEAR TO PREDICT: ')) if not hasattr(args, 'year') else args.year
@@ -195,7 +244,7 @@ if __name__=='__main__':
     else:
         selected=detect_latest(available_models)
     
-    if Path(config.PREDPATH+'/ssssssmetrics.csv').is_file():
+    if Path(config.PREDPATH+'/metrics.csv').is_file():
         available_metrics=pd.read_csv(config.PREDPATH+'/metrics.csv')
     else:
         available_metrics=pd.DataFrame.from_dict({'Model':[]})
@@ -204,8 +253,8 @@ if __name__=='__main__':
         print(available_metrics)
         available_metrics['Algorithm']=[re.sub('_|[0-9]', '', model) for model in available_metrics['Model'].values]
         print(available_metrics.groupby('Algorithm').describe().transpose())
-        parent_metrics=pd.read_csv(re.sub('hyperparameter_variability_|fixsample_','',config.PREDPATH+'/metrics.csv')).to_dict('list')
-        boxplots(available_metrics, year, K=20000, parent_metrics=parent_metrics)
+        # parent_metrics=pd.read_csv(re.sub('hyperparameter_variability_|fixsample_','',config.PREDPATH+'/metrics.csv')).to_dict('list')
+        boxplots(available_metrics, year, K=20000)
     else:
         selected=[s for s in selected if not (s in available_metrics.Model.values)]
         
@@ -230,3 +279,20 @@ if __name__=='__main__':
         # parent_metrics=pd.read_csv(re.sub('hyperparameter_variability_|fixsample_','',config.PREDPATH+'/metrics.csv')).to_dict('list')
         boxplots(df, year, K=20000, X=X, y=y)
         print(df.groupby('Algorithm').describe().transpose())
+        
+    algorithms=['randomForest', 'hgb', 'neuralNetworkRandomCLR']
+    parent_models=[i for i in detect_models(re.sub('hyperparameter_variability_|fixsample_','',config.MODELPATH))  if 'logistic' in i]
+    logistic_model=[i for i in detect_latest(parent_models) if 'logistic2022' in i][0]
+        
+    roc, pr= model_percentiles(df, 'Score', roc_pr_curves, 2018, logistic_model)
+    
+    fig1, (ax11,ax12, ax13) = plt.subplots(1,3,figsize=(16,8))
+    fig2, (ax21,ax22, ax23) = plt.subplots(1,3,figsize=(16,8))
+    rocaxes=(ax11,ax12, ax13)
+    praxes=(ax21,ax22, ax23)
+    for alg, axroc, axpr in zip(algorithms, rocaxes, praxes):
+        for perc in ['Perc. 05', 'Perc. 50', 'Perc. 95']:
+            roc[alg][perc].plot(axroc)
+            pr[alg][perc].plot(axpr)
+        axroc.set_title(alg)
+        axpr.set_title(alg)
