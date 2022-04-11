@@ -74,7 +74,9 @@ def calibrate(model_name,yr,**kwargs):
         pred, _= predict(model_name,experiment_name,yr,
                          filename=filename,
                          X=presentX, y=presentY, predictors=predictors)
-        
+        print('----'*10)
+        print(len(pred))
+        print('----'*10)
         pastPred.sort_values(by='PATIENT_ID',inplace=True)
         pastPred.reset_index(drop=True,inplace=True)
         
@@ -102,6 +104,7 @@ def calibrate(model_name,yr,**kwargs):
         p_calibrated[(p_calibrated>1)]=1
         p_calibrated[(p_calibrated<0)]=0
         pred['PREDCAL']=p_calibrated
+        assert len(pred.PREDCAL)==len(p_uncal)
         pred.to_csv(calibFilename,index=False)
         util.vprint('Saved ',calibFilename)
         uncalFilenames=[generate_filename(filename,yr, calibrated=False),

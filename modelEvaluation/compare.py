@@ -71,6 +71,7 @@ def compare(selected,X,y,year,experiment_name=Path(config.MODELPATH).parts[-1],*
     predictors=kwargs.get('predictors',{m:config.PREDICTORREGEX for m in selected})
     metrics={'Score':{},f'Recall_{K}':{},f'PPV_{K}':{}, 'Brier':{}}
     for m in selected:
+        print(m)
         try:
             probs=calibrate(m,year,experiment_name=experiment_name,presentX=X,presentY=y,predictors=predictors[m])
             if (probs is None):#If model not found
@@ -244,7 +245,7 @@ if __name__=='__main__':
     else:
         selected=detect_latest(available_models)
     
-    if Path(config.PREDPATH+'/metrics.csv').is_file():
+    if Path(config.PREDPATH+'/metricszzzz.csv').is_file():
         available_metrics=pd.read_csv(config.PREDPATH+'/metrics.csv')
     else:
         available_metrics=pd.DataFrame.from_dict({'Model':[]})
