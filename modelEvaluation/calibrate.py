@@ -1,6 +1,8 @@
 
 # IMPORTS FROM EXTERNAL LIBRARIES
 import os
+import re
+import traceback
 from pathlib import Path
 import numpy as np
 import matplotlib.pyplot as plt
@@ -14,10 +16,12 @@ from sklearn.metrics import brier_score_loss
 #IMPORTS FROM THIS PROJECT
 from python_settings import settings as config
 import configurations.utility as util
-from modelEvaluation.predict import predict, generate_filename
-from modelEvaluation.compare import detect_models, detect_latest
 if not config.configured:
-    util.configure('configurations.cluster.logistic')
+    config_used=os.path.join(os.environ['USEDCONFIG_PATH'],input('Experiment...'),input('Model...')+'.json')
+    configuration=util.configure(config_used)
+
+from modelEvaluation.predict import predict, generate_filename
+from modelEvaluation.detect import detect_models, detect_latest
 from dataManipulation.dataPreparation import getData
 from modelEvaluation.reliableDiagram import reliabilityConsistency
 np.random.seed(config.SEED)
@@ -44,57 +48,78 @@ def sample(data,uncal):
     return(idx,unique)
 
 def calibrate(model_name,yr,**kwargs):
-    filename=kwargs.get('filename',model_name)
-    calibFilename=generate_filename(filename,yr, calibrated=True)
-    if Path(calibFilename).is_file():
-        util.vprint('Calibrated predictions found; loading')
-        p_calibrated=pd.read_csv(calibFilename)
-        return(p_calibrated)
-    predictors=kwargs.get('predictors',config.PREDICTORREGEX)
-    pastX=kwargs.get('pastX',None)
-    pastY=kwargs.get('pastY',None)
-    presentX=kwargs.get('presentX',None)
-    presentY=kwargs.get('presentY',None)
-    if (not isinstance(pastX,pd.DataFrame)) or (not isinstance(pastY,pd.DataFrame)):
-        pastX,pastY=getData(yr-2)
-    if (not isinstance(presentX,pd.DataFrame)) or (not isinstance(presentY,pd.DataFrame)):
-        presentX,presentY=getData(yr-1)
-
-    #This reads the prediction files, or creates them if not present
-    pastPred, _= predict(model_name,config.EXPERIMENT,yr-1,
+    try:
+        filename=kwargs.get('filename',model_name)
+        experiment_name=kwargs.get('experiment_name',config.EXPERIMENT)
+        calibFilename=generate_filename(filename,yr, calibrated=True)
+        uncalFilename=generate_filename(filename,yr, calibrated=False)
+        if Path(calibFilename).is_file():
+            util.vprint('Calibrated predictions found; loading')
+            p_calibrated=pd.read_csv(calibFilename)
+            return(p_calibrated)
+        predictors=kwargs.get('predictors',config.PREDICTORREGEX)
+        pastX=kwargs.get('pastX',None)
+        pastY=kwargs.get('pastY',None)
+        presentX=kwargs.get('presentX',None)
+        presentY=kwargs.get('presentY',None)
+        if (not isinstance(pastX,pd.DataFrame)) or (not isinstance(pastY,pd.DataFrame)):
+            pastX,pastY=getData(yr-2)
+        if (not isinstance(presentX,pd.DataFrame)) or (not isinstance(presentY,pd.DataFrame)):
+            presentX,presentY=getData(yr-1)
+    
+        #This reads the prediction files, or creates them if not present
+        pastPred, _= predict(model_name,experiment_name,yr-1,
+                             filename=filename,
+                             X=pastX, y=pastY, predictors=predictors)
+        pred, _= predict(model_name,experiment_name,yr,
                          filename=filename,
-                         X=pastX, y=pastY, predictors=predictors)
-    pred, _= predict(model_name,config.EXPERIMENT,yr,
-                     filename=filename,
-                     X=presentX, y=presentY, predictors=predictors)
+                         X=presentX, y=presentY, predictors=predictors)
+        print('----'*10)
+        print(len(pred))
+        print('----'*10)
+        pastPred.sort_values(by='PATIENT_ID',inplace=True)
+        pastPred.reset_index(drop=True,inplace=True)
+        
+        p_train, _ , y_train, _ = train_test_split(pastPred.PRED.values, np.where(pastPred.OBS>=1,1,0).ravel(),
+                                                            test_size=0.33, random_state=config.SEED)
+        
+        ir = IsotonicRegression(y_min=0, y_max=1, out_of_bounds = 'clip' )	
+        ir.fit( p_train, y_train )
+        
+        pred.sort_values(by='PATIENT_ID',inplace=True)
+        pred.reset_index(drop=True,inplace=True)
+        p_uncal=pred.PRED
+        p_calibrated_iso = ir.transform( p_uncal )
+        util.vprint('Number of unique probabilities after isotonic regression: ',len(set(p_calibrated_iso )))
+        
+        idx,p_sample=sample(p_calibrated_iso,p_uncal)
+        p_uncal_sample=p_uncal[idx]
     
-    pastPred.sort_values(by='PATIENT_ID',inplace=True)
-    pastPred.reset_index(drop=True,inplace=True)
-    
-    p_train, _ , y_train, _ = train_test_split(pastPred.PRED.values, np.where(pastPred.OBS>=1,1,0).ravel(),
-                                                        test_size=0.33, random_state=config.SEED)
-    
-    ir = IsotonicRegression( out_of_bounds = 'clip' )	
-    ir.fit( p_train, y_train )
-    
-    pred.sort_values(by='PATIENT_ID',inplace=True)
-    pred.reset_index(drop=True,inplace=True)
-    p_uncal=pred.PRED
-    p_calibrated_iso = ir.transform( p_uncal )
-    util.vprint('Number of unique probabilities after isotonic regression: ',len(set(p_calibrated_iso )))
-    
-    idx,p_sample=sample(p_calibrated_iso,p_uncal)
-    p_uncal_sample=p_uncal[idx]
-
-    pchip=PchipInterpolator(p_uncal_sample.values, p_sample, axis=0, extrapolate=True) 
-    p_calibrated=pchip(p_uncal)
-    pred['PREDCAL']=p_calibrated
-    util.vprint('Number of unique probabilities after PCHIP: ',len(set(p_calibrated)))
-    pred.to_csv(calibFilename,index=False)
-    util.vprint('Saved ',calibFilename)
-    return(pred)
-
-def plot(p, **kwargs):
+        pchip=PchipInterpolator(p_uncal_sample.values, p_sample, axis=0, extrapolate=False) 
+        p_calibrated=pchip(p_uncal)
+        
+        util.vprint('Number of invalid probabilities (set to 1): ',sum(p_calibrated>1))
+        util.vprint('Number of invalid probabilities (set to 0): ',sum(p_calibrated<0))
+        util.vprint('Number of unique probabilities after PCHIP: ',len(set(p_calibrated)))
+        p_calibrated[(p_calibrated>1)]=1
+        p_calibrated[(p_calibrated<0)]=0
+        pred['PREDCAL']=p_calibrated
+        assert len(pred.PREDCAL)==len(p_uncal)
+        pred.to_csv(calibFilename,index=False)
+        util.vprint('Saved ',calibFilename)
+        uncalFilenames=[generate_filename(filename,yr, calibrated=False),
+                       generate_filename(filename,yr-1, calibrated=False)]
+        for f in uncalFilenames:
+            if Path(f).is_file():
+                Path(f).unlink()
+                print(f'Deleted {f}')
+        return(pred)
+    except Exception as exc:
+        print('SOMETHING WENT WRONG (calibrate)')
+        print(traceback.format_exc())
+        print(exc)
+        return None
+def plot(p, consistency_bars=True, **kwargs):
     path=kwargs.get('path',config.FIGUREPATH)
     filename=kwargs.get('filename','')
     util.makeAllPaths()
@@ -145,8 +170,8 @@ def plot(p, **kwargs):
             df['N']=bintot[bintot!=0]
             print('\n')
 
-
-            reliabilityConsistency(probs, obs, nbins=20, nboot=100, ax=axTop, seed=config.SEED,color=col)
+            if consistency_bars:
+                reliabilityConsistency(probs, obs, nbins=20, nboot=100, ax=axTop, seed=config.SEED,color=col)
             
             axHist.hist(probs, range=(0, 1), bins=unique,
                     histtype="step", lw=2,color=col)
@@ -179,11 +204,54 @@ if __name__=='__main__':
 
     pastX,pastY=getData(year-2)
     presentX,presentY=getData(year-1)
-    models=detect_latest(detect_models())
+    models=detect_models()
     p={}
+    brier_before,brier_after={},{}
     for model_name in models:
         print(model_name)
-        p[model_name]=calibrate(model_name,year,
-                pastX=pastX,pastY=pastY,presentX=presentX,presentY=presentY)
-        print(p[model_name].describe())
-    plot(p)
+        try:
+            # p[model_name]=calibrate(model_name,year,
+            #         pastX=pastX,pastY=pastY,presentX=presentX,presentY=presentY)
+            brier_before[model_name]=brier_score_loss(np.where(p[model_name].OBS>=1,1,0), p[model_name].PRED)
+            brier_after[model_name]=brier_score_loss(np.where(p[model_name].OBS>=1,1,0), p[model_name].PREDCAL)
+        except:
+            print('SOMETHING WENT WRONG')
+            p[model_name]=calibrate(model_name,year,
+                    pastX=pastX,pastY=pastY,presentX=presentX,presentY=presentY)
+            brier_before[model_name]=brier_score_loss(np.where(p[model_name].OBS>=1,1,0), p[model_name].PRED)
+            brier_after[model_name]=brier_score_loss(np.where(p[model_name].OBS>=1,1,0), p[model_name].PREDCAL)
+    
+    # For each algorithm, select the models with the 25th percentile, median and 75th percentile of Brier score
+    algorithms=list(set(['_'.join(re.findall('[^\d+_\d+]+',model)) for model in  p.keys()]))
+    
+    brier_after_alg=pd.DataFrame({'Model':brier_after.keys(),
+                     'Brier':brier_after.values(),
+                     'Algorithm':['_'.join(re.findall('[^\d+_\d+]+',model)) for model in  p.keys()]}
+                                 )
+    
+    def q1(x):
+        return x.quantile(0.25,interpolation='nearest')
+
+    def q2(x):
+        return x.quantile(0.5,interpolation='nearest')
+    
+    def q3(x):
+        return x.quantile(0.75,interpolation='nearest')
+
+    brierdist=brier_after_alg.groupby(['Algorithm']).Brier.agg([ q1, q2, q3]).stack(level=0)
+    print('Brier score distribution per algorithm: ')
+    print(brierdist)
+
+    low, median, high = {},{},{}
+    selected_models=[]
+    for alg in algorithms:
+        perc25=brierdist.loc[alg]['q1']
+        perc50=brierdist.loc[alg]['q2']
+        perc75=brierdist.loc[alg]['q3']
+        low[alg]=list(brier_after.keys())[list(brier_after.values()).index(perc25)]
+        median[alg]=list(brier_after.keys())[list(brier_after.values()).index(perc50)]
+        high[alg]=list(brier_after.keys())[list(brier_after.values()).index(perc75)]
+        selected_models=[low[alg],median[alg],high[alg]]
+        models_to_plot={k: v for k, v in p.items() if k in selected_models}
+    
+        plot(models_to_plot,consistency_bars=False, filename=alg)

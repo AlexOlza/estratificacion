@@ -82,7 +82,7 @@ def predict_save(yr,model,model_name,X,y,**kwargs):
             if 'COSTE_TOTAL_ANO2' in config.COLUMNS:
                 predictions=model.predict(chunk.drop('PATIENT_ID',axis=1)) # predicted cost
             else:
-                if 'neural' in config.ALGORITHM:
+                if 'neural' in model_name:
                     predictions=pred(chunk.drop('PATIENT_ID',axis=1))[:,0] #Probab of hospitalization
                 else:
                     predictions=pred(chunk.drop('PATIENT_ID',axis=1))[:,1] #Probab of hospitalization
@@ -91,11 +91,11 @@ def predict_save(yr,model,model_name,X,y,**kwargs):
                 del element
 
     print('saved',filename) 
-
+import re
 def predict(model_name,experiment_name,year,**kwargs):
     predictors=kwargs.get('predictors',config.PREDICTORREGEX)
     filename=kwargs.get('filename',model_name)
-    modelfilename=os.path.join(config.MODELPATH,model_name)
+    modelfilename=os.path.join(re.sub(config.EXPERIMENT,experiment_name,config.MODELPATH),model_name)
     if 'neural' in model_name:
         load=keras.models.load_model
         if model_name=='neural_AGESEX':
@@ -115,12 +115,19 @@ def predict(model_name,experiment_name,year,**kwargs):
     if (not isinstance(Xx,pd.DataFrame)) or (not isinstance(Yy,pd.DataFrame)):
         Xx,Yy=getData(year-1,predictors=predictors)
     predFilename=generate_filename(filename,year)
-    if not Path(predFilename).is_file():
+    calibFilename=generate_filename(filename,year, calibrated=True)
+    if (not Path(predFilename).is_file()) and (not Path(calibFilename).is_file()) :
         predict_save(year, model,model_name, Xx, Yy, 
                      filename=filename,
                      predictors=predictors, verbose=False)
-    probs=pd.read_csv(predFilename)
-    print(probs.head())
+        
+    if Path(calibFilename).is_file():
+        print('Calibrated predictions found; loading')
+        probs=pd.read_csv(calibFilename) 
+        probs=probs[['PATIENT_ID', 'PRED', 'OBS']]
+    else:
+        probs=pd.read_csv(predFilename) 
+        
     if 'COSTE_TOTAL_ANO2' in config.COLUMNS:
         score=r2_score(probs.OBS, probs.PRED)
     else:

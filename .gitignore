@@ -5,6 +5,7 @@ estratificacion-reports/
 configurations/used/
 predictions/
 *__pycache__*
+*.pyc
 *.ini
 *.zip
 *.csv
