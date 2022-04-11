@@ -73,7 +73,7 @@ def compare(selected,X,y,year,experiment_name=Path(config.MODELPATH).parts[-1],*
     for m in selected:
         print(m)
         try:
-            probs=calibrate(m,year,experiment_name=experiment_name,presentX=X,presentY=y,predictors=predictors[m])
+            probs=calibrate(m,year,experiment_name=experiment_name,presentX=X,presentY=y,predictors=predictors[m],**kwargs)
             if (probs is None):#If model not found
                 continue
             metrics['Score'][m]=roc_auc_score(np.where(probs.OBS>=1,1,0), probs.PREDCAL)
@@ -260,9 +260,10 @@ if __name__=='__main__':
         selected=[s for s in selected if not (s in available_metrics.Model.values)]
         
         X,y=getData(year-1)
-
+        pastX,pasty=getData(year-2)
+        
         if not nested:
-            metrics=compare(selected,X,y,year)
+            metrics=compare(selected,X,y,year, pastX=pastX,pastY=pasty)
 
         if nested:
             metrics=compare_nested(available_models,X,y,year)
