@@ -205,13 +205,14 @@ if __name__=='__main__':
     pastX,pastY=getData(year-2)
     presentX,presentY=getData(year-1)
     models=detect_models()
+    models= [m for m in models if (any( [('hgb' in m),('random' in m), ('neuralNetworkRandom' in m)])) and (not 'CLR' in m) ]
     p={}
     brier_before,brier_after={},{}
     for model_name in models:
         print(model_name)
         try:
-            # p[model_name]=calibrate(model_name,year,
-            #         pastX=pastX,pastY=pastY,presentX=presentX,presentY=presentY)
+            p[model_name]=calibrate(model_name,year,
+                    pastX=pastX,pastY=pastY,presentX=presentX,presentY=presentY)
             brier_before[model_name]=brier_score_loss(np.where(p[model_name].OBS>=1,1,0), p[model_name].PRED)
             brier_after[model_name]=brier_score_loss(np.where(p[model_name].OBS>=1,1,0), p[model_name].PREDCAL)
         except:
