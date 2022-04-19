@@ -165,7 +165,7 @@ def boxplots(df, year, K, parent_metrics=None, parentNeural=False, **kwargs):
    
     for column in ['Score', f'Recall_{K}', f'PPV_{K}','Brier',f'F1_{K}']:
         print(column)
-        fig, ax = plt.subplots(figsize=(8,12))
+        fig, ax = plt.subplots(figsize=(10,12))
         plt.suptitle('')
 
         df.boxplot(column=column, by='Algorithm', ax=ax)
@@ -245,7 +245,7 @@ if __name__=='__main__':
     else:
         selected=detect_latest(available_models)
     
-    if Path(config.PREDPATH+'/metricszzzz.csv').is_file():
+    if Path(config.PREDPATH+'/metrics.csv').is_file():
         available_metrics=pd.read_csv(config.PREDPATH+'/metrics.csv')
     else:
         available_metrics=pd.DataFrame.from_dict({'Model':[]})
@@ -256,6 +256,7 @@ if __name__=='__main__':
         print(available_metrics.groupby('Algorithm').describe().transpose())
         # parent_metrics=pd.read_csv(re.sub('hyperparameter_variability_|fixsample_','',config.PREDPATH+'/metrics.csv')).to_dict('list')
         boxplots(available_metrics, year, K=20000)
+        df=available_metrics
     else:
         selected=[s for s in selected if not (s in available_metrics.Model.values)]
         
@@ -277,12 +278,12 @@ if __name__=='__main__':
         
         df=pd.concat([df, available_metrics], ignore_index=True, axis=0)
         df.to_csv(config.PREDPATH+'/metrics.csv', index=False)
-    
+        algorithms=['randomForest', 'hgb', 'neuralNetworkRandom']
         # parent_metrics=pd.read_csv(re.sub('hyperparameter_variability_|fixsample_','',config.PREDPATH+'/metrics.csv')).to_dict('list')
-        boxplots(df, year, K=20000, X=X, y=y)
+        boxplots(df.loc[df.Algorithm.isin(algorithms)], year, K=20000, X=X, y=y)
         print(df.groupby('Algorithm').describe().transpose())
         
-    algorithms=['randomForest', 'hgb', 'neuralNetworkRandomCLR']
+    algorithms=['randomForest', 'hgb', 'neuralNetworkRandom']
     parent_models=[i for i in detect_models(re.sub('hyperparameter_variability_|fixsample_','',config.MODELPATH))  if 'logistic' in i]
     logistic_model=[i for i in detect_latest(parent_models) if 'logistic2022' in i][0]
         
