@@ -126,16 +126,37 @@ def getData(yr,columns=config.COLUMNS,previousHosp=config.PREVIOUSHOSP,
 def CCSData(yr,  X, y,
             **kwargs):
     from dataManipulation.dataPreparation import getData 
-    ccs=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,config.ICDTOCCSFILE), dtype=str)
+    icd10cm=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,config.ICDTOCCSFILES['ICD10CM']),
+                        dtype=str,)# usecols=['ICD-10-CM CODE', 'CCS CATEGORY'])
+    icd10cm.rename(columns={'ICD-10-CM CODE':'CODE', 'CCS CATEGORY':'CCS'},inplace=True)
+    
+    #IDENTIFY MISSING CCS CATEGORIES
+    print('CCS categories missing in the dictionary: ',set(range(260))-set(icd10cm.CCS.values.astype(int)))
+    
+    icd10cm.loc[(icd10cm.CCS)=='65']
+    # icd10cm.loc[(icd10cm.CCS).astype(int)>259][['CCS', 'CCS CATEGORY DESCRIPTION']].drop_duplicates()
+    
+    
+    
+    
+    icd9=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,config.ICDTOCCSFILES['ICD9']), dtype=str,
+                     )
+
+    
+    icd9.rename(columns={'ICD-9-CM CODE':'CODE', 'CCS LVL 1':'CCS'},inplace=True)
+    
     diags=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,config.ICDFILES[yr]),
                       usecols=['PATIENT_ID','CIE_VERSION','CIE_CODE','START_DATE','END_DATE'],
                       index_col=False)
     #KEEP ONLY DX THAT ARE STILL ACTIVE AT THE BEGINNING OF THE CURRENT YEAR
     diags=diags.loc[diags.END_DATE>=f'{yr}-01-01']
-    
-    for c in ccs:
-        print(f'{c} has {len(ccs[c].unique())} unique values')
-             
+
+    for c in icd10cm:
+        print(f'{c} has {len(icd10cm[c].unique())} unique values')
+           
+    for c in icd9:
+        print(f'{c} has {len(icd9[c].unique())} unique values')
+           
     return 0,0
 if __name__=='__main__':
     import sys
