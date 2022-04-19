@@ -5,7 +5,7 @@ Created on Wed Nov 17 11:20:27 2021
 
 @author: aolza
 """
-
+import os
 import pandas as pd
 import time
 import numpy as np
@@ -38,12 +38,18 @@ def getData(yr,columns=config.COLUMNS,previousHosp=config.PREVIOUSHOSP,
             exclude=config.EXCLUDE,
             resourceUsage=config.RESOURCEUSAGE,
             **kwargs):
-    has_fullEDCs_attr=hasattr(config,'FULLEDCS')
     try:
         fullEDCs = kwargs.get('fullEDCs', config.FULLEDCS)
     except AttributeError:
         fullEDCs = False
+        
+    try:
+        CCS = kwargs.get('CCS', config.CCS)
+    except AttributeError:
+        CCS = False
+        
     oldbase = kwargs.get('oldbase', False)
+    
     if oldbase or ('COSTE_TOTAL_ANO2' in columns):
         if 'ingresoUrg' not in predictors and not ('COSTE_TOTAL_ANO2' in columns):
             predictors=predictors+'|ingresoUrg'
@@ -112,9 +118,25 @@ def getData(yr,columns=config.COLUMNS,previousHosp=config.PREVIOUSHOSP,
     print('number of patients in data: ', sum(np.where(data[config.COLUMNS]>=1,1,0)))
     print('getData time: ',time.time()-t0)
     finalcols=listIntersection(data.columns,pred16.columns)
+    X,y=data[finalcols].reindex(sorted(data[finalcols].columns), axis=1),data[cols]
+    # if CCS:
+    #     X,y=CCSData(yr, X, y, **kwargs)
+    return(X[finalcols].reindex(sorted(data[finalcols].columns), axis=1),y[cols])
 
-    return(data[finalcols].reindex(sorted(data[finalcols].columns), axis=1),data[cols])
-
+def CCSData(yr,  X, y,
+            **kwargs):
+    from dataManipulation.dataPreparation import getData 
+    ccs=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,config.ICDTOCCSFILE), dtype=str)
+    diags=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,config.ICDFILES[yr]),
+                      usecols=['PATIENT_ID','CIE_VERSION','CIE_CODE','START_DATE','END_DATE'],
+                      index_col=False)
+    #KEEP ONLY DX THAT ARE STILL ACTIVE AT THE BEGINNING OF THE CURRENT YEAR
+    diags=diags.loc[diags.END_DATE>=f'{yr}-01-01']
+    
+    for c in ccs:
+        print(f'{c} has {len(ccs[c].unique())} unique values')
+             
+    return 0,0
 if __name__=='__main__':
     import sys
     sys.path.append('/home/aolza/Desktop/estratificacion/')
@@ -125,6 +147,9 @@ if __name__=='__main__':
     # xx,yy=getData(2017,oldbase=True)
     X,Y=getData(2016)
     print('positive class ',sum(np.where(Y.urgcms>=1,1,0)))
+    
+    xx,yy=CCSData(2016,  X, Y)
+    
     # import inspect
     # used=[createYearlyDataFrames, loadIng,assertMissingCols,
     #       prepare,resourceUsageDataFrames]

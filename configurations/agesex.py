@@ -20,4 +20,9 @@ PREVIOUSHOSP=[]
 EXCLUDE=[]
 EXCLUDEOSI=[]
 RESOURCEUSAGE=False
+
+""" CCS"""
 CCS=True
+ICDFILES={2016:'ccs/dx_in_2016.txt',
+          2017:'ccs/dx_in_2017.csv'}
+ICDTOCCSFILE='ccs/ccs_dx_icd10cm_2017.csv'
