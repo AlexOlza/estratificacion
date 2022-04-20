@@ -8,7 +8,7 @@ Created on Thu Nov 25 16:23:21 2021
 import sys
 sys.path.append('/home/aolza/Desktop/estratificacion/')#necessary in cluster
 
-chosen_config='configurations.local.'+sys.argv[1]
+chosen_config='configurations.cluster.'+sys.argv[1]
 experiment='configurations.'+sys.argv[2]
 import importlib
 importlib.invalidate_caches()
