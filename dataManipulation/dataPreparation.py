@@ -152,6 +152,40 @@ def CCSData(yr,  X, y,
     for c in icd9:
         print(f'{c} has {len(icd9[c].unique())} unique values')
            
+
+    cie_codes_in_diags=diags.CIE_CODE.unique()
+    
+    for code in cie_codes_in_diags:
+    
+    # Add columns of zeros for each CCS category
+    for ccs_number in sorted(list(set(list(icd9.CCS.unique()) + list(icd10cm.CCS.unique())))):
+    	X[f'CCS{ccs_number}']=np.int8(0 )
+    
+    # Para cada paciente, seleccionar todos sus diagnosticos (icd9_id union icd10_id)
+    # Para cada diagnóstico de cada paciente, buscar la categoria CCS en la tabla correspondiente 
+    # y sumar 1 a dicha categoría en X
+    missing_in_icd9, missing_in_icd10cm = [], []
+    # for name, id in X.groupby('PATIENT_ID'):
+    #     print(id)
+    for id in X.PATIENT_ID.unique():
+        
+        df=diags.loc[diags.PATIENT_ID==id]
+        icd9_id=df[df.CIE_VERSION.astype(str).str.startswith('9')]
+        icd10cm_id=df[df.CIE_VERSION.astype(str).str.startswith('10')]
+        for code in icd9_id.CIE_CODE.values:
+            if code in icd9.CODE.values:
+                ccs_number=icd9[icd9.CODE==code].CCS.values[0]
+                X.loc[X.PATIENT_ID==id, f'CCS{ccs_number}']+=1
+            else:
+                missing_in_icd9.append(code)
+        for code in icd10cm_id.CIE_CODE.values:
+            if code in icd10cm.CODE.values:
+                ccs_number=icd10cm[icd10cm.CODE==code].CCS.values[0]
+                X.loc[X.PATIENT_ID==id, f'CCS{ccs_number}']+=1
+            else:
+                missing_in_icd10cm.append(code)
+
+    
     return 0,0
 if __name__=='__main__':
     import sys
