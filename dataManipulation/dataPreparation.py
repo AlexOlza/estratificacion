@@ -123,7 +123,7 @@ def getData(yr,columns=config.COLUMNS,previousHosp=config.PREVIOUSHOSP,
     #     X,y=CCSData(yr, X, y, **kwargs)
     return(X[finalcols].reindex(sorted(data[finalcols].columns), axis=1),y[cols])
 
-def CCSData(yr,  X,
+def generateCCSData(yr,  X,
             **kwargs):
     icd10cm=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,config.ICDTOCCSFILES['ICD10CM']),
                         dtype=str,)# usecols=['ICD-10-CM CODE', 'CCS CATEGORY'])
@@ -185,6 +185,7 @@ def CCSData(yr,  X,
                 X.loc[X.PATIENT_ID==id, f'CCS{ccs_number}']+=np.int16(1)
             else:
                 missing_in_icd10cm.add(code)
+        break
     print('ICD9 CODES PRESENT IN DIAGNOSTIC DATASET BUT MISSING IN THE DICTIONARY:')
     print(missing_in_icd9)
     print('-------'*10)
@@ -193,13 +194,14 @@ def CCSData(yr,  X,
     print('-------'*10)
     
     X.reindex(sorted(X.columns), axis=1).to_csv(os.path.join(config.DATAPATH,f'CCS{yr}.csv'))
+    print('Saved ',os.path.join(config.DATAPATH,f'CCS{yr}.csv'))
     return 0,0
 if __name__=='__main__':
     import sys
     sys.path.append('/home/aolza/Desktop/estratificacion/')
     yr=2016
     X,Y=getData(yr)
-    _ , _ =CCSData(yr,  X)
+    _ , _ =generateCCSData(yr,  X)
     print('positive class ',sum(np.where(Y.urgcms>=1,1,0)))
     
     # xx,yy=CCSData(2016,  X, Y)
