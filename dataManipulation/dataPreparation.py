@@ -125,19 +125,14 @@ def getData(yr,columns=config.COLUMNS,previousHosp=config.PREVIOUSHOSP,
 
 def CCSData(yr,  X, y,
             **kwargs):
-    from dataManipulation.dataPreparation import getData 
     icd10cm=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,config.ICDTOCCSFILES['ICD10CM']),
                         dtype=str,)# usecols=['ICD-10-CM CODE', 'CCS CATEGORY'])
     icd10cm.rename(columns={'ICD-10-CM CODE':'CODE', 'CCS CATEGORY':'CCS'},inplace=True)
     
     #IDENTIFY MISSING CCS CATEGORIES
     print('CCS categories missing in the dictionary: ',set(range(260))-set(icd10cm.CCS.values.astype(int)))
-    
-    icd10cm.loc[(icd10cm.CCS)=='65']
+    #IDENTIFY EXTRA CATEGORIES (NOT PRESENT IN REFERENCE WEBSITE)
     # icd10cm.loc[(icd10cm.CCS).astype(int)>259][['CCS', 'CCS CATEGORY DESCRIPTION']].drop_duplicates()
-    
-    
-    
     
     icd9=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,config.ICDTOCCSFILES['ICD9']), dtype=str,
                      )
@@ -162,17 +157,7 @@ if __name__=='__main__':
     import sys
     sys.path.append('/home/aolza/Desktop/estratificacion/')
     
-    # ing=loadIng(config.ALLHOSPITFILE,configs.DATAPATH)
-    # ingT=createYearlyDataFrames(ing)
-    # x,y=getData(2017)
-    # xx,yy=getData(2017,oldbase=True)
     X,Y=getData(2016)
     print('positive class ',sum(np.where(Y.urgcms>=1,1,0)))
     
-    xx,yy=CCSData(2016,  X, Y)
-    
-    # import inspect
-    # used=[createYearlyDataFrames, loadIng,assertMissingCols,
-    #       prepare,resourceUsageDataFrames]
-    # for  f in used:
-    #     print(f.__name__,inspect.signature(f))
+    # xx,yy=CCSData(2016,  X, Y)
