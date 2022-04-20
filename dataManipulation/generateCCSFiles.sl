@@ -4,13 +4,11 @@
 #SBATCH--job-name="CCS"
 #SBATCH--partition="large"
 #SBATCH--mem-per-cpu=26G
-#SBATCH--out="outCCSgeneration"
-#SBATCH--error="errCCSgeneration"
 ######################################################################
 #                            USAGE                                   #
 ######################################################################
 
-# sbatch --job-name=CCS16 --export=ALL,year=2016 generateCCSFiles.sl 
+# sbatch --job-name=CCS16 --out=$(pwd)/outCCSgeneration2016 --error=$(pwd)/errCCSgeneration2016 --export=ALL,year=2016 generateCCSFiles.sl 
 
 echo "-------" 
 echo "Copying input files to temporary run dir" 
