@@ -146,9 +146,11 @@ def CCSData(yr,  X,
     #KEEP ONLY DX THAT ARE STILL ACTIVE AT THE BEGINNING OF THE CURRENT YEAR
     diags=diags.loc[diags.END_DATE>=f'{yr}-01-01']
 
+    print('ICD10CM')
     for c in icd10cm:
         print(f'{c} has {len(icd10cm[c].unique())} unique values')
-           
+    print(' ')
+    print('ICD9')
     for c in icd9:
         print(f'{c} has {len(icd9[c].unique())} unique values')
            
@@ -190,7 +192,7 @@ def CCSData(yr,  X,
     print(missing_in_icd10cm)
     print('-------'*10)
     
-    X.to_csv(os.path.join(config.DATAPATH,f'CCS{yr}.csv'))
+    X.reindex(sorted(X.columns), axis=1).to_csv(os.path.join(config.DATAPATH,f'CCS{yr}.csv'))
     return 0,0
 if __name__=='__main__':
     import sys
