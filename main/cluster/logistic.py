@@ -27,13 +27,13 @@ from sklearn.linear_model import LogisticRegression
 #%%
 np.random.seed(config.SEED)
 
-X,y=getData(2016,oldbase=False)#new data 
+X,y=getData(2016)
 #%%
 
 y=np.where(y[config.COLUMNS]>=1,1,0)
 y=y.ravel()
 print('Sample size ',len(X), 'positive: ',sum(y))
-# assert False
+
 #%%
 logistic=LogisticRegression(penalty='none',max_iter=1000,verbose=0)
 
