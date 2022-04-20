@@ -123,7 +123,7 @@ def getData(yr,columns=config.COLUMNS,previousHosp=config.PREVIOUSHOSP,
     #     X,y=CCSData(yr, X, y, **kwargs)
     return(X[finalcols].reindex(sorted(data[finalcols].columns), axis=1),y[cols])
 
-def CCSData(yr,  X, y,
+def CCSData(yr,  X,
             **kwargs):
     icd10cm=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,config.ICDTOCCSFILES['ICD10CM']),
                         dtype=str,)# usecols=['ICD-10-CM CODE', 'CCS CATEGORY'])
@@ -152,52 +152,52 @@ def CCSData(yr,  X, y,
     for c in icd9:
         print(f'{c} has {len(icd9[c].unique())} unique values')
            
-
-    cie_codes_in_diags=diags.CIE_CODE.unique()
-    
-    for code in cie_codes_in_diags:
-    
     # Add columns of zeros for each CCS category
     for ccs_number in sorted(list(set(list(icd9.CCS.unique()) + list(icd10cm.CCS.unique())))):
-    	X[f'CCS{ccs_number}']=np.int8(0 )
+        X[f'CCS{ccs_number}']=np.int16(0)
     
     # Para cada paciente, seleccionar todos sus diagnosticos (icd9_id union icd10_id)
     # Para cada diagnóstico de cada paciente, buscar la categoria CCS en la tabla correspondiente 
     # y sumar 1 a dicha categoría en X
     missing_in_icd9, missing_in_icd10cm = set(),set()
-    # for name, id in X.groupby('PATIENT_ID'):
-    #     print(id)
-    
+
     #Keep only IDs present in X, because we need patients to have age, sex and 
     #other potential predictors
     diags=diags.loc[diags.PATIENT_ID.isin(X.PATIENT_ID.values)]
     
     for _, df in diags.groupby('PATIENT_ID'): 
         id=df.PATIENT_ID.values[0]
-        print(id)
+        # print(id)
         # df=diags.loc[diags.PATIENT_ID==id]
         icd9_id=df[df.CIE_VERSION.astype(str).str.startswith('9')]
         icd10cm_id=df[df.CIE_VERSION.astype(str).str.startswith('10')]
         for code in icd9_id.CIE_CODE.values:
             if code in icd9.CODE.values:
                 ccs_number=icd9[icd9.CODE==code].CCS.values[0]
-                X.loc[X.PATIENT_ID==id, f'CCS{ccs_number}']+=1
+                X.loc[X.PATIENT_ID==id, f'CCS{ccs_number}']+=np.int16(1)
             else:
                 missing_in_icd9.add(code)
         for code in icd10cm_id.CIE_CODE.values:
             if code in icd10cm.CODE.values:
                 ccs_number=icd10cm[icd10cm.CODE==code].CCS.values[0]
-                X.loc[X.PATIENT_ID==id, f'CCS{ccs_number}']+=1
+                X.loc[X.PATIENT_ID==id, f'CCS{ccs_number}']+=np.int16(1)
             else:
                 missing_in_icd10cm.add(code)
-        # break
+    print('ICD9 CODES PRESENT IN DIAGNOSTIC DATASET BUT MISSING IN THE DICTIONARY:')
+    print(missing_in_icd9)
+    print('-------'*10)
+    print('ICD10 CODES PRESENT IN DIAGNOSTIC DATASET BUT MISSING IN THE DICTIONARY:')
+    print(missing_in_icd10cm)
+    print('-------'*10)
     
+    X.to_csv(os.path.join(config.DATAPATH,f'CCS{yr}.csv'))
     return 0,0
 if __name__=='__main__':
     import sys
     sys.path.append('/home/aolza/Desktop/estratificacion/')
-    
-    X,Y=getData(2016)
+    yr=2016
+    X,Y=getData(yr)
+    _ , _ =CCSData(yr,  X)
     print('positive class ',sum(np.where(Y.urgcms>=1,1,0)))
     
     # xx,yy=CCSData(2016,  X, Y)
