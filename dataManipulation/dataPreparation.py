@@ -5,7 +5,7 @@ Created on Wed Nov 17 11:20:27 2021
 
 @author: aolza
 """
-
+import os
 import pandas as pd
 import time
 import numpy as np
@@ -38,12 +38,18 @@ def getData(yr,columns=config.COLUMNS,previousHosp=config.PREVIOUSHOSP,
             exclude=config.EXCLUDE,
             resourceUsage=config.RESOURCEUSAGE,
             **kwargs):
-    has_fullEDCs_attr=hasattr(config,'FULLEDCS')
     try:
         fullEDCs = kwargs.get('fullEDCs', config.FULLEDCS)
     except AttributeError:
         fullEDCs = False
+        
+    try:
+        CCS = kwargs.get('CCS', config.CCS)
+    except AttributeError:
+        CCS = False
+        
     oldbase = kwargs.get('oldbase', False)
+    
     if oldbase or ('COSTE_TOTAL_ANO2' in columns):
         if 'ingresoUrg' not in predictors and not ('COSTE_TOTAL_ANO2' in columns):
             predictors=predictors+'|ingresoUrg'
@@ -112,21 +118,86 @@ def getData(yr,columns=config.COLUMNS,previousHosp=config.PREVIOUSHOSP,
     print('number of patients in data: ', sum(np.where(data[config.COLUMNS]>=1,1,0)))
     print('getData time: ',time.time()-t0)
     finalcols=listIntersection(data.columns,pred16.columns)
+    X,y=data[finalcols].reindex(sorted(data[finalcols].columns), axis=1),data[cols]
+    # if CCS:
+    #     X,y=CCSData(yr, X, y, **kwargs)
+    return(X[finalcols].reindex(sorted(data[finalcols].columns), axis=1),y[cols])
 
-    return(data[finalcols].reindex(sorted(data[finalcols].columns), axis=1),data[cols])
+def CCSData(yr,  X, y,
+            **kwargs):
+    icd10cm=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,config.ICDTOCCSFILES['ICD10CM']),
+                        dtype=str,)# usecols=['ICD-10-CM CODE', 'CCS CATEGORY'])
+    icd10cm.rename(columns={'ICD-10-CM CODE':'CODE', 'CCS CATEGORY':'CCS'},inplace=True)
+    
+    #IDENTIFY MISSING CCS CATEGORIES
+    print('CCS categories missing in the dictionary: ',set(range(260))-set(icd10cm.CCS.values.astype(int)))
+    #IDENTIFY EXTRA CATEGORIES (NOT PRESENT IN REFERENCE WEBSITE)
+    # icd10cm.loc[(icd10cm.CCS).astype(int)>259][['CCS', 'CCS CATEGORY DESCRIPTION']].drop_duplicates()
+    
+    icd9=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,config.ICDTOCCSFILES['ICD9']), dtype=str,
+                     )
 
+    
+    icd9.rename(columns={'ICD-9-CM CODE':'CODE', 'CCS LVL 1':'CCS'},inplace=True)
+    
+    diags=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,config.ICDFILES[yr]),
+                      usecols=['PATIENT_ID','CIE_VERSION','CIE_CODE','START_DATE','END_DATE'],
+                      index_col=False)
+    #KEEP ONLY DX THAT ARE STILL ACTIVE AT THE BEGINNING OF THE CURRENT YEAR
+    diags=diags.loc[diags.END_DATE>=f'{yr}-01-01']
+
+    for c in icd10cm:
+        print(f'{c} has {len(icd10cm[c].unique())} unique values')
+           
+    for c in icd9:
+        print(f'{c} has {len(icd9[c].unique())} unique values')
+           
+
+    cie_codes_in_diags=diags.CIE_CODE.unique()
+    
+    for code in cie_codes_in_diags:
+    
+    # Add columns of zeros for each CCS category
+    for ccs_number in sorted(list(set(list(icd9.CCS.unique()) + list(icd10cm.CCS.unique())))):
+    	X[f'CCS{ccs_number}']=np.int8(0 )
+    
+    # Para cada paciente, seleccionar todos sus diagnosticos (icd9_id union icd10_id)
+    # Para cada diagnóstico de cada paciente, buscar la categoria CCS en la tabla correspondiente 
+    # y sumar 1 a dicha categoría en X
+    missing_in_icd9, missing_in_icd10cm = set(),set()
+    # for name, id in X.groupby('PATIENT_ID'):
+    #     print(id)
+    
+    #Keep only IDs present in X, because we need patients to have age, sex and 
+    #other potential predictors
+    diags=diags.loc[diags.PATIENT_ID.isin(X.PATIENT_ID.values)]
+    
+    for _, df in diags.groupby('PATIENT_ID'): 
+        id=df.PATIENT_ID.values[0]
+        print(id)
+        # df=diags.loc[diags.PATIENT_ID==id]
+        icd9_id=df[df.CIE_VERSION.astype(str).str.startswith('9')]
+        icd10cm_id=df[df.CIE_VERSION.astype(str).str.startswith('10')]
+        for code in icd9_id.CIE_CODE.values:
+            if code in icd9.CODE.values:
+                ccs_number=icd9[icd9.CODE==code].CCS.values[0]
+                X.loc[X.PATIENT_ID==id, f'CCS{ccs_number}']+=1
+            else:
+                missing_in_icd9.add(code)
+        for code in icd10cm_id.CIE_CODE.values:
+            if code in icd10cm.CODE.values:
+                ccs_number=icd10cm[icd10cm.CODE==code].CCS.values[0]
+                X.loc[X.PATIENT_ID==id, f'CCS{ccs_number}']+=1
+            else:
+                missing_in_icd10cm.add(code)
+        # break
+    
+    return 0,0
 if __name__=='__main__':
     import sys
     sys.path.append('/home/aolza/Desktop/estratificacion/')
     
-    # ing=loadIng(config.ALLHOSPITFILE,configs.DATAPATH)
-    # ingT=createYearlyDataFrames(ing)
-    # x,y=getData(2017)
-    # xx,yy=getData(2017,oldbase=True)
     X,Y=getData(2016)
     print('positive class ',sum(np.where(Y.urgcms>=1,1,0)))
-    # import inspect
-    # used=[createYearlyDataFrames, loadIng,assertMissingCols,
-    #       prepare,resourceUsageDataFrames]
-    # for  f in used:
-    #     print(f.__name__,inspect.signature(f))
+    
+    # xx,yy=CCSData(2016,  X, Y)
