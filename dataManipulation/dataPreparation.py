@@ -185,7 +185,7 @@ def generateCCSData(yr,  X,
                 X.loc[X.PATIENT_ID==id, f'CCS{ccs_number}']+=np.int16(1)
             else:
                 missing_in_icd10cm.add(code)
-        break
+        
     print('ICD9 CODES PRESENT IN DIAGNOSTIC DATASET BUT MISSING IN THE DICTIONARY:')
     print(missing_in_icd9)
     print('-------'*10)
