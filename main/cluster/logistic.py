@@ -8,7 +8,7 @@ Created on Thu Nov 25 16:23:21 2021
 import sys
 sys.path.append('/home/aolza/Desktop/estratificacion/')#necessary in cluster
 
-chosen_config='configurations.local.'+sys.argv[1]
+chosen_config='configurations.cluster.'+sys.argv[1]
 experiment='configurations.'+sys.argv[2]
 import importlib
 importlib.invalidate_caches()
@@ -27,13 +27,13 @@ from sklearn.linear_model import LogisticRegression
 #%%
 np.random.seed(config.SEED)
 
-X,y=getData(2016,oldbase=False)#new data 
+X,y=getData(2016)
 #%%
 
 y=np.where(y[config.COLUMNS]>=1,1,0)
 y=y.ravel()
 print('Sample size ',len(X), 'positive: ',sum(y))
-# assert False
+
 #%%
 logistic=LogisticRegression(penalty='none',max_iter=1000,verbose=0)
 
