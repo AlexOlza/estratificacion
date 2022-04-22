@@ -166,7 +166,7 @@ def generateCCSData(yr,  X,
     #Keep only IDs present in X, because we need patients to have age, sex and 
     #other potential predictors
     diags=diags.loc[diags.PATIENT_ID.isin(X.PATIENT_ID.values)]
-    
+    i=0
     for _, df in diags.groupby('PATIENT_ID'): 
         id=df.PATIENT_ID.values[0]
         # print(id)
@@ -185,7 +185,8 @@ def generateCCSData(yr,  X,
                 X.loc[X.PATIENT_ID==id, f'CCS{ccs_number}']+=np.int16(1)
             else:
                 missing_in_icd10cm.add(code)
-        
+        i+=1
+    print(f'{i} patients processed')
     print('ICD9 CODES PRESENT IN DIAGNOSTIC DATASET BUT MISSING IN THE DICTIONARY:')
     print(missing_in_icd9)
     print('-------'*10)
