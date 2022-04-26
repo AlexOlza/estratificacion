@@ -126,14 +126,15 @@ def getData(yr,columns=config.COLUMNS,previousHosp=config.PREVIOUSHOSP,
 def generateCCSData(yr,  X,
             **kwargs):
     def missingDX(dic,diags):
-        diagsCodes=diags.CIE_CODE.str.replace(r'\s|\/|^0+', r'').values
-        dictCodes=dic.CODE.astype(str).str.replace(r'\s|\/|^0+', r'').values
+        diagsCodes=diags.CIE_CODE.str.replace(r'\s|\/', r'').values
+        dictCodes=dic.CODE.astype(str).str.replace(r'\s|\/', r'').values
         diagsCodes=set(diagsCodes)
         dictCodes=set(dictCodes)
         return(diagsCodes-dictCodes)
     icd10cm=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,config.ICDTOCCSFILES['ICD10CM']),
                         dtype=str,)# usecols=['ICD-10-CM CODE', 'CCS CATEGORY'])
     icd10cm.rename(columns={'ICD-10-CM CODE':'CODE', 'CCS CATEGORY':'CCS'},inplace=True)
+    icd10cm.CODE=icd10cm.CODE.str.slice(0,6)
     # icd10cm.CODE=icd10cm.CODE.str.replace(r'^[0-9]+$', r'ONCOLOGY')
     #IDENTIFY MISSING CCS CATEGORIES
     # print('CCS categories missing in the dictionary: ',set(range(260))-set(icd10cm.CCS.values.astype(int)))
@@ -146,19 +147,26 @@ def generateCCSData(yr,  X,
     #the CCS category is expressed between brackets inside the column 'CCS LVL 3 LABEL'.
     icd9.rename(columns={'ICD-9-CM CODE':'CODE', 'CCS LVL 3 LABEL':'CCS'},inplace=True)
     icd9.CCS=icd9.CCS.str.replace(r'[^0-9]', r'') #Keep only numbers (the CCS category)
+    icd9.CODE=icd9.CODE.str.slice(0,5)
     
     diags=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,config.ICDFILES[yr]),
                       usecols=['PATIENT_ID','CIE_VERSION','CIE_CODE','START_DATE','END_DATE'],
                       index_col=False)
     #KEEP ONLY DX THAT ARE STILL ACTIVE AT THE BEGINNING OF THE CURRENT YEAR
-    diags=diags.loc[diags.END_DATE>=f'{yr}-01-01']
+    diags=diags.loc[diags.END_DATE>=f'{yr}-01-01'][['PATIENT_ID', 'CIE_VERSION', 'CIE_CODE']]
     # diags.CIE_CODE.replace(r'^[0-9]+$', 'ONCOLOGY', regex=True, inplace=True)
     
 
     diags.CIE_CODE=diags.CIE_CODE.str.replace(r'\s|\/|^0+', r'')
-    diags.loc[(diags.CIE_VERSION.astype(str).str.startswith('10') & diags.CIE_CODE.str.match('^[0-9]')),'CIE_CODE']=diags.CIE_CODE.str.replace(r'^[0-9]', r'ONCOLOGY')
+
+    #In the diagnoses dataset, ICD10CM dx that start with a digit are related to oncology
+    diags.loc[(diags.CIE_VERSION.astype(str).str.startswith('10') & diags.CIE_CODE.str.match('^[0-9]')),'CIE_CODE']='ONCOLOGY'
     
-    diags.loc[diags.CIE_VERSION.astype(str).str.startswith('10'),'CIE_CODE']=diags.loc[diags.CIE_VERSION.astype(str).str.startswith('10')].CIE_CODE.str.replace(r'^[0-9]+$', r'ONCOLOGY')
+    #ICD10CM and ICD9 only allow for 6 and 5 characters respectively
+    diags.loc[diags.CIE_VERSION.astype(str).str.startswith('10'),'CIE_CODE']=diags.loc[diags.CIE_VERSION.astype(str).str.startswith('10'),'CIE_CODE'].str.slice(0,6)
+    diags.loc[diags.CIE_VERSION.astype(str).str.startswith('9'),'CIE_CODE']=diags.loc[diags.CIE_VERSION.astype(str).str.startswith('10'),'CIE_CODE'].str.slice(0,5)
+    
+   
     missing_in_icd9=missingDX(icd9,diags.loc[diags.CIE_VERSION.astype(str).str.startswith('9')])
     missing_in_icd10cm=missingDX(icd10cm,diags.loc[diags.CIE_VERSION.astype(str).str.startswith('10')])
     print('ICD9 CODES PRESENT IN DIAGNOSTIC DATASET BUT MISSING IN THE DICTIONARY:')
