@@ -126,13 +126,15 @@ def getData(yr,columns=config.COLUMNS,previousHosp=config.PREVIOUSHOSP,
 def generateCCSData(yr,  X,
             **kwargs):
     def missingDX(dic,diags):
-        diagsCodes=set(diags.CIE_CODE.values)
-        dictCodes=set(dic.CODE.astype(str).values)
+        diagsCodes=diags.CIE_CODE.str.replace(r'\s|\/|^0+', r'').values
+        dictCodes=dic.CODE.astype(str).str.replace(r'\s|\/|^0+', r'').values
+        diagsCodes=set(diagsCodes)
+        dictCodes=set(dictCodes)
         return(diagsCodes-dictCodes)
     icd10cm=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,config.ICDTOCCSFILES['ICD10CM']),
                         dtype=str,)# usecols=['ICD-10-CM CODE', 'CCS CATEGORY'])
     icd10cm.rename(columns={'ICD-10-CM CODE':'CODE', 'CCS CATEGORY':'CCS'},inplace=True)
-    
+    icd10cm.CODE=icd10cm.CODE.str.replace(r'^[0-9]+$', r'ONCOLOGY')
     #IDENTIFY MISSING CCS CATEGORIES
     print('CCS categories missing in the dictionary: ',set(range(260))-set(icd10cm.CCS.values.astype(int)))
     #IDENTIFY EXTRA CATEGORIES (NOT PRESENT IN REFERENCE WEBSITE)
@@ -150,6 +152,22 @@ def generateCCSData(yr,  X,
                       index_col=False)
     #KEEP ONLY DX THAT ARE STILL ACTIVE AT THE BEGINNING OF THE CURRENT YEAR
     diags=diags.loc[diags.END_DATE>=f'{yr}-01-01']
+    diags.CIE_CODE.replace(r'^[0-9]+$', 'ONCOLOGY', regex=True, inplace=True)
+    
+    
+    import re
+    
+    def clean_codes(code, index):
+        if re.search(r'^[0-9]+$', code):
+            return 'ONCOLOGY'
+        else:
+            # if clean up needed return the same name
+            return code
+              
+    
+    diags.loc[(diags.CIE_VERSION.astype(str).str.startswith('10') & diags.CIE_CODE.str.match('^[0-9]')),'CIE_CODE']=diags.CIE_CODE.str.replace(r'^[0-9]+$', r'ONCOLOGY')
+    
+    diags.loc[diags.CIE_VERSION.astype(str).str.startswith('10'),'CIE_CODE']=diags.loc[diags.CIE_VERSION.astype(str).str.startswith('10')].CIE_CODE.str.replace(r'^[0-9]+$', r'ONCOLOGY')
     missing_in_icd9=missingDX(icd9,diags.loc[diags.CIE_VERSION.astype(str).str.startswith('9')])
     missing_in_icd10cm=missingDX(icd10cm,diags.loc[diags.CIE_VERSION.astype(str).str.startswith('10')])
     print('ICD9 CODES PRESENT IN DIAGNOSTIC DATASET BUT MISSING IN THE DICTIONARY:')
