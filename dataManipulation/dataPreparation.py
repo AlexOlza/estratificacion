@@ -125,6 +125,10 @@ def getData(yr,columns=config.COLUMNS,previousHosp=config.PREVIOUSHOSP,
 
 def generateCCSData(yr,  X,
             **kwargs):
+    def missingDX(dic,diags):
+        diagsCodes=set(diags.CIE_CODE.values)
+        dictCodes=set(dic.CODE.astype(str).values)
+        return(diagsCodes-dictCodes)
     icd10cm=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,config.ICDTOCCSFILES['ICD10CM']),
                         dtype=str,)# usecols=['ICD-10-CM CODE', 'CCS CATEGORY'])
     icd10cm.rename(columns={'ICD-10-CM CODE':'CODE', 'CCS CATEGORY':'CCS'},inplace=True)
@@ -146,7 +150,17 @@ def generateCCSData(yr,  X,
                       index_col=False)
     #KEEP ONLY DX THAT ARE STILL ACTIVE AT THE BEGINNING OF THE CURRENT YEAR
     diags=diags.loc[diags.END_DATE>=f'{yr}-01-01']
-
+    missing_in_icd9=missingDX(icd9,diags.loc[diags.CIE_VERSION.astype(str).str.startswith('9')])
+    missing_in_icd10cm=missingDX(icd10cm,diags.loc[diags.CIE_VERSION.astype(str).str.startswith('10')])
+    print('ICD9 CODES PRESENT IN DIAGNOSTIC DATASET BUT MISSING IN THE DICTIONARY:')
+    print(missing_in_icd9)
+    print('Quantity: ', len(missing_in_icd9))
+    print('-------'*10)
+    print('ICD10 CODES PRESENT IN DIAGNOSTIC DATASET BUT MISSING IN THE DICTIONARY:')
+    print(missing_in_icd10cm)
+    print('Quantity: ', len(missing_in_icd10cm))
+    print('-------'*10)
+    
     print('ICD10CM')
     for c in icd10cm:
         print(f'{c} has {len(icd10cm[c].unique())} unique values')
@@ -162,7 +176,6 @@ def generateCCSData(yr,  X,
     # Para cada paciente, seleccionar todos sus diagnosticos (icd9_id union icd10_id)
     # Para cada diagnóstico de cada paciente, buscar la categoria CCS en la tabla correspondiente 
     # y sumar 1 a dicha categoría en X
-    missing_in_icd9, missing_in_icd10cm = set(),set()
 
     #Keep only IDs present in X, because we need patients to have age, sex and 
     #other potential predictors
@@ -178,22 +191,17 @@ def generateCCSData(yr,  X,
             if code in icd9.CODE.values:
                 ccs_number=icd9[icd9.CODE==code].CCS.values[0]
                 X.loc[X.PATIENT_ID==id, f'CCS{ccs_number}']+=np.int16(1)
-            else:
-                missing_in_icd9.add(code)
+            # else:
+            #     missing_in_icd9.add(code)
         for code in icd10cm_id.CIE_CODE.values:
             if code in icd10cm.CODE.values:
                 ccs_number=icd10cm[icd10cm.CODE==code].CCS.values[0]
                 X.loc[X.PATIENT_ID==id, f'CCS{ccs_number}']+=np.int16(1)
-            else:
-                missing_in_icd10cm.add(code)
+            # else:
+            #     missing_in_icd10cm.add(code)
         i+=1
     print(f'{i} patients processed')
-    print('ICD9 CODES PRESENT IN DIAGNOSTIC DATASET BUT MISSING IN THE DICTIONARY:')
-    print(missing_in_icd9)
-    print('-------'*10)
-    print('ICD10 CODES PRESENT IN DIAGNOSTIC DATASET BUT MISSING IN THE DICTIONARY:')
-    print(missing_in_icd10cm)
-    print('-------'*10)
+    
     
     X.reindex(sorted(X.columns), axis=1).to_csv(os.path.join(config.DATAPATH,f'CCS{yr}.csv'))
     print('Saved ',os.path.join(config.DATAPATH,f'CCS{yr}.csv'))
