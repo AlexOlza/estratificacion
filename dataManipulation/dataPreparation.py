@@ -135,10 +135,11 @@ def generateCCSData(yr,  X,
     # icd10cm.loc[(icd10cm.CCS).astype(int)>259][['CCS', 'CCS CATEGORY DESCRIPTION']].drop_duplicates()
     
     icd9=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,config.ICDTOCCSFILES['ICD9']), dtype=str,
-                     )
+                     usecols=['ICD-9-CM CODE','CCS LVL 3 LABEL'])
 
-    
-    icd9.rename(columns={'ICD-9-CM CODE':'CODE', 'CCS LVL 1':'CCS'},inplace=True)
+    #the CCS category is expressed between brackets inside the column 'CCS LVL 3 LABEL'.
+    icd9.rename(columns={'ICD-9-CM CODE':'CODE', 'CCS LVL 3 LABEL':'CCS'},inplace=True)
+    icd9.CCS=icd9.CCS.str.replace(r'[^0-9]', r'') #Keep only numbers (the CCS category)
     
     diags=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,config.ICDFILES[yr]),
                       usecols=['PATIENT_ID','CIE_VERSION','CIE_CODE','START_DATE','END_DATE'],
