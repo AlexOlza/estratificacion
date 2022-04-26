@@ -16,5 +16,5 @@ We are also starting to incorporate resource usage variables, extracted directly
 
 # Usage- Repo Structure
 
-Details coming soon.
+Explanation of the repository structure [here](https://github.com/AlexOlza/estratificacion/blob/2ff68b6833a2b7676cbc2c522a9f20c0584ba7d9/docs/structure.md).
 
