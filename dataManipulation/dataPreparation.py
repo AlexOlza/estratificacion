@@ -137,6 +137,8 @@ def generateCCSData(yr,  X,
             print(dx)
             if not isinstance(dx,str):
                 continue
+            if not dx=='ONCOLO':
+                continue
             i=0
             options=dictionary.loc[dictionary.CODE.str.startswith(dx.upper())].CCS.unique()
             code=dx
@@ -145,14 +147,25 @@ def generateCCSData(yr,  X,
                 code=dx[:-i]
                 options=dictionary.loc[dictionary.CODE.str.startswith(code)].CCS.unique()
                 # print(options)
-            print('Final options: ', options, code)  
+            # print('Final options: ', options, code)  
             if len(options)==1:
-                success[dx]=options[0]
+                success[(dx, code)]=options[0]
             else:
-                failure[dx]=list(options)
+                failure[(dx, code)]=list(options)
         print(failure)
         return(success, failure)
-                
+    
+    def needsManualRevision(failure, dictionary):      
+        import csv 
+        with open('needs_manual_revision.csv', 'w') as output:
+            writer = csv.writer(output)
+            for key, value in failure.items():
+                # writer.writerow([key])
+                writer.writerow([key[0]+' -> '+key[1],'CCS', 'Description'])
+                for v in value:
+                    writer.writerow([' ',v, dictionary.loc[dictionary.CCS==v]['MULTI CCS LVL 2 LABEL'].unique()[0]])
+                writer.writerow(['','',''])
+                        
     icd10cm=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,config.ICDTOCCSFILES['ICD10CM']),
                         dtype=str,)# usecols=['ICD-10-CM CODE', 'CCS CATEGORY'])
     icd10cm.rename(columns={'ICD-10-CM CODE':'CODE', 'CCS CATEGORY':'CCS'},inplace=True)
