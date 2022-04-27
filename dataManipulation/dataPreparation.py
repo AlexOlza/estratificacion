@@ -132,15 +132,26 @@ def generateCCSData(yr,  X,
         dictCodes=set(dictCodes)
         return(diagsCodes-dictCodes)
     def guessingCCS(missingDX, dictionary):
+        success, failure={},{}
         for dx in missingDX:
+            print(dx)
+            if not isinstance(dx,str):
+                continue
             i=0
-            options=dictionary.loc[dictionary.CODE.str.startswith(dx)].CCS.unique()
-            while (len(options)==0) and i<len(dx):
+            options=dictionary.loc[dictionary.CODE.str.startswith(dx.upper())].CCS.unique()
+            code=dx
+            while (len(options)==0) and (i<=len(dx)):
                 i+=1
                 code=dx[:-i]
                 options=dictionary.loc[dictionary.CODE.str.startswith(code)].CCS.unique()
-                print(options)
-            print('Final options: ', options)       
+                # print(options)
+            print('Final options: ', options, code)  
+            if len(options)==1:
+                success[dx]=options
+            else:
+                failure[dx]=options
+        print(failure)
+        return(success, failure)
                 
     icd10cm=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,config.ICDTOCCSFILES['ICD10CM']),
                         dtype=str,)# usecols=['ICD-10-CM CODE', 'CCS CATEGORY'])
