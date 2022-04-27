@@ -157,7 +157,7 @@ def generateCCSData(yr,  X,
     # diags.CIE_CODE.replace(r'^[0-9]+$', 'ONCOLOGY', regex=True, inplace=True)
     
 
-    diags.CIE_CODE=diags.CIE_CODE.str.replace(r'\s|\/|^0+', r'')
+    diags.CIE_CODE=diags.CIE_CODE.str.replace(r'\s|\/', r'')
 
     #In the diagnoses dataset, ICD10CM dx that start with a digit are related to oncology
     diags.loc[(diags.CIE_VERSION.astype(str).str.startswith('10') & diags.CIE_CODE.str.match('^[0-9]')),'CIE_CODE']='ONCOLOGY'
