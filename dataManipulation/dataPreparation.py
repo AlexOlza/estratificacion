@@ -137,21 +137,22 @@ def generateCCSData(yr,  X,
             print(dx)
             if not isinstance(dx,str):
                 continue
-            if not dx=='ONCOLO':
+            if dx=='ONCOLO':
                 continue
             i=0
-            options=dictionary.loc[dictionary.CODE.str.startswith(dx.upper())].CCS.unique()
+            options=list(dictionary.loc[dictionary.CODE.str.startswith(dx.upper())].CCS.unique())
             code=dx
             while (len(options)==0) and (i<=len(dx)):
                 i+=1
                 code=dx[:-i]
-                options=dictionary.loc[dictionary.CODE.str.startswith(code)].CCS.unique()
+                options=list(dictionary.loc[dictionary.CODE.str.startswith(code)].CCS.unique())
                 # print(options)
-            # print('Final options: ', options, code)  
+            # print('Final options: ', options, code) 
+            if '259' in options: options.remove('259') #CCS 259 is for residual unclassified codes
             if len(options)==1:
                 success[(dx, code)]=options[0]
             else:
-                failure[(dx, code)]=list(options)
+                failure[(dx, code)]=options
         print(failure)
         return(success, failure)
     
