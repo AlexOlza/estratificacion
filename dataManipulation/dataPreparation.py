@@ -147,9 +147,9 @@ def generateCCSData(yr,  X,
                 # print(options)
             print('Final options: ', options, code)  
             if len(options)==1:
-                success[dx]=options
+                success[dx]=options[0]
             else:
-                failure[dx]=options
+                failure[dx]=list(options)
         print(failure)
         return(success, failure)
                 
