@@ -146,8 +146,7 @@ def generateCCSData(yr,  X,
                 i+=1
                 code=dx[:-i]
                 options=list(dictionary.loc[dictionary.CODE.str.startswith(code)].CCS.unique())
-                # print(options)
-            # print('Final options: ', options, code) 
+ 
             if '259' in options: options.remove('259') #CCS 259 is for residual unclassified codes
             if len(options)==1:
                 success[(dx, code)]=options[0]
@@ -171,12 +170,7 @@ def generateCCSData(yr,  X,
                         dtype=str,)# usecols=['ICD-10-CM CODE', 'CCS CATEGORY'])
     icd10cm.rename(columns={'ICD-10-CM CODE':'CODE', 'CCS CATEGORY':'CCS'},inplace=True)
     icd10cm.CODE=icd10cm.CODE.str.slice(0,6)
-    # icd10cm.CODE=icd10cm.CODE.str.replace(r'^[0-9]+$', r'ONCOLOGY')
-    #IDENTIFY MISSING CCS CATEGORIES
-    # print('CCS categories missing in the dictionary: ',set(range(260))-set(icd10cm.CCS.values.astype(int)))
-    #IDENTIFY EXTRA CATEGORIES (NOT PRESENT IN REFERENCE WEBSITE)
-    # icd10cm.loc[(icd10cm.CCS).astype(int)>259][['CCS', 'CCS CATEGORY DESCRIPTION']].drop_duplicates()
-    
+
     icd9=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,config.ICDTOCCSFILES['ICD9']), dtype=str,
                      usecols=['ICD-9-CM CODE','CCS LVL 3 LABEL'])
 
@@ -190,8 +184,7 @@ def generateCCSData(yr,  X,
                       index_col=False)
     #KEEP ONLY DX THAT ARE STILL ACTIVE AT THE BEGINNING OF THE CURRENT YEAR
     diags=diags.loc[diags.END_DATE>=f'{yr}-01-01'][['PATIENT_ID', 'CIE_VERSION', 'CIE_CODE']]
-    # diags.CIE_CODE.replace(r'^[0-9]+$', 'ONCOLOGY', regex=True, inplace=True)
-    
+
 
     diags.CIE_CODE=diags.CIE_CODE.str.replace(r'\s|\/', r'')
 
