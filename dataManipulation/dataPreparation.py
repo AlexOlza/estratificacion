@@ -229,22 +229,16 @@ def generateCCSData(yr,  X,
     i=0
     for _, df in diags.groupby('PATIENT_ID'): 
         id=df.PATIENT_ID.values[0]
-        # print(id)
-        # df=diags.loc[diags.PATIENT_ID==id]
         icd9_id=df[df.CIE_VERSION.astype(str).str.startswith('9')]
         icd10cm_id=df[df.CIE_VERSION.astype(str).str.startswith('10')]
         for code in icd9_id.CIE_CODE.values:
             if code in icd9.CODE.values:
                 ccs_number=icd9[icd9.CODE==code].CCS.values[0]
                 X.loc[X.PATIENT_ID==id, f'CCS{ccs_number}']+=np.int16(1)
-            # else:
-            #     missing_in_icd9.add(code)
         for code in icd10cm_id.CIE_CODE.values:
             if code in icd10cm.CODE.values:
                 ccs_number=icd10cm[icd10cm.CODE==code].CCS.values[0]
                 X.loc[X.PATIENT_ID==id, f'CCS{ccs_number}']+=np.int16(1)
-            # else:
-            #     missing_in_icd10cm.add(code)
         i+=1
     print(f'{i} patients processed')
     
