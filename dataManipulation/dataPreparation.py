@@ -202,13 +202,17 @@ def generateCCSData(yr,  X,
     print(missing_in_icd9)
     print('Quantity: ', len(missing_in_icd9))
     success, failure=guessingCCS(missing_in_icd9, icd9)
-    needsManualRevision(failure, icd9, appendix='_icd9')
+    print(f'{len(failure.keys())} codes need manual revision')
+    if len(failure.keys())>0: 
+        needsManualRevision(failure, icd9, appendix=f'_icd9_{yr}')
     print('-------'*10)
     print('ICD10 CODES PRESENT IN DIAGNOSTIC DATASET BUT MISSING IN THE DICTIONARY:')
     print(missing_in_icd10cm)
     print('Quantity: ', len(missing_in_icd10cm))
     success, failure=guessingCCS(missing_in_icd10cm, icd10cm)
-    needsManualRevision(failure, icd10cm, appendix='_icd10')
+    print(f'{len(failure.keys())} codes need manual revision')
+    if len(failure.keys())>0:
+        needsManualRevision(failure, icd10cm, appendix=f'_icd10_{yr}')
     print('-------'*10)
     
     print('ICD10CM')
