@@ -125,27 +125,96 @@ def getData(yr,columns=config.COLUMNS,previousHosp=config.PREVIOUSHOSP,
 
 def generateCCSData(yr,  X,
             **kwargs):
+    def missingDX(dic,diags):
+        diagsCodes=diags.CIE_CODE.str.replace(r'\s|\/', r'').values
+        dictCodes=dic.CODE.astype(str).str.replace(r'\s|\/', r'').values
+        diagsCodes=set(diagsCodes)
+        dictCodes=set(dictCodes)
+        return(diagsCodes-dictCodes)
+    def guessingCCS(missingDX, dictionary):
+        success, failure={},{}
+        for dx in missingDX:
+            print(dx)
+            if not isinstance(dx,str):
+                continue
+            if dx=='ONCOLO':
+                continue
+            i=0
+            options=list(dictionary.loc[dictionary.CODE.str.startswith(dx.upper())].CCS.unique())
+            code=dx
+            while (len(options)==0) and (i<=len(dx)):
+                i+=1
+                code=dx[:-i]
+                options=list(dictionary.loc[dictionary.CODE.str.startswith(code)].CCS.unique())
+ 
+            if '259' in options: options.remove('259') #CCS 259 is for residual unclassified codes
+            if len(options)==1:
+                success[(dx, code)]=options[0]
+            else:
+                failure[(dx, code)]=options
+        print(failure)
+        return(success, failure)
+    
+    def needsManualRevision(failure, dictionary, appendix=''):      
+        import csv 
+        with open(f'needs_manual_revision{appendix}.csv', 'w') as output:
+            writer = csv.writer(output)
+            for key, value in failure.items():
+                # writer.writerow([key])
+                writer.writerow([key[0]+' -> '+key[1],'CCS', 'Description'])
+                for v in value:
+                    writer.writerow([' ',v, dictionary.loc[dictionary.CCS==v]['MULTI CCS LVL 2 LABEL'].unique()[0]])
+                writer.writerow(['','',''])
+                        
     icd10cm=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,config.ICDTOCCSFILES['ICD10CM']),
                         dtype=str,)# usecols=['ICD-10-CM CODE', 'CCS CATEGORY'])
     icd10cm.rename(columns={'ICD-10-CM CODE':'CODE', 'CCS CATEGORY':'CCS'},inplace=True)
-    
-    #IDENTIFY MISSING CCS CATEGORIES
-    print('CCS categories missing in the dictionary: ',set(range(260))-set(icd10cm.CCS.values.astype(int)))
-    #IDENTIFY EXTRA CATEGORIES (NOT PRESENT IN REFERENCE WEBSITE)
-    # icd10cm.loc[(icd10cm.CCS).astype(int)>259][['CCS', 'CCS CATEGORY DESCRIPTION']].drop_duplicates()
-    
-    icd9=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,config.ICDTOCCSFILES['ICD9']), dtype=str,
-                     )
+    icd10cm.CODE=icd10cm.CODE.str.slice(0,6)
 
-    
-    icd9.rename(columns={'ICD-9-CM CODE':'CODE', 'CCS LVL 1':'CCS'},inplace=True)
+    icd9=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,config.ICDTOCCSFILES['ICD9']), dtype=str,
+                     usecols=['ICD-9-CM CODE','CCS LVL 3 LABEL'])
+
+    #the CCS category is expressed between brackets inside the column 'CCS LVL 3 LABEL'.
+    icd9.rename(columns={'ICD-9-CM CODE':'CODE', 'CCS LVL 3 LABEL':'CCS'},inplace=True)
+    icd9.CCS=icd9.CCS.str.replace(r'[^0-9]', r'') #Keep only numbers (the CCS category)
+    icd9.CODE=icd9.CODE.str.slice(0,5)
     
     diags=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,config.ICDFILES[yr]),
                       usecols=['PATIENT_ID','CIE_VERSION','CIE_CODE','START_DATE','END_DATE'],
                       index_col=False)
     #KEEP ONLY DX THAT ARE STILL ACTIVE AT THE BEGINNING OF THE CURRENT YEAR
-    diags=diags.loc[diags.END_DATE>=f'{yr}-01-01']
+    diags=diags.loc[diags.END_DATE>=f'{yr}-01-01'][['PATIENT_ID', 'CIE_VERSION', 'CIE_CODE']]
 
+
+    diags.CIE_CODE=diags.CIE_CODE.str.replace(r'\s|\/', r'')
+
+    #In the diagnoses dataset, ICD10CM dx that start with a digit are related to oncology
+    diags.loc[(diags.CIE_VERSION.astype(str).str.startswith('10') & diags.CIE_CODE.str.match('^[0-9]')),'CIE_CODE']='ONCOLOGY'
+    
+    #ICD10CM and ICD9 only allow for 6 and 5 characters respectively
+    diags.loc[diags.CIE_VERSION.astype(str).str.startswith('10'),'CIE_CODE']=diags.loc[diags.CIE_VERSION.astype(str).str.startswith('10'),'CIE_CODE'].str.slice(0,6)
+    diags.loc[diags.CIE_VERSION.astype(str).str.startswith('9'),'CIE_CODE']=diags.loc[diags.CIE_VERSION.astype(str).str.startswith('10'),'CIE_CODE'].str.slice(0,5)
+    
+   
+    missing_in_icd9=missingDX(icd9,diags.loc[diags.CIE_VERSION.astype(str).str.startswith('9')])
+    missing_in_icd10cm=missingDX(icd10cm,diags.loc[diags.CIE_VERSION.astype(str).str.startswith('10')])
+    print('ICD9 CODES PRESENT IN DIAGNOSTIC DATASET BUT MISSING IN THE DICTIONARY:')
+    print(missing_in_icd9)
+    print('Quantity: ', len(missing_in_icd9))
+    success, failure=guessingCCS(missing_in_icd9, icd9)
+    print(f'{len(failure.keys())} codes need manual revision')
+    if len(failure.keys())>0: 
+        needsManualRevision(failure, icd9, appendix=f'_icd9_{yr}')
+    print('-------'*10)
+    print('ICD10 CODES PRESENT IN DIAGNOSTIC DATASET BUT MISSING IN THE DICTIONARY:')
+    print(missing_in_icd10cm)
+    print('Quantity: ', len(missing_in_icd10cm))
+    success, failure=guessingCCS(missing_in_icd10cm, icd10cm)
+    print(f'{len(failure.keys())} codes need manual revision')
+    if len(failure.keys())>0:
+        needsManualRevision(failure, icd10cm, appendix=f'_icd10_{yr}')
+    print('-------'*10)
+    
     print('ICD10CM')
     for c in icd10cm:
         print(f'{c} has {len(icd10cm[c].unique())} unique values')
@@ -161,7 +230,6 @@ def generateCCSData(yr,  X,
     # Para cada paciente, seleccionar todos sus diagnosticos (icd9_id union icd10_id)
     # Para cada diagnóstico de cada paciente, buscar la categoria CCS en la tabla correspondiente 
     # y sumar 1 a dicha categoría en X
-    missing_in_icd9, missing_in_icd10cm = set(),set()
 
     #Keep only IDs present in X, because we need patients to have age, sex and 
     #other potential predictors
@@ -169,30 +237,19 @@ def generateCCSData(yr,  X,
     i=0
     for _, df in diags.groupby('PATIENT_ID'): 
         id=df.PATIENT_ID.values[0]
-        # print(id)
-        # df=diags.loc[diags.PATIENT_ID==id]
         icd9_id=df[df.CIE_VERSION.astype(str).str.startswith('9')]
         icd10cm_id=df[df.CIE_VERSION.astype(str).str.startswith('10')]
         for code in icd9_id.CIE_CODE.values:
             if code in icd9.CODE.values:
                 ccs_number=icd9[icd9.CODE==code].CCS.values[0]
                 X.loc[X.PATIENT_ID==id, f'CCS{ccs_number}']+=np.int16(1)
-            else:
-                missing_in_icd9.add(code)
         for code in icd10cm_id.CIE_CODE.values:
             if code in icd10cm.CODE.values:
                 ccs_number=icd10cm[icd10cm.CODE==code].CCS.values[0]
                 X.loc[X.PATIENT_ID==id, f'CCS{ccs_number}']+=np.int16(1)
-            else:
-                missing_in_icd10cm.add(code)
         i+=1
     print(f'{i} patients processed')
-    print('ICD9 CODES PRESENT IN DIAGNOSTIC DATASET BUT MISSING IN THE DICTIONARY:')
-    print(missing_in_icd9)
-    print('-------'*10)
-    print('ICD10 CODES PRESENT IN DIAGNOSTIC DATASET BUT MISSING IN THE DICTIONARY:')
-    print(missing_in_icd10cm)
-    print('-------'*10)
+    
     
     X.reindex(sorted(X.columns), axis=1).to_csv(os.path.join(config.DATAPATH,f'CCS{yr}.csv'))
     print('Saved ',os.path.join(config.DATAPATH,f'CCS{yr}.csv'))
@@ -202,7 +259,7 @@ if __name__=='__main__':
     sys.path.append('/home/aolza/Desktop/estratificacion/')
     yr=2016
     X,Y=getData(yr)
-    _ , _ =generateCCSData(yr,  X)
+    # _ , _ =generateCCSData(yr,  X)
     print('positive class ',sum(np.where(Y.urgcms>=1,1,0)))
     
     # xx,yy=CCSData(2016,  X, Y)
