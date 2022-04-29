@@ -147,17 +147,17 @@ def generateCCSData(yr,  X,
                 code=dx[:-i]
                 options=list(dictionary.loc[dictionary.CODE.str.startswith(code)].CCS.unique())
  
-            if '259' in options: options.remove('259') #CCS 259 is for residual unclassified codes
-            if len(options)==1:
-                success[(dx, code)]=options[0]
-            else:
-                failure[(dx, code)]=options
+            if '259' in options: #options.remove('259') #CCS 259 is for residual unclassified codes
+                if len(options)==1:
+                    success[(dx, code)]=options[0]
+                else:
+                    failure[(dx, code)]=options
         print(failure)
         return(success, failure)
     
-    def needsManualRevision(failure, dictionary):      
+    def needsManualRevision(failure, dictionary, appendix=''):      
         import csv 
-        with open('needs_manual_revision.csv', 'w') as output:
+        with open(f'needs_manual_revision{appendix}.csv', 'w') as output:
             writer = csv.writer(output)
             for key, value in failure.items():
                 # writer.writerow([key])
@@ -201,10 +201,14 @@ def generateCCSData(yr,  X,
     print('ICD9 CODES PRESENT IN DIAGNOSTIC DATASET BUT MISSING IN THE DICTIONARY:')
     print(missing_in_icd9)
     print('Quantity: ', len(missing_in_icd9))
+    success, failure=guessingCCS(missing_in_icd9, icd9)
+    needsManualRevision(failure, dictionary, appendix='')
     print('-------'*10)
     print('ICD10 CODES PRESENT IN DIAGNOSTIC DATASET BUT MISSING IN THE DICTIONARY:')
     print(missing_in_icd10cm)
     print('Quantity: ', len(missing_in_icd10cm))
+    success, failure=guessingCCS(missing_in_icd10cm, icd10cm)
+    needsManualRevision(failure, dictionary, appendix='')
     print('-------'*10)
     
     print('ICD10CM')
@@ -251,7 +255,7 @@ if __name__=='__main__':
     sys.path.append('/home/aolza/Desktop/estratificacion/')
     yr=2016
     X,Y=getData(yr)
-    _ , _ =generateCCSData(yr,  X)
+    # _ , _ =generateCCSData(yr,  X)
     print('positive class ',sum(np.where(Y.urgcms>=1,1,0)))
     
     # xx,yy=CCSData(2016,  X, Y)
