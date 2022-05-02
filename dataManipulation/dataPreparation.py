@@ -125,6 +125,9 @@ def getData(yr,columns=config.COLUMNS,previousHosp=config.PREVIOUSHOSP,
 
 def generateCCSData(yr,  X,
             **kwargs):
+    filename=os.path.join(config.DATAPATH,config.CCSFILES[yr])
+    if Path(filename).is_file():
+        return pd.read_csv(filename)
     def missingDX(dic,diags):
         diagsCodes=diags.CIE_CODE.str.replace(r'\s|\/', r'').values
         dictCodes=dic.CODE.astype(str).str.replace(r'\s|\/', r'').values
@@ -154,7 +157,13 @@ def generateCCSData(yr,  X,
                 failure[(dx, code)]=options
         print(failure)
         return(success, failure)
-    
+    def assign_success(success, dic):
+        if len(success.keys())>0:
+            assign_success={'CODE':[k[0] for k in success.keys()], 'CCS':[v for v in success.values()]}
+            assign_success['CODE'].append('ONCOLO')
+            assign_success['CCS'].append('ONCOLO')
+            dic= pd.concat([dic, pd.DataFrame(assign_success)],ignore_index=True)
+        return dic
     def needsManualRevision(failure, dictionary, appendix='',
                             description=True, diags=None,
                             exclude={}):      
@@ -206,20 +215,20 @@ def generateCCSData(yr,  X,
     missing_in_icd9=missingDX(icd9,diags.loc[diags.CIE_VERSION.astype(str).str.startswith('9')])
     missing_in_icd10cm=missingDX(icd10cm,diags.loc[diags.CIE_VERSION.astype(str).str.startswith('10')])
     print('ICD9 CODES PRESENT IN DIAGNOSTIC DATASET BUT MISSING IN THE DICTIONARY:')
-    print(missing_in_icd9)
     print('Quantity: ', len(missing_in_icd9))
     success, failure=guessingCCS(missing_in_icd9, icd9)
+    icd9=assign_success(success,icd9)
     print(f'{len(failure.keys())} codes need manual revision')
     if len(failure.keys())>0: 
         needsManualRevision(failure, icd9, description=False, appendix=f'nodesc_icd9_{yr}', diags=diags)
     print('-------'*10)
     print('ICD10 CODES PRESENT IN DIAGNOSTIC DATASET BUT MISSING IN THE DICTIONARY:')
-    print(missing_in_icd10cm)
     print('Quantity: ', len(missing_in_icd10cm))
     success, failure=guessingCCS(missing_in_icd10cm, icd10cm)
+    icd10cm=assign_success(success,icd10cm)
     print(f'{len(failure.keys())} codes need manual revision')
     if len(failure.keys())>0:
-        needsManualRevision(failure, icd10cm, description=False, appendix=f'nodesc_icd10_{yr}', diags=diags)
+        needsManualRevision(failure, icd10cm, appendix=f'_icd10_{yr}', diags=diags)
     print('-------'*10)
     
     print('ICD10CM')
