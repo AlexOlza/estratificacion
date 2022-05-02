@@ -155,17 +155,21 @@ def generateCCSData(yr,  X,
         print(failure)
         return(success, failure)
     
-    def needsManualRevision(failure, dictionary, appendix=''):      
+    def needsManualRevision(failure, dictionary, appendix='',
+                            description=True, diags=None):      
         import csv 
         with open(f'needs_manual_revision{appendix}.csv', 'w') as output:
             writer = csv.writer(output)
             for key, value in failure.items():
-                # writer.writerow([key])
-                writer.writerow([key[0]+' -> '+key[1],'CCS', 'Description'])
-                for v in value:
-                    writer.writerow([' ',v, dictionary.loc[dictionary.CCS==v]['MULTI CCS LVL 2 LABEL'].unique()[0]])
-                writer.writerow(['','',''])
-                        
+                if description:
+                    writer.writerow([key[0]+' -> '+key[1],'CCS', 'Description'])
+                    for v in value:
+                        writer.writerow([' ',v, dictionary.loc[dictionary.CCS==v]['MULTI CCS LVL 2 LABEL'].unique()[0]])
+                    writer.writerow(['','',''])
+                else:
+                    assert isinstance(diags, pd.DataFrame)
+                    N=len(diags.loc[diags.CIE_CODE==key[0]].PATIENT_ID.unique())
+                    writer.writerow([key[0], N])     
     icd10cm=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,config.ICDTOCCSFILES['ICD10CM']),
                         dtype=str,)# usecols=['ICD-10-CM CODE', 'CCS CATEGORY'])
     icd10cm.rename(columns={'ICD-10-CM CODE':'CODE', 'CCS CATEGORY':'CCS'},inplace=True)
@@ -204,7 +208,7 @@ def generateCCSData(yr,  X,
     success, failure=guessingCCS(missing_in_icd9, icd9)
     print(f'{len(failure.keys())} codes need manual revision')
     if len(failure.keys())>0: 
-        needsManualRevision(failure, icd9, appendix=f'_icd9_{yr}')
+        needsManualRevision(failure, icd9, description=False, appendix=f'nodesc_icd9_{yr}', diags=diags)
     print('-------'*10)
     print('ICD10 CODES PRESENT IN DIAGNOSTIC DATASET BUT MISSING IN THE DICTIONARY:')
     print(missing_in_icd10cm)
@@ -212,7 +216,7 @@ def generateCCSData(yr,  X,
     success, failure=guessingCCS(missing_in_icd10cm, icd10cm)
     print(f'{len(failure.keys())} codes need manual revision')
     if len(failure.keys())>0:
-        needsManualRevision(failure, icd10cm, appendix=f'_icd10_{yr}')
+        needsManualRevision(failure, icd10cm, description=False, appendix=f'nodesc_icd10_{yr}', diags=diags)
     print('-------'*10)
     
     print('ICD10CM')
