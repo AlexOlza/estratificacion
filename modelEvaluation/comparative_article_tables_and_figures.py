@@ -33,15 +33,30 @@ female=X['FEMALE']==1
 male=X['FEMALE']==0
 sex=[ 'Women','Men']
 # table1={'Women':pd.DataFrame(), 'Men':pd.DataFrame()}
-table1= pd.DataFrame(index=['N (%)', 'Hospitalized in 2017'])
+table1= pd.DataFrame(index=['N (%)', 'Hospitalized in 2017', 
+                            'Aged 0-17',
+                            'Aged 18-64',
+                            'Aged 65-69',
+                            'Aged 70-79',
+                            'Aged 80-84',
+                            'Aged 85+'])
 for group, groupname in zip([female,male],sex):
     print(groupname)
     Xgroup=X.loc[group]
     ygroup=y.loc[group]
     # ygroup18=y.loc[group18]
+    a1=sum(Xgroup.AGE_0004)+sum(Xgroup.AGE_0511)+sum(Xgroup.AGE_0511)
+    a2=sum(Xgroup.AGE_1834)+sum(Xgroup.AGE_3544)+sum(Xgroup.AGE_4554)+sum(Xgroup.AGE_5564)
+    a3=sum(Xgroup.AGE_6569)
+    a4=sum(Xgroup.AGE_7074)+sum(Xgroup.AGE_7579)
+    a5=sum(Xgroup.AGE_8084)
+    a85plus=len(Xgroup)-(a1+a2+a3+a4+a5)
     positives=sum(np.where(ygroup.urgcms>=1,1,0))
     table1[groupname]=[f'{len(Xgroup)} ({len(Xgroup)*100/len(X):2.2f} %)',
-                       f'{positives} ({positives*100/len(Xgroup):2.2f} %)']
-    # table1[groupname=[f'{positives} ({positives*100/len(Xgroup):2.2f} %)']
-    # table1[groupname]['Hospitalized (2018)']=sum(np.where(ygroup18.urgcms>=1,1,0))
-    
+                       f'{positives} ({positives*100/len(Xgroup):2.2f} %)',
+                       a1,
+                       a2,
+                       a3,
+                       a4,
+                       a5,
+                       a85plus]
