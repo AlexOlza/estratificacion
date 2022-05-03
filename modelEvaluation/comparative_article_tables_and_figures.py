@@ -26,7 +26,7 @@ import numpy as np
 #%%
 
 X,y=getData(2016)
-X17,y18=getData(2017)
+# X17,y18=getData(2017)
 #%%
 """ TABLE 1:  DEMOGRAPHICS"""
 female=X['FEMALE']==1
@@ -54,9 +54,11 @@ for group, groupname in zip([female,male],sex):
     positives=sum(np.where(ygroup.urgcms>=1,1,0))
     table1[groupname]=[f'{len(Xgroup)} ({len(Xgroup)*100/len(X):2.2f} %)',
                        f'{positives} ({positives*100/len(Xgroup):2.2f} %)',
-                       a1,
-                       a2,
-                       a3,
-                       a4,
-                       a5,
-                       a85plus]
+                       f'{a1} ({a1*100/len(Xgroup):2.2f} %) ',
+                       f'{a2} ({a2*100/len(Xgroup):2.2f} %) ',
+                       f'{a3} ({a3*100/len(Xgroup):2.2f} %) ',
+                       f'{a4} ({a4*100/len(Xgroup):2.2f} %) ',
+                       f'{a5} ({a5*100/len(Xgroup):2.2f} %) ',
+                       f'{a85plus} ({a85plus*100/len(Xgroup):2.2f} %) ']
+
+print(table1.to_latex())
