@@ -25,8 +25,8 @@ import pandas as pd
 import numpy as np
 #%%
 
-X,y=getData(2016)
-# X17,y18=getData(2017)
+X,y=getData(2017)
+X16,y17=getData(2016)
 #%%
 """ TABLE 1:  DEMOGRAPHICS"""
 female=X['FEMALE']==1
@@ -62,3 +62,10 @@ for group, groupname in zip([female,male],sex):
                        f'{a85plus} ({a85plus*100/len(Xgroup):2.2f} %) ']
 
 print(table1.to_latex())
+
+simdif=len(set(X.PATIENT_ID.values).symmetric_difference(set(X16.PATIENT_ID.values)))
+# simdif=len(set(X.PATIENT_ID.values).symmetric_difference(set(X16.PATIENT_ID.values)))
+""" Comments on Table 1 """
+print('The two populations contained...')
+print(simdif, '(simetric difference)')
+print(f'... patients not in common, that is, {simdif*100/len(X):2.2f} %')
