@@ -231,19 +231,19 @@ def generateCCSData(yr,  X,
     if len(failure.keys())>0:
         needsManualRevision(failure, icd10cm, appendix=f'_icd10_{yr}', diags=diags)
     print('-------'*10)
-    f=os.path.join(config.INDISPENSABLEDATAPATH,f'ccs/manually_revised_icd10_{yr}.csv')
-    if Path(f).is_file():
-        print('Found manual revision')
-        revision=pd.read_csv(f, names=['CODE', 'CCS', 'NEW_CODE'])
     
-    print('ICD10CM')
-    for c in icd10cm:
-        print(f'{c} has {len(icd10cm[c].unique())} unique values')
-    print(' ')
-    print('ICD9')
-    for c in icd9:
-        print(f'{c} has {len(icd9[c].unique())} unique values')
-           
+    f=os.path.join(config.INDISPENSABLEDATAPATH,f'ccs/manually_revised_icd10_{yr}.csv')
+    assert Path(f).is_file(), "Manual revision file not found!!"
+    revision=pd.read_csv(f, header=0, names=['CODE', 'CCS', 'NEW_CODE'])
+    
+    #Use the manual revision to change diagnostic codes when necessary
+    #Those with no NEW_CODE specified are lost -> discard rows with NAs
+    #the CCSs are not correct, look at dictionary -> discard column
+    revision=revision.dropna()[['CODE','NEW_CODE']] 
+    for code, new in zip(revision.CODE, revision.NEW_CODE):
+        diags.loc[diags.CIE_CODE==code, 'CIE_CODE']=new
+        
+    
     # Add columns of zeros for each CCS category
     for ccs_number in sorted(list(set(list(icd9.CCS.unique()) + list(icd10cm.CCS.unique())))):
         X[f'CCS{ccs_number}']=np.int16(0)
@@ -280,7 +280,7 @@ if __name__=='__main__':
     sys.path.append('/home/aolza/Desktop/estratificacion/')
     yr=2016
     X,Y=getData(yr)
-    # _ , _ =generateCCSData(yr,  X)
+    _ , _ =generateCCSData(yr,  X)
     print('positive class ',sum(np.where(Y.urgcms>=1,1,0)))
     
     # xx,yy=CCSData(2016,  X, Y)
