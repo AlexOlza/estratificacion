@@ -9,6 +9,7 @@ import os
 import pandas as pd
 import time
 import numpy as np
+from pathlib import Path
 from python_settings import settings as config
 
 import configurations.utility as util
@@ -230,6 +231,10 @@ def generateCCSData(yr,  X,
     if len(failure.keys())>0:
         needsManualRevision(failure, icd10cm, appendix=f'_icd10_{yr}', diags=diags)
     print('-------'*10)
+    f=os.path.join(config.INDISPENSABLEDATAPATH,f'ccs/manually_revised_icd10_{yr}.csv')
+    if Path(f).is_file():
+        print('Found manual revision')
+        revision=pd.read_csv(f, names=['CODE', 'CCS', 'NEW_CODE'])
     
     print('ICD10CM')
     for c in icd10cm:
