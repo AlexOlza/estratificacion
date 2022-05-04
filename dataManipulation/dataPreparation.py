@@ -128,7 +128,7 @@ def generateCCSData(yr,  X,
             **kwargs):
     filename=os.path.join(config.DATAPATH,config.CCSFILES[yr])
     if Path(filename).is_file():
-        return pd.read_csv(filename)
+        return load(config.CCSFILES[yr],directory=config.DATAPATH)
     def missingDX(dic,diags):
         diagsCodes=diags.CIE_CODE.str.replace(r'\s|\/', r'').values
         dictCodes=dic.CODE.astype(str).str.replace(r'\s|\/', r'').values
@@ -269,6 +269,7 @@ def generateCCSData(yr,  X,
                 ccs_number=icd10cm[icd10cm.CODE==code].CCS.values[0]
                 X.loc[X.PATIENT_ID==id, f'CCS{ccs_number}']+=np.int16(1)
         i+=1
+        print(i)
     print(f'{i} patients processed')
     
     

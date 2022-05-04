@@ -24,6 +24,6 @@ util.makeAllPaths()
 from dataManipulation.dataPreparation import getData, generateCCSData
 #%%
 
-X,Y=getData(year)
+X,_=getData(year)
 _ , _ =generateCCSData(year,  X)
 
