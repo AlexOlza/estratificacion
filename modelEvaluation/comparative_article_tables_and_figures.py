@@ -69,3 +69,8 @@ simdif=len(set(X.PATIENT_ID.values).symmetric_difference(set(X16.PATIENT_ID.valu
 print('The two populations contained...')
 print(simdif, '(simetric difference)')
 print(f'... patients not in common, that is, {simdif*100/len(X):2.2f} %')
+#%%
+""" MATERIALS AND METHODS: Comments on variability assessment"""
+metrics=pd.read_csv(config.PREDPATH+'/metrics.csv')
+print('Number of models per algorithm:')
+print( metrics.groupby(['Algorithm'])['Algorithm'].count() )
