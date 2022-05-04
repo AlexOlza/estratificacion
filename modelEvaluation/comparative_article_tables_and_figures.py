@@ -9,7 +9,7 @@ import sys
 sys.path.append('/home/aolza/Desktop/estratificacion/')#necessary in cluster
 
 chosen_config='configurations.cluster.logistic'
-experiment='configurations.urgcms_excl_nbinj'
+experiment='configurations.hyperparameter_variability_urgcms_excl_nbinj'
 import importlib
 importlib.invalidate_caches()
 from python_settings import settings as config
