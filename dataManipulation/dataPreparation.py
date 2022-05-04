@@ -9,6 +9,7 @@ import os
 import pandas as pd
 import time
 import numpy as np
+from pathlib import Path
 from python_settings import settings as config
 
 import configurations.utility as util
@@ -125,6 +126,9 @@ def getData(yr,columns=config.COLUMNS,previousHosp=config.PREVIOUSHOSP,
 
 def generateCCSData(yr,  X,
             **kwargs):
+    filename=os.path.join(config.DATAPATH,config.CCSFILES[yr])
+    if Path(filename).is_file():
+        return load(config.CCSFILES[yr],directory=config.DATAPATH)
     def missingDX(dic,diags):
         diagsCodes=diags.CIE_CODE.str.replace(r'\s|\/', r'').values
         dictCodes=dic.CODE.astype(str).str.replace(r'\s|\/', r'').values
@@ -154,18 +158,31 @@ def generateCCSData(yr,  X,
                 failure[(dx, code)]=options
         print(failure)
         return(success, failure)
-    
-    def needsManualRevision(failure, dictionary, appendix=''):      
+    def assign_success(success, dic):
+        if len(success.keys())>0:
+            assign_success={'CODE':[k[0] for k in success.keys()], 'CCS':[v for v in success.values()]}
+            assign_success['CODE'].append('ONCOLO')
+            assign_success['CCS'].append('ONCOLO')
+            dic= pd.concat([dic, pd.DataFrame(assign_success)],ignore_index=True)
+        return dic
+    def needsManualRevision(failure, dictionary, appendix='',
+                            description=True, diags=None,
+                            exclude={}):      
         import csv 
         with open(f'needs_manual_revision{appendix}.csv', 'w') as output:
             writer = csv.writer(output)
             for key, value in failure.items():
-                # writer.writerow([key])
-                writer.writerow([key[0]+' -> '+key[1],'CCS', 'Description'])
-                for v in value:
-                    writer.writerow([' ',v, dictionary.loc[dictionary.CCS==v]['MULTI CCS LVL 2 LABEL'].unique()[0]])
-                writer.writerow(['','',''])
-                        
+                if key not in exclude.keys():
+                    if description:
+                        writer.writerow([key[0]+' -> '+key[1],'CCS', 'Description'])
+                        for v in value:
+                            writer.writerow([' ',v, dictionary.loc[dictionary.CCS==v]['MULTI CCS LVL 2 LABEL'].unique()[0]])
+                        writer.writerow(['','',''])
+                    else:
+                        assert isinstance(diags, pd.DataFrame)
+                        N=len(diags.loc[diags.CIE_CODE==key[0]].PATIENT_ID.unique())
+                        writer.writerow([key[0], N])     
+   
     icd10cm=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,config.ICDTOCCSFILES['ICD10CM']),
                         dtype=str,)# usecols=['ICD-10-CM CODE', 'CCS CATEGORY'])
     icd10cm.rename(columns={'ICD-10-CM CODE':'CODE', 'CCS CATEGORY':'CCS'},inplace=True)
@@ -199,30 +216,34 @@ def generateCCSData(yr,  X,
     missing_in_icd9=missingDX(icd9,diags.loc[diags.CIE_VERSION.astype(str).str.startswith('9')])
     missing_in_icd10cm=missingDX(icd10cm,diags.loc[diags.CIE_VERSION.astype(str).str.startswith('10')])
     print('ICD9 CODES PRESENT IN DIAGNOSTIC DATASET BUT MISSING IN THE DICTIONARY:')
-    print(missing_in_icd9)
     print('Quantity: ', len(missing_in_icd9))
     success, failure=guessingCCS(missing_in_icd9, icd9)
+    icd9=assign_success(success,icd9)
     print(f'{len(failure.keys())} codes need manual revision')
     if len(failure.keys())>0: 
-        needsManualRevision(failure, icd9, appendix=f'_icd9_{yr}')
+        needsManualRevision(failure, icd9, description=False, appendix=f'nodesc_icd9_{yr}', diags=diags)
     print('-------'*10)
     print('ICD10 CODES PRESENT IN DIAGNOSTIC DATASET BUT MISSING IN THE DICTIONARY:')
-    print(missing_in_icd10cm)
     print('Quantity: ', len(missing_in_icd10cm))
     success, failure=guessingCCS(missing_in_icd10cm, icd10cm)
+    icd10cm=assign_success(success,icd10cm)
     print(f'{len(failure.keys())} codes need manual revision')
     if len(failure.keys())>0:
-        needsManualRevision(failure, icd10cm, appendix=f'_icd10_{yr}')
+        needsManualRevision(failure, icd10cm, appendix=f'_icd10_{yr}', diags=diags)
     print('-------'*10)
     
-    print('ICD10CM')
-    for c in icd10cm:
-        print(f'{c} has {len(icd10cm[c].unique())} unique values')
-    print(' ')
-    print('ICD9')
-    for c in icd9:
-        print(f'{c} has {len(icd9[c].unique())} unique values')
-           
+    f=os.path.join(config.INDISPENSABLEDATAPATH,f'ccs/manually_revised_icd10_{yr}.csv')
+    assert Path(f).is_file(), "Manual revision file not found!!"
+    revision=pd.read_csv(f, header=0, names=['CODE', 'CCS', 'NEW_CODE'])
+    
+    #Use the manual revision to change diagnostic codes when necessary
+    #Those with no NEW_CODE specified are lost -> discard rows with NAs
+    #the CCSs are not correct, look at dictionary -> discard column
+    revision=revision.dropna()[['CODE','NEW_CODE']] 
+    for code, new in zip(revision.CODE, revision.NEW_CODE):
+        diags.loc[diags.CIE_CODE==code, 'CIE_CODE']=new
+        
+    
     # Add columns of zeros for each CCS category
     for ccs_number in sorted(list(set(list(icd9.CCS.unique()) + list(icd10cm.CCS.unique())))):
         X[f'CCS{ccs_number}']=np.int16(0)
@@ -248,6 +269,7 @@ def generateCCSData(yr,  X,
                 ccs_number=icd10cm[icd10cm.CODE==code].CCS.values[0]
                 X.loc[X.PATIENT_ID==id, f'CCS{ccs_number}']+=np.int16(1)
         i+=1
+        print(i)
     print(f'{i} patients processed')
     
     
@@ -259,7 +281,7 @@ if __name__=='__main__':
     sys.path.append('/home/aolza/Desktop/estratificacion/')
     yr=2016
     X,Y=getData(yr)
-    # _ , _ =generateCCSData(yr,  X)
+    _ , _ =generateCCSData(yr,  X)
     print('positive class ',sum(np.where(Y.urgcms>=1,1,0)))
     
     # xx,yy=CCSData(2016,  X, Y)
