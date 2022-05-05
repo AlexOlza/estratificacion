@@ -65,15 +65,27 @@ for group, groupname in zip([female,male],sex):
 print(table1.to_latex())
 
 simdif=len(set(X.PATIENT_ID.values).symmetric_difference(set(X16.PATIENT_ID.values)))
-# simdif=len(set(X.PATIENT_ID.values).symmetric_difference(set(X16.PATIENT_ID.values)))
+
 """ Comments on Table 1 """
 print('The two populations contained...')
 print(simdif, '(simetric difference)')
 print(f'... patients not in common, that is, {simdif*100/len(X):2.2f} %')
 #%%
 """ MATERIALS AND METHODS: Comments on variability assessment"""
+K=20000
 metrics=pd.read_csv(re.sub(config.EXPERIMENT, 'hyperparameter_variability_'+config.EXPERIMENT,config.PREDPATH)+'/metrics.csv')
 print('Number of models per algorithm:')
 print( metrics.groupby(['Algorithm'])['Algorithm'].count() )
+
+""" RESULTS. TABLE 2 """
 logisticMetrics=pd.read_csv(config.PREDPATH+'/metrics.csv')
-logisticMetrics.loc[logisticMetrics.Model.str.startswith('logistic')]
+logisticMetrics=logisticMetrics.loc[logisticMetrics.Model.str.startswith('logistic2022')]
+logisticMetrics[f'F1_{K}']=2*logisticMetrics[f'Recall_{K}']*logisticMetrics[f'PPV_{K}']/(logisticMetrics[f'Recall_{K}']+logisticMetrics[f'PPV_{K}'])
+logisticMetrics['Algorithm']=['logistic']
+
+metrics=pd.concat([metrics, logisticMetrics])
+#Discard some algorithms
+metrics=metrics.loc[metrics.Algorithm.isin(('logistic','hgb','randomForest','neuralNetworkRandom'))]
+print( metrics.groupby(['Algorithm'])['Brier'].median() )
+from scipy.stats import iqr
+metrics.groupby(['Algorithm'])['Brier'].agg(iqr)
