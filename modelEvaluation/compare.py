@@ -47,7 +47,16 @@ from python_settings import settings as config
 
 if not config.configured: 
     import configurations.utility as util
-    config_used=args.config_used if hasattr(args, 'config_used') else os.path.join(os.environ['USEDCONFIG_PATH'],input('Experiment...'),input('Model...')+'.json')
+    if hasattr(args, 'config_used') :
+        config_used=args.config_used 
+    else:
+        experiment=input('Experiment...')
+        print('Available models:')
+        p = Path(os.path.join(os.environ['USEDCONFIG_PATH'],experiment)).glob('**/*.json')
+        files = [x.stem for x in p if x.is_file()]
+        print(files)
+        model=input('Model...')
+        config_used=os.path.join(os.environ['USEDCONFIG_PATH'],experiment,model+'.json')
     configuration=util.configure(config_used,TRACEBACK=True, VERBOSE=True)
 import configurations.utility as util
 from modelEvaluation.predict import predict, generate_filename
