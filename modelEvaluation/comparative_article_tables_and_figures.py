@@ -86,6 +86,13 @@ logisticMetrics['Algorithm']=['logistic']
 metrics=pd.concat([metrics, logisticMetrics])
 #Discard some algorithms
 metrics=metrics.loc[metrics.Algorithm.isin(('logistic','hgb','randomForest','neuralNetworkRandom'))]
-print( metrics.groupby(['Algorithm'])['Brier'].median() )
+
+table2=pd.DataFrame()
 from scipy.stats import iqr
-metrics.groupby(['Algorithm'])['Brier'].agg(iqr)
+for metric in ['Score', 'Recall_20000', 'PPV_20000', 'F1_20000','Brier']:
+    median=metrics.groupby(['Algorithm'])[metric].median()
+    IQR=metrics.groupby(['Algorithm'])[metric].agg(iqr)
+    table2[metric]=[f'{m:1.3f} ({i:.2E})' for m, i in zip(median.values, IQR.values)]
+    table2.index=IQR.index
+  
+print(table2.to_latex())
