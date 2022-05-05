@@ -9,7 +9,7 @@ import sys
 sys.path.append('/home/aolza/Desktop/estratificacion/')#necessary in cluster
 
 chosen_config='configurations.cluster.logistic'
-experiment='configurations.hyperparameter_variability_urgcms_excl_nbinj'
+experiment='configurations.urgcms_excl_nbinj'
 import importlib
 importlib.invalidate_caches()
 from python_settings import settings as config
@@ -23,6 +23,7 @@ util.makeAllPaths()
 from dataManipulation.dataPreparation import getData
 import pandas as pd
 import numpy as np
+import re
 #%%
 
 X,y=getData(2017)
@@ -71,6 +72,8 @@ print(simdif, '(simetric difference)')
 print(f'... patients not in common, that is, {simdif*100/len(X):2.2f} %')
 #%%
 """ MATERIALS AND METHODS: Comments on variability assessment"""
-metrics=pd.read_csv(config.PREDPATH+'/metrics.csv')
+metrics=pd.read_csv(re.sub(config.EXPERIMENT, 'hyperparameter_variability_'+config.EXPERIMENT,config.PREDPATH)+'/metrics.csv')
 print('Number of models per algorithm:')
 print( metrics.groupby(['Algorithm'])['Algorithm'].count() )
+logisticMetrics=pd.read_csv(config.PREDPATH+'/metrics.csv')
+logisticMetrics.loc[logisticMetrics.Model.str.startswith('logistic')]
