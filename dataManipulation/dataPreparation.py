@@ -98,6 +98,8 @@ def getData(yr,columns=config.COLUMNS,previousHosp=config.PREVIOUSHOSP,
     elif fullEDCs:
         full16=create_fullacgfiles(config.FULLACGFILES[yr],yr,directory=config.DATAPATH,
                     predictors=predictors)
+    elif CCS:
+        full16=generateCCSData(yr,  pd.DataFrame(), predictors=predictors)
     else:
         full16=load(filename=config.ACGFILES[yr],predictors=predictors)
    
@@ -126,9 +128,11 @@ def getData(yr,columns=config.COLUMNS,previousHosp=config.PREVIOUSHOSP,
 
 def generateCCSData(yr,  X,
             **kwargs):
+    predictors=kwargs.get('predictors',None)
     filename=os.path.join(config.DATAPATH,config.CCSFILES[yr])
     if Path(filename).is_file():
-        return load(config.CCSFILES[yr],directory=config.DATAPATH)
+        return load(config.CCSFILES[yr],directory=config.DATAPATH,
+                    predictors=predictors)
     def missingDX(dic,diags):
         diagsCodes=diags.CIE_CODE.str.replace(r'\s|\/', r'').values
         dictCodes=dic.CODE.astype(str).str.replace(r'\s|\/', r'').values
