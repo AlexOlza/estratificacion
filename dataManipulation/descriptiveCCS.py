@@ -20,7 +20,10 @@ if not config.configured:
 assert config.configured 
 import configurations.utility as util
 util.makeAllPaths()
+import re
+import os
 import numpy as np
+import pandas as pd
 from dataManipulation.dataPreparation import getData, generateCCSData
 #%%
 
@@ -43,7 +46,25 @@ cp= Counter(p)
 most_common = c.most_common(K) 
 most_prevalent= cp.most_common(K) 
 
+#%%
+#Build dataframe with descriptions
+ccs=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,config.ICDTOCCSFILES['ICD10CM']),
+                        dtype=str, usecols=['CCS CATEGORY', 'CCS CATEGORY DESCRIPTION'])
+ccs.drop_duplicates(inplace=True)
+#%%
+def to_df(List, ccsDF):
+    keys=[re.sub('CCS','',e[0]) for e in List]
+    numbers=[e[1] for e in List]
+    df=pd.DataFrame({'CCS CATEGORY': keys, 'N':numbers})
+    df=pd.merge(df, ccsDF, how='left')
+    return df
+
 print('MOST COMMON CCSs:')
-print(most_common)
+mc=to_df(most_common, ccs)
+print(mc)
+mc.to_excel(f'most_common_CCSs_{year}.xlsx',index=False)
 
 print('MOST PREVALENT CCSs:')
+mp=to_df(most_prevalent, ccs)
+print(mp)
+mp.to_excel(f'most_prevalent_CCSs_{year}.xlsx',index=False)
