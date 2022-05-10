@@ -26,12 +26,24 @@ from dataManipulation.dataPreparation import getData, generateCCSData
 
 X,y=getData(year)
 #%%
-print('NUMBER OF DIAGNOSIS IN EACH CCS')
+n,p={},{}
 for c in X.drop('PATIENT_ID',axis=1):
-    print(c, X[c].sum())
-print('------'*10)
+    n[c]= X[c].sum()
+    
 #%%
-print('PREVALENCE OF EACH CCS')
+
 for c in X.drop('PATIENT_ID',axis=1):
-    print(c, sum(np.where(X[c]>=1,1,0))/len(X))
-print('------'*10)
+    p[c]= sum(np.where(X[c]>=1,1,0))/len(X)
+
+#%%
+from collections import Counter
+K=15
+c = Counter(n)
+cp= Counter(p)
+most_common = c.most_common(K) 
+most_prevalent= cp.most_common(K) 
+
+print('MOST COMMON CCSs:')
+print(most_common)
+
+print('MOST PREVALENT CCSs:')
