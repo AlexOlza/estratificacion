@@ -205,9 +205,13 @@ def generateCCSData(yr,  X,
                       index_col=False)
     #KEEP ONLY DX THAT ARE STILL ACTIVE AT THE BEGINNING OF THE CURRENT YEAR
     diags=diags.loc[diags.END_DATE>=f'{yr}-01-01'][['PATIENT_ID', 'CIE_VERSION', 'CIE_CODE']]
-
-
+    diags.CIE_CODE=diags.CIE_CODE.astype(str)
+    diags.CIE_VERSION=diags.CIE_VERSION.astype(str)
     diags.CIE_CODE=diags.CIE_CODE.str.replace(r'\s|\/', r'')
+    
+    #Number of patients with diabetes (dx: 250xxx)
+    print('Number of patients with diabetes (dx: 250xxx)')
+    print(len(diags.loc[diags.CIE_CODE.str.startswith('250')].PATIENT_ID.unique()))
 
     #In the diagnoses dataset, ICD10CM dx that start with a digit are related to oncology
     diags.loc[(diags.CIE_VERSION.astype(str).str.startswith('10') & diags.CIE_CODE.str.match('^[0-9]')),'CIE_CODE']='ONCOLOGY'

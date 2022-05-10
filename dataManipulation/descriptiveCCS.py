@@ -43,8 +43,10 @@ from collections import Counter
 K=15
 c = Counter(n)
 cp= Counter(p)
-most_common = c.most_common(K) 
-most_prevalent= cp.most_common(K) 
+most_common = c.most_common(len(n)) 
+most_prevalent= cp.most_common(len(p)) 
+diabetes=[v for v in most_prevalent if v[0]=='CCS49'][0][1]+[v for v in most_prevalent if v[0]=='CCS50'][0][1]
+diabetesDX=[v for v in most_common if v[0]=='CCS49'][0][1]+[v for v in most_common if v[0]=='CCS50'][0][1]
 
 #%%
 #Build dataframe with descriptions
