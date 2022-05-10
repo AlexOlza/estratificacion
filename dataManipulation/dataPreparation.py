@@ -212,7 +212,20 @@ def generateCCSData(yr,  X,
     #Number of patients with diabetes (dx: 250xxx)
     print('Number of patients with diabetes (dx: 250xxx)')
     print(len(diags.loc[diags.CIE_CODE.str.startswith('250')].PATIENT_ID.unique()))
-
+    print('Number of patients with diabetes (dx: E11)')
+    print(len(diags.loc[diags.CIE_CODE.str.startswith('E11')].PATIENT_ID.unique()))
+    print('Number of patients with diabetes (dx: E12)')
+    print(len(diags.loc[diags.CIE_CODE.str.startswith('E12')].PATIENT_ID.unique()))
+    print('Number of patients with diabetes (dx: E13)')
+    print(len(diags.loc[diags.CIE_CODE.str.startswith('E13')].PATIENT_ID.unique()))
+    
+    diabetesDataset=pd.concat([diags.loc[diags.CIE_CODE.str.startswith('250')],
+                               diags.loc[diags.CIE_CODE.str.startswith('E11')],
+                               diags.loc[diags.CIE_CODE.str.startswith('E12')],
+                               diags.loc[diags.CIE_CODE.str.startswith('E13')]])
+    
+    diabetesDataset.to_csv(f'diabetesDiags{yr}.csv')
+    
     #In the diagnoses dataset, ICD10CM dx that start with a digit are related to oncology
     diags.loc[(diags.CIE_VERSION.astype(str).str.startswith('10') & diags.CIE_CODE.str.match('^[0-9]')),'CIE_CODE']='ONCOLOGY'
     
