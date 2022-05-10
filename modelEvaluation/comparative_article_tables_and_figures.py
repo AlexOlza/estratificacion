@@ -87,6 +87,7 @@ metrics=pd.concat([metrics, logisticMetrics])
 #Discard some algorithms
 metrics=metrics.loc[metrics.Algorithm.isin(('logistic','hgb','randomForest','neuralNetworkRandom'))]
 
+# Option 1: Median --- (Interquartile range)
 table2=pd.DataFrame()
 from scipy.stats import iqr
 for metric in ['Score', 'Recall_20000', 'PPV_20000', 'F1_20000','Brier']:
@@ -96,3 +97,14 @@ for metric in ['Score', 'Recall_20000', 'PPV_20000', 'F1_20000','Brier']:
     table2.index=IQR.index
   
 print(table2.to_latex())
+
+higher_better={'Score': True, 'Recall_20000': True, 'PPV_20000': True, 'Brier':False}
+def use_f_3(x):
+    return "%.4f" % x
+def use_E(x):
+    return "%.2e" % x
+# Option 2: Subtables with descriptive
+for metric in ['Score', 'Recall_20000', 'PPV_20000', 'Brier']:
+    table2=metrics.groupby(['Algorithm'])[metric].describe()[['25%','50%', '75%','std']].sort_values('50%', ascending=[not higher_better[metric]])
+    print(table2.to_latex(formatters=[ use_f_3, use_f_3, use_f_3, use_E]))
+    print('\n'*2)
