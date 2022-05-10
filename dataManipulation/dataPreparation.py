@@ -194,10 +194,12 @@ def generateCCSData(yr,  X,
 
     icd9=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,config.ICDTOCCSFILES['ICD9']), dtype=str,
                      usecols=['ICD-9-CM CODE','CCS LVL 3 LABEL'])
+    
 
     #the CCS category is expressed between brackets inside the column 'CCS LVL 3 LABEL'.
     icd9.rename(columns={'ICD-9-CM CODE':'CODE', 'CCS LVL 3 LABEL':'CCS'},inplace=True)
     icd9.CCS=icd9.CCS.str.replace(r'[^0-9]', r'') #Keep only numbers (the CCS category)
+    icd9.CCS=icd9.CCS.str.replace(r'\s|\/', r'')
     icd9.CODE=icd9.CODE.str.slice(0,5)
     
     diags=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,config.ICDFILES[yr]),
@@ -209,6 +211,11 @@ def generateCCSData(yr,  X,
     diags.CIE_VERSION=diags.CIE_VERSION.astype(str)
     diags.CIE_CODE=diags.CIE_CODE.str.replace(r'\s|\/', r'')
     
+    
+    """
+    MISSING DIABETES 
+    ----------------------------------------------------------------------
+    """
     #Number of patients with diabetes (dx: 250xxx)
     print('Number of patients with diabetes (dx: 250xxx)')
     print(len(diags.loc[diags.CIE_CODE.str.startswith('250')].PATIENT_ID.unique()))
@@ -220,11 +227,28 @@ def generateCCSData(yr,  X,
     print(len(diags.loc[diags.CIE_CODE.str.startswith('E13')].PATIENT_ID.unique()))
     
     diabetesDataset=pd.concat([diags.loc[diags.CIE_CODE.str.startswith('250')],
-                               diags.loc[diags.CIE_CODE.str.startswith('E11')],
-                               diags.loc[diags.CIE_CODE.str.startswith('E12')],
-                               diags.loc[diags.CIE_CODE.str.startswith('E13')]])
+                                diags.loc[diags.CIE_CODE.str.startswith('E11')],
+                                diags.loc[diags.CIE_CODE.str.startswith('E12')],
+                                diags.loc[diags.CIE_CODE.str.startswith('E13')]])
     
-    diabetesDataset.to_csv(f'diabetesDiags{yr}.csv')
+    diabetesDataset.to_csv(f'diabetesDiags{yr}.csv', index=False)
+    
+    diabetesDiags9=diabetesDataset.loc[diabetesDataset.CIE_VERSION.str.startswith('9')].drop_duplicates('CIE_CODE')
+    diabetesDiags10=diabetesDataset.loc[diabetesDataset.CIE_VERSION.str.startswith('10')].drop_duplicates('CIE_CODE')
+    
+    CCSset9=set()
+    for code in diabetesDiags9.CIE_CODE:
+        ccscode=icd9.loc[icd9.CODE==code]
+        print(ccscode)
+        CCSset9.union(set(ccscode.CCS.values))
+    """
+    MISSING DIABETES 
+    ----------------------------------------------------------------------
+    """
+    
+    
+    
+    
     
     #In the diagnoses dataset, ICD10CM dx that start with a digit are related to oncology
     diags.loc[(diags.CIE_VERSION.astype(str).str.startswith('10') & diags.CIE_CODE.str.match('^[0-9]')),'CIE_CODE']='ONCOLOGY'
