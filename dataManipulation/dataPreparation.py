@@ -191,13 +191,18 @@ def generateCCSData(yr,  X,
                         dtype=str,)# usecols=['ICD-10-CM CODE', 'CCS CATEGORY'])
     icd10cm.rename(columns={'ICD-10-CM CODE':'CODE', 'CCS CATEGORY':'CCS'},inplace=True)
     icd10cm.CODE=icd10cm.CODE.str.slice(0,6)
-
+    assert icd10cm.CCS.isnull().sum()==0, 'Some codes in the ICD10CM dictionary have not been assigned a CCS :('
     icd9=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,config.ICDTOCCSFILES['ICD9']), dtype=str,
-                     usecols=['ICD-9-CM CODE','CCS LVL 3 LABEL'])
+                     usecols=['ICD-9-CM CODE','CCS LVL 1 LABEL','CCS LVL 2 LABEL',
+                              'CCS LVL 3 LABEL','CCS LVL 4 LABEL'])
     
 
-    #the CCS category is expressed between brackets inside the column 'CCS LVL 3 LABEL'.
-    icd9.rename(columns={'ICD-9-CM CODE':'CODE', 'CCS LVL 3 LABEL':'CCS'},inplace=True)
+    #the CCS category is expressed between brackets and followed by a dot,
+    #and can be inside any column of type 'CCS LVL x LABEL'.
+    icd9.rename(columns={'ICD-9-CM CODE':'CODE'},inplace=True)
+    icd9['CCS']=icd9['CCS LVL 1 LABEL']+icd9['CCS LVL 2 LABEL']+icd9['CCS LVL 3 LABEL']+icd9['CCS LVL 4 LABEL']
+    icd9.CCS=icd9.CCS.str.extract(r'(?P<CCS>[0-9]+)').CCS
+    assert icd9.CCS.describe().isnull().sum()==0, 'Some codes in the ICD9 dictionary have not been assigned a CCS :('
     icd9.CCS=icd9.CCS.str.replace(r'[^0-9]', r'') #Keep only numbers (the CCS category)
     icd9.CCS=icd9.CCS.str.replace(r'\s|\/', r'')
     icd9.CODE=icd9.CODE.str.slice(0,5)
