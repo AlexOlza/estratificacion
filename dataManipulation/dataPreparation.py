@@ -98,6 +98,8 @@ def getData(yr,columns=config.COLUMNS,previousHosp=config.PREVIOUSHOSP,
     elif fullEDCs:
         full16=create_fullacgfiles(config.FULLACGFILES[yr],yr,directory=config.DATAPATH,
                     predictors=predictors)
+    elif CCS:
+        full16=generateCCSData(yr,  pd.DataFrame(), predictors=predictors)
     else:
         full16=load(filename=config.ACGFILES[yr],predictors=predictors)
    
@@ -126,9 +128,11 @@ def getData(yr,columns=config.COLUMNS,previousHosp=config.PREVIOUSHOSP,
 
 def generateCCSData(yr,  X,
             **kwargs):
+    predictors=kwargs.get('predictors',None)
     filename=os.path.join(config.DATAPATH,config.CCSFILES[yr])
     if Path(filename).is_file():
-        return load(config.CCSFILES[yr],directory=config.DATAPATH)
+        return load(config.CCSFILES[yr],directory=config.DATAPATH,
+                    predictors=predictors)
     def missingDX(dic,diags):
         diagsCodes=diags.CIE_CODE.str.replace(r'\s|\/', r'').values
         dictCodes=dic.CODE.astype(str).str.replace(r'\s|\/', r'').values
@@ -187,13 +191,20 @@ def generateCCSData(yr,  X,
                         dtype=str,)# usecols=['ICD-10-CM CODE', 'CCS CATEGORY'])
     icd10cm.rename(columns={'ICD-10-CM CODE':'CODE', 'CCS CATEGORY':'CCS'},inplace=True)
     icd10cm.CODE=icd10cm.CODE.str.slice(0,6)
-
+    assert icd10cm.CCS.isnull().sum()==0, 'Some codes in the ICD10CM dictionary have not been assigned a CCS :('
     icd9=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,config.ICDTOCCSFILES['ICD9']), dtype=str,
-                     usecols=['ICD-9-CM CODE','CCS LVL 3 LABEL'])
+                     usecols=['ICD-9-CM CODE','CCS LVL 1 LABEL','CCS LVL 2 LABEL',
+                              'CCS LVL 3 LABEL','CCS LVL 4 LABEL'])
+    
 
-    #the CCS category is expressed between brackets inside the column 'CCS LVL 3 LABEL'.
-    icd9.rename(columns={'ICD-9-CM CODE':'CODE', 'CCS LVL 3 LABEL':'CCS'},inplace=True)
+    #the CCS category is expressed between brackets and followed by a dot,
+    #and can be inside any column of type 'CCS LVL x LABEL'.
+    icd9.rename(columns={'ICD-9-CM CODE':'CODE'},inplace=True)
+    icd9['CCS']=icd9['CCS LVL 1 LABEL']+icd9['CCS LVL 2 LABEL']+icd9['CCS LVL 3 LABEL']+icd9['CCS LVL 4 LABEL']
+    icd9.CCS=icd9.CCS.str.extract(r'(?P<CCS>[0-9]+)').CCS
+    assert icd9.CCS.describe().isnull().sum()==0, 'Some codes in the ICD9 dictionary have not been assigned a CCS :('
     icd9.CCS=icd9.CCS.str.replace(r'[^0-9]', r'') #Keep only numbers (the CCS category)
+    icd9.CCS=icd9.CCS.str.replace(r'\s|\/', r'')
     icd9.CODE=icd9.CODE.str.slice(0,5)
     
     diags=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,config.ICDFILES[yr]),
@@ -201,10 +212,10 @@ def generateCCSData(yr,  X,
                       index_col=False)
     #KEEP ONLY DX THAT ARE STILL ACTIVE AT THE BEGINNING OF THE CURRENT YEAR
     diags=diags.loc[diags.END_DATE>=f'{yr}-01-01'][['PATIENT_ID', 'CIE_VERSION', 'CIE_CODE']]
-
-
+    diags.CIE_CODE=diags.CIE_CODE.astype(str)
+    diags.CIE_VERSION=diags.CIE_VERSION.astype(str)
     diags.CIE_CODE=diags.CIE_CODE.str.replace(r'\s|\/', r'')
-
+    
     #In the diagnoses dataset, ICD10CM dx that start with a digit are related to oncology
     diags.loc[(diags.CIE_VERSION.astype(str).str.startswith('10') & diags.CIE_CODE.str.match('^[0-9]')),'CIE_CODE']='ONCOLOGY'
     
@@ -269,7 +280,7 @@ def generateCCSData(yr,  X,
                 ccs_number=icd10cm[icd10cm.CODE==code].CCS.values[0]
                 X.loc[X.PATIENT_ID==id, f'CCS{ccs_number}']+=np.int16(1)
         i+=1
-        print(i)
+        # print(i)
     print(f'{i} patients processed')
     
     
@@ -281,7 +292,7 @@ if __name__=='__main__':
     sys.path.append('/home/aolza/Desktop/estratificacion/')
     yr=2016
     X,Y=getData(yr)
-    _ , _ =generateCCSData(yr,  X)
+    # _ , _ =generateCCSData(yr,  X)
     print('positive class ',sum(np.where(Y.urgcms>=1,1,0)))
     
     # xx,yy=CCSData(2016,  X, Y)
