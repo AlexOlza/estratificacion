@@ -85,9 +85,12 @@ def compare(selected,X,y,year,experiment_name=Path(config.MODELPATH).parts[-1],*
             probs=calibrate(m,year,experiment_name=experiment_name,presentX=X,presentY=y,predictors=predictors[m],**kwargs)
             if (probs is None):#If model not found
                 continue
-            metrics['Score'][m]=roc_auc_score(np.where(probs.OBS>=1,1,0), probs.PREDCAL)
+            obs=np.where(probs.OBS>=1,1,0)
+            metrics['Score'][m]=roc_auc_score(obs, probs.PREDCAL)
             metrics[f'Recall_{K}'][m],metrics[f'PPV_{K}'][m], _, _=performance(np.where(probs.OBS>=1,1,0), probs.PREDCAL,K)
-            metrics['Brier'][m]=brier_score_loss(np.where(probs.OBS>=1,1,0), probs.PREDCAL)
+            metrics['Brier'][m]=brier_score_loss(obs, probs.PREDCAL)
+            metrics['Brier Before'][m]=brier_score_loss(obs, probs.PRED)
+            metrics['AP']= average_precision_score(obs, probs.PREDCAL)
         except Exception as exc:
             print('Something went wrong for model ', m)
             print(traceback.format_exc())
