@@ -165,18 +165,21 @@ def boxplots(df, year, K, parent_metrics=None, parentNeural=False, **kwargs):
         logistic_predictions=calibrate(logistic_model, year,experiment_name=re.sub('hyperparameter_variability_|fixsample_','',config.EXPERIMENT), presentX=X, presentY=y)
         auc=roc_auc_score(np.where(logistic_predictions.OBS>=1,1,0), logistic_predictions.PRED)
         brier=brier_score_loss(np.where(logistic_predictions.OBS>=1,1,0), logistic_predictions.PREDCAL)
+        brierBefore=brier_score_loss(np.where(logistic_predictions.OBS>=1,1,0), logistic_predictions.PRED)
+        ap=average_precision_score(np.where(logistic_predictions.OBS>=1,1,0), logistic_predictions.PREDCAL)
         recall, ppv, _, _= performance(logistic_predictions.OBS,logistic_predictions.PRED, K)
         parent_metrics={'Model':[logistic_model],
                         'Score':[auc],
                         f'Recall_{K}': [recall],
                         f'PPV_{K}':[ppv],
-                        'Brier':[brier]}
+                        'AP':[ap],
+                        'Brier':[brier],
+                        'Brier Before':[brierBefore]}
     parent_df=pd.DataFrame.from_dict(parent_metrics)   
     parent_metrics[f'F1_{K}'] = 2*parent_df[f'Recall_{K}']*parent_df[f'PPV_{K}']/(parent_df[f'Recall_{K}']+parent_df[f'PPV_{K}'])
-    df['Algorithm']=[re.sub('_|[0-9]', '', model) for model in df['Model'].values]
     df[f'F1_{K}']=2*df[f'Recall_{K}']*df[f'PPV_{K}']/(df[f'Recall_{K}']+df[f'PPV_{K}'])
    
-    for column in ['Score', f'Recall_{K}', f'PPV_{K}','Brier',f'F1_{K}']:
+    for column in ['Score', f'Recall_{K}', f'PPV_{K}','Brier',f'F1_{K}', 'AP','Brier Before']:
         print(column)
         fig, ax = plt.subplots(figsize=(10,12))
         plt.suptitle('')
@@ -288,7 +291,10 @@ if __name__=='__main__':
             print(df.to_markdown(index=False,))
         
         df=pd.concat([df, available_metrics], ignore_index=True, axis=0)
+        df['Algorithm']=[re.sub('_|[0-9]', '', model) for model in df['Model'].values]
+    
         df.to_csv(config.PREDPATH+'/metrics.csv', index=False)
+        
         algorithms=['randomForest', 'hgb', 'neuralNetworkRandom']
         # parent_metrics=pd.read_csv(re.sub('hyperparameter_variability_|fixsample_','',config.PREDPATH+'/metrics.csv')).to_dict('list')
         boxplots(df.loc[df.Algorithm.isin(algorithms)], year, K=20000, X=X, y=y)
