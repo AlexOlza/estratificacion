@@ -91,7 +91,7 @@ def compare(selected,X,y,year,experiment_name=Path(config.MODELPATH).parts[-1],*
             metrics[f'Recall_{K}'][m],metrics[f'PPV_{K}'][m], _, _=performance(np.where(probs.OBS>=1,1,0), probs.PREDCAL,K)
             metrics['Brier'][m]=brier_score_loss(obs, probs.PREDCAL)
             metrics['Brier Before'][m]=brier_score_loss(obs, probs.PRED)
-            metrics['AP']= average_precision_score(obs, probs.PREDCAL)
+            metrics['AP'][m]= average_precision_score(obs, probs.PREDCAL)
         except Exception as exc:
             print('Something went wrong for model ', m)
             print(traceback.format_exc())
@@ -280,11 +280,11 @@ if __name__=='__main__':
         if nested:
             metrics=compare_nested(available_models,X,y,year)
             variable_groups=[r'SEX+ AGE','+ EDC_','+ RXMG_','+ ACG']
-            score,recall,ppv, brier=[list(array.values()) for array in list(metrics.values())]
+            score,recall,ppv, brier, brierBefore, ap=[list(array.values()) for array in list(metrics.values())]
             print(pd.DataFrame(list(zip(selected,variable_groups,score,recall,ppv)),columns=['Model','Predictors']+list(metrics.keys())).to_markdown(index=False))
         else:
-            score,recall,ppv, brier=[list(array.values()) for array in list(metrics.values())]
-            df=pd.DataFrame(list(zip(selected,score,recall,ppv, brier)),columns=['Model']+list(metrics.keys()))
+            score,recall,ppv, brier, brierBefore, ap=[list(array.values()) for array in list(metrics.values())]
+            df=pd.DataFrame(list(zip(selected,score,recall,ppv, brier, brierBefore, ap)),columns=['Model']+list(metrics.keys()))
             print(df.to_markdown(index=False,))
         
         df=pd.concat([df, available_metrics], ignore_index=True, axis=0)
