@@ -49,10 +49,14 @@ def sample(data,uncal):
 
 def calibrate(model_name,yr,**kwargs):
     try:
-        filename=kwargs.get('filename',model_name)
+        filename=kwargs.get('filename',None)
         experiment_name=kwargs.get('experiment_name',config.EXPERIMENT)
-        calibFilename=generate_filename(filename,yr, calibrated=True)
-        uncalFilename=generate_filename(filename,yr, calibrated=False)
+        if filename:
+            calibFilename=filename
+            uncalFilename=re.sub(filename,'calibrated','')
+        else:
+            calibFilename=generate_filename(model_name,yr, calibrated=True)
+            uncalFilename=generate_filename(model_name,yr, calibrated=False)
         if Path(calibFilename).is_file():
             util.vprint('Calibrated predictions found; loading')
             p_calibrated=pd.read_csv(calibFilename)
