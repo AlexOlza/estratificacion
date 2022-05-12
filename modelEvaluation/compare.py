@@ -78,7 +78,8 @@ def compare(selected,X,y,year,experiment_name=Path(config.MODELPATH).parts[-1],*
     import traceback
     K=kwargs.get('K',20000)
     predictors=kwargs.get('predictors',{m:config.PREDICTORREGEX for m in selected})
-    metrics={'Score':{},f'Recall_{K}':{},f'PPV_{K}':{}, 'Brier':{}}
+    metrics={'Score':{},f'Recall_{K}':{},f'PPV_{K}':{},
+             'Brier':{}, 'Brier Before':{}, 'AP':{}}
     for m in selected:
         print(m)
         try:
@@ -193,8 +194,6 @@ def boxplots(df, year, K, parent_metrics=None, parentNeural=False, **kwargs):
         plt.show()
 
 def roc_pr_curves(modelDict, yr, parent_model, **kwargs):
-    # load logistic predictions
-    parent=calibrate(parent_model, yr)
     models, roc, pr={},{},{}
     # load models predictions
     for label,  model in modelDict.items(): 

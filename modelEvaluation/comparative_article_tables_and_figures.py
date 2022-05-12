@@ -25,7 +25,39 @@ import pandas as pd
 import numpy as np
 import re
 #%%
+def model_labels(models):
+    labels=[]
+    #The abbreviations that should appear in tables and figures:
+    dictionary={'logistic':'LR','randomForest':'RF',
+                'neuralNetworkRandom':'MLP','hgb':'GBDT'}
+    for m in models:
+        alg=re.sub('_|[0-9]', '', m)
+        labels.append(dictionary[alg])
+    return labels
 
+def ROC_PR_comparison(models, yr, logistic_model, **kwargs):
+    # load logistic predictions
+    parent=calibrate(parent_model, yr)
+    models, roc, pr={},{},{}
+    # load models predictions
+    labels=model_labels(models.append(logistic_model))
+    for m, label in zip(models, labels): 
+        print(m, label)
+        if m==logistic_model:
+            model=calibrate(m, yr,experiment_name=re.sub('hyperparameter_variability_|fixsample_','',config.EXPERIMENT))
+        else:
+            model=calibrate(m, yr)
+        obs=np.where(model.OBS>=1,1,0)
+        fpr, tpr, _ = roc_curve(obs, model.PREDCAL)
+        prec, rec, _ = precision_recall_curve(obs, model.PREDCAL)
+        roc_auc = auc(fpr, tpr)
+        avg_prec = average_precision_score(obs, model.PREDCAL)
+        pr[label]=PrecisionRecallDisplay(prec, rec, 
+                                     estimator_name=label,
+                                     average_precision=avg_prec)
+        roc[label]= RocCurveDisplay(fpr=fpr, tpr=tpr, roc_auc=roc_auc,
+                      estimator_name=label)
+    return(roc, pr)
 def brier_boxplot(df, year, **kwargs):
     path=kwargs.get('path',config.FIGUREPATH)
     name=kwargs.get('name','')
