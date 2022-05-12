@@ -21,9 +21,13 @@ import configurations.utility as util
 util.makeAllPaths()
 
 from dataManipulation.dataPreparation import getData
+from modelEvaluation.calibrate import calibrate
 import pandas as pd
 import numpy as np
 import re
+import os
+from sklearn.metrics import roc_auc_score,average_precision_score, brier_score_loss,RocCurveDisplay,roc_curve, auc,precision_recall_curve, PrecisionRecallDisplay
+
 #%%
 def model_labels(models):
     labels=[]
@@ -35,62 +39,68 @@ def model_labels(models):
         labels.append(dictionary[alg])
     return labels
 
-def ROC_PR_comparison(models, yr, logistic_model, **kwargs):
+def ROC_PR_comparison(models, yr, logistic_model, mode='ROC', **kwargs):
     # load logistic predictions
-    parent=calibrate(parent_model, yr)
-    models, roc, pr={},{},{}
+    parent=calibrate(logistic_model, yr)
+    display={}
     # load models predictions
-    labels=model_labels(models.append(logistic_model))
+    models.append(logistic_model)
+    labels=model_labels(models)
     for m, label in zip(models, labels): 
         print(m, label)
         if m==logistic_model:
-            model=calibrate(m, yr,experiment_name=re.sub('hyperparameter_variability_|fixsample_','',config.EXPERIMENT))
+            model=calibrate(m, yr,experiment_name=config.EXPERIMENT,
+                            )
         else:
-            model=calibrate(m, yr)
+            predpath=re.sub(config.EXPERIMENT,'hyperparameter_variability_'+config.EXPERIMENT,config.PREDPATH)
+            model=calibrate(m, yr, experiment_name='hyperparameter_variability_'+config.EXPERIMENT,
+                            filename=os.path.join(predpath,f'{m}_calibrated_{yr}.csv'))
         obs=np.where(model.OBS>=1,1,0)
         fpr, tpr, _ = roc_curve(obs, model.PREDCAL)
         prec, rec, _ = precision_recall_curve(obs, model.PREDCAL)
         roc_auc = auc(fpr, tpr)
         avg_prec = average_precision_score(obs, model.PREDCAL)
-        pr[label]=PrecisionRecallDisplay(prec, rec, 
+        if mode=='PR':
+            display[label]=PrecisionRecallDisplay(prec, rec, 
                                      estimator_name=label,
                                      average_precision=avg_prec)
-        roc[label]= RocCurveDisplay(fpr=fpr, tpr=tpr, roc_auc=roc_auc,
+        elif mode=='ROC':
+            display[label]= RocCurveDisplay(fpr=fpr, tpr=tpr, roc_auc=roc_auc,
                       estimator_name=label)
-    return(roc, pr)
-def brier_boxplot(df, year, **kwargs):
-    path=kwargs.get('path',config.FIGUREPATH)
-    name=kwargs.get('name','')
-    X=kwargs.get('X',None)
-    y=kwargs.get('y',None)
-    if not parent_metrics: #we have to compute them
-        parent_models=[i for i in detect_models(re.sub('hyperparameter_variability_|fixsample_','',config.MODELPATH))  if 'logistic' in i]
-        logistic_model=[i for i in detect_latest(parent_models) if 'logistic2022' in i][0]
-        # logistic_predfile=re.sub('hyperparameter_variability_|fixsample_','',generate_filename(logistic_model,year, calibrated=True))
-        # logistic_predictions=pd.read_csv(logistic_predfile)
-        logistic_predictions=calibrate(logistic_model, year,experiment_name=re.sub('hyperparameter_variability_|fixsample_','',config.EXPERIMENT), presentX=X, presentY=y)
-        brier=brier_score_loss(np.where(logistic_predictions.OBS>=1,1,0), logistic_predictions.PREDCAL)
-        brierBefore=brier_score_loss(np.where(logistic_predictions.OBS>=1,1,0), logistic_predictions.PRED)
-        parent_metrics={'Model':[logistic_model],
-                        'Before':[brierBefore],
-                        'After':[brier]}
-    parent_df=pd.DataFrame.from_dict(parent_metrics)   
-    df['Algorithm']=[re.sub('_|[0-9]', '', model) for model in df['Model'].values]
+    return(display)
+# def brier_boxplot(df, year, **kwargs):
+#     path=kwargs.get('path',config.FIGUREPATH)
+#     name=kwargs.get('name','')
+#     X=kwargs.get('X',None)
+#     y=kwargs.get('y',None)
+#     if not parent_metrics: #we have to compute them
+#         parent_models=[i for i in detect_models(re.sub('hyperparameter_variability_|fixsample_','',config.MODELPATH))  if 'logistic' in i]
+#         logistic_model=[i for i in detect_latest(parent_models) if 'logistic2022' in i][0]
+#         # logistic_predfile=re.sub('hyperparameter_variability_|fixsample_','',generate_filename(logistic_model,year, calibrated=True))
+#         # logistic_predictions=pd.read_csv(logistic_predfile)
+#         logistic_predictions=calibrate(logistic_model, year,experiment_name=re.sub('hyperparameter_variability_|fixsample_','',config.EXPERIMENT), presentX=X, presentY=y)
+#         brier=brier_score_loss(np.where(logistic_predictions.OBS>=1,1,0), logistic_predictions.PREDCAL)
+#         brierBefore=brier_score_loss(np.where(logistic_predictions.OBS>=1,1,0), logistic_predictions.PRED)
+#         parent_metrics={'Model':[logistic_model],
+#                         'Before':[brierBefore],
+#                         'After':[brier]}
+#     parent_df=pd.DataFrame.from_dict(parent_metrics)   
+#     df['Algorithm']=[re.sub('_|[0-9]', '', model) for model in df['Model'].values]
     
-    fig, ax = plt.subplots(figsize=(10,12))
-    plt.suptitle('')
+#     fig, ax = plt.subplots(figsize=(10,12))
+#     plt.suptitle('')
 
-    df.groupby('Before/After').boxplot(column='Brier', by='Algorithm', ax=ax)
-    for model, value in zip(parent_metrics['Model'], parent_metrics['Brier']):
-        if parentNeural:
-            if any(['logistic' in model,'neural' in model]): #exclude other algorithms
-                plt.axhline(y = value, linestyle = '-', label=model, color=next(ax._get_lines.prop_cycler)['color'])
-        else:
-            if any(['logistic' in model]): #exclude other algorithms
-                plt.axhline(y = value, linestyle = '-', label=model, color='r')
-    plt.legend()
-    plt.savefig(os.path.join(path,f'hyperparameter_variability_{'Brier'}.png'))
-    plt.show()
+#     df.groupby('Before/After').boxplot(column='Brier', by='Algorithm', ax=ax)
+#     for model, value in zip(parent_metrics['Model'], parent_metrics['Brier']):
+#         if parentNeural:
+#             if any(['logistic' in model,'neural' in model]): #exclude other algorithms
+#                 plt.axhline(y = value, linestyle = '-', label=model, color=next(ax._get_lines.prop_cycler)['color'])
+#         else:
+#             if any(['logistic' in model]): #exclude other algorithms
+#                 plt.axhline(y = value, linestyle = '-', label=model, color='r')
+#     plt.legend()
+#     plt.savefig(os.path.join(path,f'hyperparameter_variability_{'Brier'}.png'))
+#     plt.show()
 #%%
 
 X,y=getData(2017)
@@ -175,3 +185,21 @@ for metric in ['Score', 'Recall_20000', 'PPV_20000', 'Brier']:
     table2=metrics.groupby(['Algorithm'])[metric].describe()[['25%','50%', '75%','std']].sort_values('50%', ascending=[not higher_better[metric]])
     print(table2.to_latex(formatters=[ use_f_3, use_f_3, use_f_3, use_E]))
     print('\n'*2)
+
+def median(x):
+    return x.quantile(0.5,interpolation='nearest')
+median_models={}
+for metric in ['Score', 'AP']:
+    mediandf=metrics.groupby(['Algorithm'])[metric].agg([ median]).stack(level=0)
+    for alg in metrics.Algorithm.unique():
+            if alg=='logistic':
+                continue
+            df_alg=metrics.loc[metrics.Algorithm==alg].to_dict(orient='list')
+            perc50=mediandf.loc[alg]['median']
+            chosen_model=list(df_alg['Model'])[list(df_alg[metric]).index(perc50)]
+            print(metrics.loc[metrics.Model==chosen_model][metric])
+            try:
+                median_models[metric].append(chosen_model)
+            except KeyError:
+                median_models[metric]=[chosen_model]
+                
