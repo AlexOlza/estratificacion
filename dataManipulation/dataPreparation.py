@@ -286,20 +286,19 @@ def generateCCSData(yr,  X,
     i=0
     import time
     t0=time.time()
+    # X.set_index('PATIENT_ID', inplace=True)
     for ccs_number, df in diags_with_ccs.groupby('CCS'):
-        if i>1:
-            break
+        # if i>1000:
+        #     break
             # ids=df.PATIENT_ID.unique()
         print(ccs_number,df['CCS CATEGORY DESCRIPTION'].values[0])
         amount_per_patient=df.groupby('PATIENT_ID').size().to_frame(name=f'CCS{ccs_number}')
         X[f'CCS{ccs_number}']=np.int16(0)
-        X.set_index('PATIENT_ID', inplace=True)
-        X.update(amount_per_patient)
-        X.reset_index()
-       
-        # X.loc[X.PATIENT_ID==df.PATIENT_ID]
         
+        X.update(amount_per_patient)
+
         i+=1
+    X.reset_index()
     print('TIME : ' , time.time()-t0)
  
     
