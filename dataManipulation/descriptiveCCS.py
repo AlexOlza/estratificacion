@@ -40,7 +40,7 @@ for c in X.drop('PATIENT_ID',axis=1):
 
 #%%
 from collections import Counter
-K=15
+# K=15
 c = Counter(n)
 cp= Counter(p)
 most_common = c.most_common(len(n)) 
@@ -70,3 +70,8 @@ print('MOST PREVALENT CCSs:')
 mp=to_df(most_prevalent, ccs)
 print(mp)
 mp.to_excel(f'most_prevalent_CCSs_{year}.xlsx',index=False)
+
+print('CHECKS')
+print( mc['CCS CATEGORY DESCRIPTION'].isnull().sum())
+print(mc.loc[mc['CCS CATEGORY']=='50'])
+print(mc.loc[mc['CCS CATEGORY']=='49'])
