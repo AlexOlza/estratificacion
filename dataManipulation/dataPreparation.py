@@ -256,7 +256,7 @@ def generateCCSData(yr,  X,
         
     
     # Add columns of zeros for each CCS category
-    for ccs_number in sorted(list(set(list(icd9.CCS.unique()) + list(icd10cm.CCS.unique())))):
+    for ccs_number in sorted(list(['0'])+list(set(list(icd9.CCS.unique()) + list(icd10cm.CCS.unique())))):
         X[f'CCS{ccs_number}']=np.int16(0)
     
     # Para cada paciente, seleccionar todos sus diagnosticos (icd9_id union icd10_id)
@@ -279,36 +279,31 @@ def generateCCSData(yr,  X,
         df['CODE']=df.CIE_CODE
         dfmerged=pd.merge(df, icd10cm, how='left', on='CODE')[['PATIENT_ID','CIE_CODE','CODE','CCS', 'CCS CATEGORY DESCRIPTION']]
         diags_with_ccs= pd.concat([diags_with_ccs, dfmerged])      
-                             
+    
+    # Add columns of zeros for each CCS category
+    for ccs_number in sorted(list(['0'])+list(set(list(icd9.CCS.unique()) + list(icd10cm.CCS.unique())))):
+        diags_with_ccs[f'CCS{ccs_number}']=np.int16(0)
     i=0
     import time
     t0=time.time()
-    for yy, df in diags_with_ccs.groupby(['CCS','PATIENT_ID']):
-        if i>10:
+    for ccs_number, df in diags_with_ccs.groupby('CCS'):
+        if i>1:
             break
             # ids=df.PATIENT_ID.unique()
-        print(yy,df['CCS CATEGORY DESCRIPTION'].values[0])
-        print(df.size)
+        print(ccs_number,df['CCS CATEGORY DESCRIPTION'].values[0])
+        amount_per_patient=df.groupby('PATIENT_ID').size().to_frame(name=f'CCS{ccs_number}')
+        X[f'CCS{ccs_number}']=np.int16(0)
+        X.set_index('PATIENT_ID', inplace=True)
+        X.update(amount_per_patient)
+        X.reset_index()
+       
+        # X.loc[X.PATIENT_ID==df.PATIENT_ID]
+        
         i+=1
-    print(time.time()-t0)
+    print('TIME : ' , time.time()-t0)
+ 
     
-   
-    i=0
-    for _, df in diags.groupby('PATIENT_ID'): 
-        id=df.PATIENT_ID.values[0]
-        icd9_id=df[df.CIE_VERSION.astype(str).str.startswith('9')]
-        icd10cm_id=df[df.CIE_VERSION.astype(str).str.startswith('10')]
-        for code in icd9_id.CIE_CODE.values:
-            if code in icd9.CODE.values:
-                ccs_number=icd9[icd9.CODE==code].CCS.values[0]
-                X.loc[X.PATIENT_ID==id, f'CCS{ccs_number}']+=np.int16(1)
-        for code in icd10cm_id.CIE_CODE.values:
-            if code in icd10cm.CODE.values:
-                ccs_number=icd10cm[icd10cm.CODE==code].CCS.values[0]
-                X.loc[X.PATIENT_ID==id, f'CCS{ccs_number}']+=np.int16(1)
-        i+=1
-        # print(i)
-    print(f'{i} patients processed')
+    print(f'{i} dfs processed')
     
     
     X.reindex(sorted(X.columns), axis=1).to_csv(os.path.join(config.DATAPATH,f'CCS{yr}.csv'))
