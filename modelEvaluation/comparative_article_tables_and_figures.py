@@ -67,6 +67,10 @@ def ROC_PR_comparison(models, yr, logistic_model, mode='ROC', **kwargs):
         elif mode=='ROC':
             display[label]= RocCurveDisplay(fpr=fpr, tpr=tpr, roc_auc=roc_auc,
                       estimator_name=label)
+    import matplotlib.pyplot as plt
+    fig2, ax = plt.subplots(1,1,figsize=(10,10))
+    for curve in display.values():
+        curve.plot(ax)
     return(display)
 # def brier_boxplot(df, year, **kwargs):
 #     path=kwargs.get('path',config.FIGUREPATH)
@@ -111,7 +115,7 @@ female=X['FEMALE']==1
 male=X['FEMALE']==0
 sex=[ 'Women','Men']
 # table1={'Women':pd.DataFrame(), 'Men':pd.DataFrame()}
-table1= pd.DataFrame(index=['N (%)', 'Hospitalized in 2017', 
+table1= pd.DataFrame(index=['N in 2017 (%)', 'Hospitalized in 2018', 
                             'Aged 0-17',
                             'Aged 18-64',
                             'Aged 65-69',
@@ -147,6 +151,7 @@ simdif=len(set(X.PATIENT_ID.values).symmetric_difference(set(X16.PATIENT_ID.valu
 print('The two populations contained...')
 print(simdif, '(simetric difference)')
 print(f'... patients not in common, that is, {simdif*100/len(X):2.2f} %')
+print('Prevalence of admission in 2018:',sum(np.where(y.urgcms>=1,1,0))/len(X))
 #%%
 """ MATERIALS AND METHODS: Comments on variability assessment"""
 K=20000
@@ -175,13 +180,14 @@ for metric in ['Score', 'Recall_20000', 'PPV_20000', 'F1_20000','Brier']:
   
 print(table2.to_latex())
 
-higher_better={'Score': True, 'Recall_20000': True, 'PPV_20000': True, 'Brier':False}
+higher_better={'Score': True, 'Recall_20000': True,
+               'PPV_20000': True, 'Brier':False, 'AP':True}
 def use_f_3(x):
     return "%.4f" % x
 def use_E(x):
     return "%.2e" % x
 # Option 2: Subtables with descriptive
-for metric in ['Score', 'Recall_20000', 'PPV_20000', 'Brier']:
+for metric in [ 'Score', 'Recall_20000', 'PPV_20000', 'Brier','AP']:
     table2=metrics.groupby(['Algorithm'])[metric].describe()[['25%','50%', '75%','std']].sort_values('50%', ascending=[not higher_better[metric]])
     print(table2.to_latex(formatters=[ use_f_3, use_f_3, use_f_3, use_E]))
     print('\n'*2)
@@ -203,3 +209,10 @@ for metric in ['Score', 'AP']:
             except KeyError:
                 median_models[metric]=[chosen_model]
                 
+
+
+""" ROC AND PR FIGURES """
+logistic_model='logistic20220207_122835'
+ROC_PR_comparison(median_models['AP'], 2018, logistic_model, mode='PR')
+ROC_PR_comparison(median_models['Score'], 2018, logistic_model, mode='ROC')
+
