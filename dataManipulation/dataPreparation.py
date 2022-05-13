@@ -203,7 +203,7 @@ def generateCCSData(yr,  X,
     icd9['CCS']=icd9['CCS LVL 1 LABEL']+icd9['CCS LVL 2 LABEL']+icd9['CCS LVL 3 LABEL']+icd9['CCS LVL 4 LABEL']
     icd9.CCS=icd9.CCS.str.extract(r'(?P<CCS>[0-9]+)').CCS
     assert icd9.CCS.describe().isnull().sum()==0, 'Some codes in the ICD9 dictionary have not been assigned a CCS :('
-    icd9.CCS=icd9.CCS.str.replace(r'[^0-9]', r'') #Keep only numbers (the CCS category)
+    # icd9.CCS=icd9.CCS.str.replace(r'[^0-9]', r'') #Keep only numbers (the CCS category)
     icd9.CCS=icd9.CCS.str.replace(r'\s|\/', r'')
     icd9.CODE=icd9.CODE.str.slice(0,5)
     
@@ -266,6 +266,33 @@ def generateCCSData(yr,  X,
     #Keep only IDs present in X, because we need patients to have age, sex and 
     #other potential predictors
     diags=diags.loc[diags.PATIENT_ID.isin(X.PATIENT_ID.values)]
+    icd9diags=diags.CIE_VERSION.astype(str).str.startswith('9')
+    icd10diags=diags.CIE_VERSION.astype(str).str.startswith('10')
+    
+    assert diags.loc[icd9diags].CIE_CODE.isnull().sum()==0
+    assert diags.loc[icd10diags].CIE_CODE.isnull().sum()==0
+    
+    
+    diags_with_ccs=pd.DataFrame()
+    for version, dictdf in zip( [icd9diags,icd10diags], [icd9, icd10cm]):
+        df=diags.loc[version]
+        df['CODE']=df.CIE_CODE
+        dfmerged=pd.merge(df, icd10cm, how='left', on='CODE')[['PATIENT_ID','CIE_CODE','CODE','CCS', 'CCS CATEGORY DESCRIPTION']]
+        diags_with_ccs= pd.concat([diags_with_ccs, dfmerged])      
+                             
+    i=0
+    import time
+    t0=time.time()
+    for yy, df in diags_with_ccs.groupby(['CCS','PATIENT_ID']):
+        if i>10:
+            break
+            # ids=df.PATIENT_ID.unique()
+        print(yy,df['CCS CATEGORY DESCRIPTION'].values[0])
+        print(df.size)
+        i+=1
+    print(time.time()-t0)
+    
+   
     i=0
     for _, df in diags.groupby('PATIENT_ID'): 
         id=df.PATIENT_ID.values[0]
