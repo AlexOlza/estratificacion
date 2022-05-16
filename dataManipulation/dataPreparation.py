@@ -180,9 +180,13 @@ def generateCCSData(yr,  X,
                 if key not in exclude.keys():
                     if description:
                         writer.writerow([key[0]+' -> '+key[1],'CCS', 'Description'])
-                        for v in value:
-                            writer.writerow([' ',v, dictionary.loc[dictionary.CCS==v]['CCS LVL 2 LABEL'].unique()[0]])
-                        writer.writerow(['','',''])
+                        for col in ['CCS LVL 2 LABEL', 'CCS CATEGORY DESCRIPTION']:
+                            try:
+                                for v in value:
+                                    writer.writerow([' ',v, dictionary.loc[dictionary.CCS==v][col].unique()[0]])
+                                writer.writerow(['','',''])
+                            except:
+                                continue
                     else:
                         assert isinstance(diags, pd.DataFrame)
                         N=len(diags.loc[diags.CIE_CODE==key[0]].PATIENT_ID.unique())
