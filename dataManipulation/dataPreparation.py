@@ -288,10 +288,6 @@ def generateCCSData(yr,  X,
     icd9diags=diags.CIE_VERSION.str.startswith('9')
     icd10diags=diags.CIE_VERSION.str.startswith('10')
     
-    assert diags.loc[icd9diags].CIE_CODE.isnull().sum()==0
-    assert diags.loc[icd10diags].CIE_CODE.isnull().sum()==0
-    
-    
     diags_with_ccs=pd.DataFrame()
     for version, dictdf in zip( [icd9diags,icd10diags], [icd9, icd10cm]):
         df=diags.loc[version]
@@ -300,15 +296,15 @@ def generateCCSData(yr,  X,
         diags_with_ccs= pd.concat([diags_with_ccs, dfmerged])      
     #%%
     # Add columns of zeros for each CCS category
-    for ccs_number in sorted(list(['0'])+list(set(list(icd9.CCS.unique()) + list(icd10cm.CCS.unique())))):
-        diags_with_ccs[f'CCS{ccs_number}']=np.int16(0)
+    # for ccs_number in sorted(list(['0'])+list(set(list(icd9.CCS.unique()) + list(icd10cm.CCS.unique())))):
+    #     diags_with_ccs[f'CCS{ccs_number}']=np.int16(0)
     i=0
     import time
     t0=time.time()
     # X.set_index('PATIENT_ID', inplace=True)
     for ccs_number, df in diags_with_ccs.groupby('CCS'):
-        # if i>1000:
-        #     break
+        if i>10000:
+            break
             # ids=df.PATIENT_ID.unique()
         print(ccs_number,df['CCS CATEGORY DESCRIPTION'].values[0])
         amount_per_patient=df.groupby('PATIENT_ID').size().to_frame(name=f'CCS{ccs_number}')
