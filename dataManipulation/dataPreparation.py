@@ -186,16 +186,22 @@ def generateCCSData(yr,  X,
                         assert isinstance(diags, pd.DataFrame)
                         N=len(diags.loc[diags.CIE_CODE==key[0]].PATIENT_ID.unique())
                         writer.writerow([key[0], N])     
-   
+    """ ICD 10 CM """
     icd10cm=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,config.ICDTOCCSFILES['ICD10CM']),
                         dtype=str,)# usecols=['ICD-10-CM CODE', 'CCS CATEGORY'])
+    #Check no null values at reading time
+    assert all(icd10cm.isnull().sum()==0), f'Null values encountered when reading {config.ICDTOCCSFILES["ICD10CM"]}'
+
     icd10cm.rename(columns={'ICD-10-CM CODE':'CODE', 'CCS CATEGORY':'CCS'},inplace=True)
     icd10cm.CODE=icd10cm.CODE.str.slice(0,6)
     assert icd10cm.CCS.isnull().sum()==0, 'Some codes in the ICD10CM dictionary have not been assigned a CCS :('
+    
+    """ ICD 9 """
     icd9=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,config.ICDTOCCSFILES['ICD9']), dtype=str,
                      usecols=['ICD-9-CM CODE','CCS LVL 1 LABEL','CCS LVL 2 LABEL',
                               'CCS LVL 3 LABEL','CCS LVL 4 LABEL'])
-    
+    #Check no null values at reading time
+    assert all(icd9.isnull().sum()==0), f'Null values encountered when reading {config.ICDTOCCSFILES["ICD9"]}'
 
     #the CCS category is expressed between brackets and followed by a dot,
     #and can be inside any column of type 'CCS LVL x LABEL'.
@@ -207,15 +213,24 @@ def generateCCSData(yr,  X,
     icd9.CCS=icd9.CCS.str.replace(r'\s|\/', r'')
     icd9.CODE=icd9.CODE.str.slice(0,5)
     
+    """ DIAGNOSES """
     diags=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,config.ICDFILES[yr]),
-                      usecols=['PATIENT_ID','CIE_VERSION','CIE_CODE','START_DATE','END_DATE'],
+                      usecols=['PATIENT_ID','CIE_VERSION','CIE_CODE','END_DATE'],
                       index_col=False)
+    
+    print('Dropping NULL codes:')
+    print(diags.loc[diags.CIE_CODE.isnull()])
+    diags.dropna(subset=['CIE_CODE'], inplace=True)
     #KEEP ONLY DX THAT ARE STILL ACTIVE AT THE BEGINNING OF THE CURRENT YEAR
+    #Interpret NaN as still active:
+    diags.loc[diags.END_DATE.isnull(),'END_DATE']=f'{yr}-12-31'
     diags=diags.loc[diags.END_DATE>=f'{yr}-01-01'][['PATIENT_ID', 'CIE_VERSION', 'CIE_CODE']]
     diags.CIE_CODE=diags.CIE_CODE.astype(str)
     diags.CIE_VERSION=diags.CIE_VERSION.astype(str)
     diags.CIE_CODE=diags.CIE_CODE.str.replace(r'\s|\/', r'')
-    
+    #Check null values
+    assert all(diags.isnull().sum()==0), f'Null values encountered after cleaning up {config.ICDFILES[yr]}'
+
     #In the diagnoses dataset, ICD10CM dx that start with a digit are related to oncology
     diags.loc[(diags.CIE_VERSION.astype(str).str.startswith('10') & diags.CIE_CODE.str.match('^[0-9]')),'CIE_CODE']='ONCOLOGY'
     
@@ -312,7 +327,7 @@ if __name__=='__main__':
     import sys
     sys.path.append('/home/aolza/Desktop/estratificacion/')
     yr=2016
-    X,Y=getData(yr)
+    X,Y=getData(yr, CCS=False)
     # _ , _ =generateCCSData(yr,  X)
     print('positive class ',sum(np.where(Y.urgcms>=1,1,0)))
     
