@@ -262,6 +262,8 @@ def generateCCSData(yr,  X,
         needsManualRevision(failure, icd10cm, appendix=f'_icd10_{yr}', diags=diags)
     print('-------'*10)
     
+     # for fname in [f'ccs/manually_revised_icd9_{yr}.csv', f'ccs/manually_revised_icd10_{yr}.csv']
+
     f=os.path.join(config.INDISPENSABLEDATAPATH,f'ccs/manually_revised_icd10_{yr}.csv')
     assert Path(f).is_file(), "Manual revision file not found!!"
     revision=pd.read_csv(f, header=0, names=['CODE', 'CCS', 'NEW_CODE'])
@@ -274,13 +276,6 @@ def generateCCSData(yr,  X,
         diags.loc[diags.CIE_CODE==code, 'CIE_CODE']=new
         
     #%%
-    # Add columns of zeros for each CCS category
-    for ccs_number in sorted(list(['0'])+list(set(list(icd9.CCS.unique()) + list(icd10cm.CCS.unique())))):
-        X[f'CCS{ccs_number}']=np.int16(0)
-    
-    # Para cada paciente, seleccionar todos sus diagnosticos (icd9_id union icd10_id)
-    # Para cada diagnóstico de cada paciente, buscar la categoria CCS en la tabla correspondiente 
-    # y sumar 1 a dicha categoría en X
 
     #Keep only IDs present in X, because we need patients to have age, sex and 
     #other potential predictors
@@ -289,11 +284,14 @@ def generateCCSData(yr,  X,
     icd10diags=diags.CIE_VERSION.str.startswith('10')
     
     diags_with_ccs=pd.DataFrame()
+    icd9['DESCRIPTION']=icd9['CCS LVL 1 LABEL']+icd9['CCS LVL 2 LABEL']+icd9['CCS LVL 3 LABEL']+icd9['CCS LVL 4 LABEL']
+    icd10cm.rename(columns={'CCS CATEGORY DESCRIPTION':'DESCRIPTION'},inplace=True)
     for version, dictdf in zip( [icd9diags,icd10diags], [icd9, icd10cm]):
         df=diags.loc[version]
         df['CODE']=df.CIE_CODE
-        dfmerged=pd.merge(df, icd10cm, how='left', on='CODE')[['PATIENT_ID','CIE_CODE','CODE','CCS', 'CCS CATEGORY DESCRIPTION']]
+        dfmerged=pd.merge(df, dictdf, how='left', on='CODE')[['PATIENT_ID','CIE_CODE','CODE','CCS', 'DESCRIPTION']]
         diags_with_ccs= pd.concat([diags_with_ccs, dfmerged])      
+        # break 
     #%%
     # Add columns of zeros for each CCS category
     # for ccs_number in sorted(list(['0'])+list(set(list(icd9.CCS.unique()) + list(icd10cm.CCS.unique())))):
@@ -306,7 +304,7 @@ def generateCCSData(yr,  X,
     except KeyError:
         pass
     for ccs_number, df in diags_with_ccs.groupby('CCS'):
-        print(ccs_number,df['CCS CATEGORY DESCRIPTION'].values[0])
+        print(ccs_number,df['DESCRIPTION'].values[0])
         amount_per_patient=df.groupby('PATIENT_ID').size().to_frame(name=f'CCS{ccs_number}')
         X[f'CCS{ccs_number}']=np.int16(0)
         
