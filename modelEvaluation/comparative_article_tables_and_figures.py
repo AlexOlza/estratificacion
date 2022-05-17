@@ -73,7 +73,8 @@ def ROC_PR_comparison(models, yr, logistic_model, mode='ROC', **kwargs):
     for curve in display.values():
         curve.plot(ax)
     return(display)
-def brier_boxplot(df):
+def brier_boxplot(df, violin, together):
+    import seaborn as sns
     labels={'randomForest':'RF',
                 'neuralNetworkRandom':'MLP','hgb':'GBDT'}
     # path=kwargs.get('path',config.FIGUREPATH)
@@ -85,22 +86,37 @@ def brier_boxplot(df):
     parent_metrics=df.copy().loc[df.Algorithm=='logistic']
     df=df.loc[df.Algorithm!='logistic']
     df=df.replace({'Algorithm': labels})
-    fig=plt.figure(figsize=(7.5,8.8))
-    nrow=3
-    ncol=2
-    ax1 = plt.subplot2grid((nrow,ncol),(0,0))
-    ax2 = plt.subplot2grid((nrow,ncol),(0,1))
-    ax3 = plt.subplot2grid((nrow,ncol),(1,0))
-    ax4 = plt.subplot2grid((nrow,ncol),(1,1))
-    ax5 = plt.subplot2grid((nrow,ncol),(2,0), rowspan=1, colspan=2)
+    
     # fig, ((ax1,ax2, ax3),(ax4,ax5,ax6)) = plt.subplots(2,3,figsize=(10,12), gridspec_kw={'width_ratios': [1,1,1,3]})
     
+    if together:
+        fig=plt.figure(figsize=(8.5,5.8))
+        nrow=2
+        ncol=3
+        ax1 = plt.subplot2grid((nrow,ncol),(0,0))
+        ax2 = plt.subplot2grid((nrow,ncol),(0,1))
+        ax3 = plt.subplot2grid((nrow,ncol),(1,0))
+        ax4 = plt.subplot2grid((nrow,ncol),(1,1))
+        ax5 = plt.subplot2grid((nrow,ncol),(0,2), rowspan=2, colspan=1)
+        for metric, ax in zip(['Score', 'AP', 'Recall_20000', 'PPV_20000'],[ax1,ax2,ax3, ax4]):
+            if not violin:
+                df.boxplot(column=metric, by='Algorithm', ax=ax)
+            if violin:
+                sns.violinplot(ax=ax,x="Algorithm", y=metric, data=df)
     
-    for metric, ax in zip(['Score', 'AP', 'Recall_20000', 'PPV_20000'],[ax1,ax2,ax3, ax4]):
-        df.boxplot(column=metric, by='Algorithm', ax=ax)
-        print(parent_metrics[metric].values[0])
-        ax.axhline(y = parent_metrics[metric].values[0], linestyle = '-', label='Logistic', color='r')
+            print(parent_metrics[metric].values[0])
+            ax.axhline(y = parent_metrics[metric].values[0], linestyle = '-', label='Logistic', color='r')
+    else:
+        for metric in ['Score', 'AP', 'Recall_20000', 'PPV_20000']:
+            fig, ax=plt.subplots()
+            if not violin:
+                df.boxplot(column=metric, by='Algorithm', ax=ax)
+            if violin:
+                sns.violinplot(ax=ax,x="Algorithm", y=metric, data=df)
     
+            print(parent_metrics[metric].values[0])
+            ax.axhline(y = parent_metrics[metric].values[0], linestyle = '-', label='Logistic', color='r')
+
     df['Before/After']='After'
     dff=df.copy()
     dff['Before/After']='Before'
@@ -109,10 +125,19 @@ def brier_boxplot(df):
     # df2['Before/After']='After'
     # df2.loc[original_index, 'Before/After']='Before'
     # df2.loc[original_index, 'Brier']=df2.loc[original_index, 'Brier Before']
-    df2.boxplot(column='Brier', by=['Before/After','Algorithm'], ax=ax5)
-    ax5.axhline(y =parent_metrics['Brier'].values[0], linestyle = '-', label='Logistic', color='r')
-    plt.legend()
-    # plt.savefig(os.path.join(path,f'hyperparameter_variability_{'Brier'}.png'))
+    if together:
+        df2.boxplot(column='Brier', by=['Before/After','Algorithm'], ax=ax5)
+        ax5.axhline(y =parent_metrics['Brier'].values[0], linestyle = '-', label='Logistic', color='r')
+        plt.legend()
+        # plt.savefig(os.path.join(path,f'hyperparameter_variability_{'Brier'}.png'))
+    else:
+        fig, ax5=plt.subplots(figsize=(6,10))
+        if violin:
+            sns.violinplot(ax=ax5,x="Algorithm", y='Brier', data=df2, hue='Before/After')
+        else:
+            df2.boxplot(column='Brier', by=['Before/After','Algorithm'], ax=ax5)
+        ax5.axhline(y =parent_metrics['Brier'].values[0], linestyle = '-', label='Logistic', color='r')
+        plt.legend()
     plt.suptitle('')
     plt.tight_layout()
     plt.show()
@@ -227,4 +252,4 @@ logistic_model='logistic20220207_122835'
 ROC_PR_comparison(median_models['AP'], 2018, logistic_model, mode='PR')
 ROC_PR_comparison(median_models['Score'], 2018, logistic_model, mode='ROC')
 
-brier_boxplot(metrics, 2018)
+brier_boxplot(metrics)
