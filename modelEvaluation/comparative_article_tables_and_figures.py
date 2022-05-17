@@ -82,16 +82,16 @@ def brier_boxplot(df, year, **kwargs):
     # df['Algorithm']=[re.sub('_|[0-9]', '', model) for model in df['Model'].values]
     parent_metrics=df.copy().loc[df.Algorithm=='logistic']
     df=df.loc[df.Algorithm!='logistic']
-    fig=plt.figure(figsize=(12, 6))
-    ax1 = plt.subplot(3,2,1)
-    ax2 = plt.subplot(3,2,2)
-    ax3 = plt.subplot(3,2,3)
-    ax4 = plt.subplot(3,2,4)
-    ax5 = plt.subplot(3,1,2)
+    fig=plt.figure()
+    ax1 = plt.subplot2grid((3,2),(0,0))
+    ax2 = plt.subplot2grid((3,2),(0,1))
+    ax3 = plt.subplot2grid((3,2),(1,0))
+    ax4 = plt.subplot2grid((3,2),(1,1))
+    ax5 = plt.subplot2grid((3,2),(2,0), rowspan=1, colspan=2)
     # fig, ((ax1,ax2, ax3),(ax4,ax5,ax6)) = plt.subplots(2,3,figsize=(10,12), gridspec_kw={'width_ratios': [1,1,1,3]})
     plt.suptitle('')
     
-    for metric, ax in zip(['Score', 'AP', 'Recall_20000', 'PPV_20000'],[ax1,ax2,ax3]):
+    for metric, ax in zip(['Score', 'AP', 'Recall_20000', 'PPV_20000'],[ax1,ax2,ax3, ax4]):
         df.boxplot(column=metric, by='Algorithm', ax=ax)
         print(parent_metrics[metric].values[0])
         ax.axhline(y = parent_metrics[metric].values[0], linestyle = '-', label='Logistic', color='r')
@@ -104,8 +104,8 @@ def brier_boxplot(df, year, **kwargs):
     # df2['Before/After']='After'
     # df2.loc[original_index, 'Before/After']='Before'
     # df2.loc[original_index, 'Brier']=df2.loc[original_index, 'Brier Before']
-    df2.boxplot(column='Brier', by=['Before/After','Algorithm'], ax=ax4)
-    ax4.axhline(y =parent_metrics['Brier'].values[0], linestyle = '-', label='Logistic', color='r')
+    df2.boxplot(column='Brier', by=['Before/After','Algorithm'], ax=ax5)
+    ax5.axhline(y =parent_metrics['Brier'].values[0], linestyle = '-', label='Logistic', color='r')
     plt.legend()
     # plt.savefig(os.path.join(path,f'hyperparameter_variability_{'Brier'}.png'))
     plt.show()
@@ -220,3 +220,4 @@ logistic_model='logistic20220207_122835'
 ROC_PR_comparison(median_models['AP'], 2018, logistic_model, mode='PR')
 ROC_PR_comparison(median_models['Score'], 2018, logistic_model, mode='ROC')
 
+brier_boxplot(metrics, 2018)
