@@ -73,7 +73,9 @@ def ROC_PR_comparison(models, yr, logistic_model, mode='ROC', **kwargs):
     for curve in display.values():
         curve.plot(ax)
     return(display)
-def brier_boxplot(df, year, **kwargs):
+def brier_boxplot(df):
+    labels={'randomForest':'RF',
+                'neuralNetworkRandom':'MLP','hgb':'GBDT'}
     # path=kwargs.get('path',config.FIGUREPATH)
     # name=kwargs.get('name','')
     # X=kwargs.get('X',None)
@@ -82,14 +84,17 @@ def brier_boxplot(df, year, **kwargs):
     # df['Algorithm']=[re.sub('_|[0-9]', '', model) for model in df['Model'].values]
     parent_metrics=df.copy().loc[df.Algorithm=='logistic']
     df=df.loc[df.Algorithm!='logistic']
-    fig=plt.figure()
-    ax1 = plt.subplot2grid((3,2),(0,0))
-    ax2 = plt.subplot2grid((3,2),(0,1))
-    ax3 = plt.subplot2grid((3,2),(1,0))
-    ax4 = plt.subplot2grid((3,2),(1,1))
-    ax5 = plt.subplot2grid((3,2),(2,0), rowspan=1, colspan=2)
+    df=df.replace({'Algorithm': labels})
+    fig=plt.figure(figsize=(7.5,8.8))
+    nrow=3
+    ncol=2
+    ax1 = plt.subplot2grid((nrow,ncol),(0,0))
+    ax2 = plt.subplot2grid((nrow,ncol),(0,1))
+    ax3 = plt.subplot2grid((nrow,ncol),(1,0))
+    ax4 = plt.subplot2grid((nrow,ncol),(1,1))
+    ax5 = plt.subplot2grid((nrow,ncol),(2,0), rowspan=1, colspan=2)
     # fig, ((ax1,ax2, ax3),(ax4,ax5,ax6)) = plt.subplots(2,3,figsize=(10,12), gridspec_kw={'width_ratios': [1,1,1,3]})
-    plt.suptitle('')
+    
     
     for metric, ax in zip(['Score', 'AP', 'Recall_20000', 'PPV_20000'],[ax1,ax2,ax3, ax4]):
         df.boxplot(column=metric, by='Algorithm', ax=ax)
@@ -108,6 +113,8 @@ def brier_boxplot(df, year, **kwargs):
     ax5.axhline(y =parent_metrics['Brier'].values[0], linestyle = '-', label='Logistic', color='r')
     plt.legend()
     # plt.savefig(os.path.join(path,f'hyperparameter_variability_{'Brier'}.png'))
+    plt.suptitle('')
+    plt.tight_layout()
     plt.show()
 #%%
 
