@@ -80,19 +80,16 @@ def brier_boxplot(df, year, **kwargs):
     # y=kwargs.get('y',None)
 
     # df['Algorithm']=[re.sub('_|[0-9]', '', model) for model in df['Model'].values]
-    parent_metrics=df.loc[df.Algorithm=='logistic']
+    parent_metrics=df.copy().loc[df.Algorithm=='logistic']
     df=df.loc[df.Algorithm!='logistic']
     fig, ((ax1,ax2, ax3),(ax4,ax5,ax6)) = plt.subplots(2,3,figsize=(10,12))
     plt.suptitle('')
     
     for metric, ax in zip(['Score', 'Recall_20000', 'PPV_20000'],[ax1,ax2,ax3]):
         df.boxplot(column=metric, by='Algorithm', ax=ax)
-        # print(parent_metrics[metric])
-        try:
-            ax.axhline(y = parent_metrics[metric].values[0], linestyle = '-', label='Logistic', color='r')
-        except:
-            pass
-    original_index=df.index
+        print(parent_metrics[metric].values[0])
+        ax.axhline(y = parent_metrics[metric].values[0], linestyle = '-', label='Logistic', color='r')
+    
     df['Before/After']='After'
     dff=df.copy()
     dff['Before/After']='Before'
@@ -102,10 +99,7 @@ def brier_boxplot(df, year, **kwargs):
     # df2.loc[original_index, 'Before/After']='Before'
     # df2.loc[original_index, 'Brier']=df2.loc[original_index, 'Brier Before']
     df2.boxplot(column='Brier', by=['Before/After','Algorithm'], ax=ax4)
-    try:
-        ax4.axhline(y =parent_metrics['Brier'], linestyle = '-', label='Logistic', color='r')
-    except:
-        pass
+    ax4.axhline(y =parent_metrics['Brier'].values[0], linestyle = '-', label='Logistic', color='r')
     plt.legend()
     # plt.savefig(os.path.join(path,f'hyperparameter_variability_{'Brier'}.png'))
     plt.show()
