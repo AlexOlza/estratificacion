@@ -82,10 +82,16 @@ def brier_boxplot(df, year, **kwargs):
     # df['Algorithm']=[re.sub('_|[0-9]', '', model) for model in df['Model'].values]
     parent_metrics=df.copy().loc[df.Algorithm=='logistic']
     df=df.loc[df.Algorithm!='logistic']
-    fig, ((ax1,ax2, ax3),(ax4,ax5,ax6)) = plt.subplots(2,3,figsize=(10,12))
+    fig=plt.figure(figsize=(12, 6))
+    ax1 = plt.subplot(3,2,1)
+    ax2 = plt.subplot(3,2,2)
+    ax3 = plt.subplot(3,2,3)
+    ax4 = plt.subplot(3,2,4)
+    ax5 = plt.subplot(3,1,2)
+    # fig, ((ax1,ax2, ax3),(ax4,ax5,ax6)) = plt.subplots(2,3,figsize=(10,12), gridspec_kw={'width_ratios': [1,1,1,3]})
     plt.suptitle('')
     
-    for metric, ax in zip(['Score', 'Recall_20000', 'PPV_20000'],[ax1,ax2,ax3]):
+    for metric, ax in zip(['Score', 'AP', 'Recall_20000', 'PPV_20000'],[ax1,ax2,ax3]):
         df.boxplot(column=metric, by='Algorithm', ax=ax)
         print(parent_metrics[metric].values[0])
         ax.axhline(y = parent_metrics[metric].values[0], linestyle = '-', label='Logistic', color='r')
