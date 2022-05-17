@@ -155,11 +155,12 @@ def generateCCSData(yr,  X,
                 code=dx[:-i]
                 options=list(dictionary.loc[dictionary.CODE.str.startswith(code)].CCS.unique())
  
-            if '259' in options: options.remove('259') #CCS 259 is for residual unclassified codes
+            if '259' in options and len(options)>=2: options.remove('259') #CCS 259 is for residual unclassified codes
             if len(options)==1:
                 success[(dx, code)]=options[0]
             else:
                 failure[(dx, code)]=options
+            # break
         print(failure)
         return(success, failure)
     def assign_success(success, dic):
@@ -179,23 +180,33 @@ def generateCCSData(yr,  X,
                 if key not in exclude.keys():
                     if description:
                         writer.writerow([key[0]+' -> '+key[1],'CCS', 'Description'])
-                        for v in value:
-                            writer.writerow([' ',v, dictionary.loc[dictionary.CCS==v]['MULTI CCS LVL 2 LABEL'].unique()[0]])
-                        writer.writerow(['','',''])
+                        for col in ['CCS LVL 2 LABEL', 'CCS CATEGORY DESCRIPTION']:
+                            try:
+                                for v in value:
+                                    writer.writerow([' ',v, dictionary.loc[dictionary.CCS==v][col].unique()[0]])
+                                writer.writerow(['','',''])
+                            except:
+                                continue
                     else:
                         assert isinstance(diags, pd.DataFrame)
                         N=len(diags.loc[diags.CIE_CODE==key[0]].PATIENT_ID.unique())
                         writer.writerow([key[0], N])     
-   
+    """ ICD 10 CM """
     icd10cm=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,config.ICDTOCCSFILES['ICD10CM']),
                         dtype=str,)# usecols=['ICD-10-CM CODE', 'CCS CATEGORY'])
+    #Check no null values at reading time
+    assert all(icd10cm.isnull().sum()==0), f'Null values encountered when reading {config.ICDTOCCSFILES["ICD10CM"]}'
+
     icd10cm.rename(columns={'ICD-10-CM CODE':'CODE', 'CCS CATEGORY':'CCS'},inplace=True)
     icd10cm.CODE=icd10cm.CODE.str.slice(0,6)
     assert icd10cm.CCS.isnull().sum()==0, 'Some codes in the ICD10CM dictionary have not been assigned a CCS :('
+    
+    """ ICD 9 """
     icd9=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,config.ICDTOCCSFILES['ICD9']), dtype=str,
                      usecols=['ICD-9-CM CODE','CCS LVL 1 LABEL','CCS LVL 2 LABEL',
                               'CCS LVL 3 LABEL','CCS LVL 4 LABEL'])
-    
+    #Check no null values at reading time
+    assert all(icd9.isnull().sum()==0), f'Null values encountered when reading {config.ICDTOCCSFILES["ICD9"]}'
 
     #the CCS category is expressed between brackets and followed by a dot,
     #and can be inside any column of type 'CCS LVL x LABEL'.
@@ -203,36 +214,44 @@ def generateCCSData(yr,  X,
     icd9['CCS']=icd9['CCS LVL 1 LABEL']+icd9['CCS LVL 2 LABEL']+icd9['CCS LVL 3 LABEL']+icd9['CCS LVL 4 LABEL']
     icd9.CCS=icd9.CCS.str.extract(r'(?P<CCS>[0-9]+)').CCS
     assert icd9.CCS.describe().isnull().sum()==0, 'Some codes in the ICD9 dictionary have not been assigned a CCS :('
-    icd9.CCS=icd9.CCS.str.replace(r'[^0-9]', r'') #Keep only numbers (the CCS category)
+    # icd9.CCS=icd9.CCS.str.replace(r'[^0-9]', r'') #Keep only numbers (the CCS category)
     icd9.CCS=icd9.CCS.str.replace(r'\s|\/', r'')
     icd9.CODE=icd9.CODE.str.slice(0,5)
-    
+    #%%
+    """ DIAGNOSES """
     diags=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,config.ICDFILES[yr]),
-                      usecols=['PATIENT_ID','CIE_VERSION','CIE_CODE','START_DATE','END_DATE'],
+                      usecols=['PATIENT_ID','CIE_VERSION','CIE_CODE','END_DATE'],
                       index_col=False)
+    
+    print('Dropping NULL codes:')
+    print(diags.loc[diags.CIE_CODE.isnull()])
+    diags.dropna(subset=['CIE_CODE'], inplace=True)
     #KEEP ONLY DX THAT ARE STILL ACTIVE AT THE BEGINNING OF THE CURRENT YEAR
+    #Interpret NaN as still active:
+    diags.loc[diags.END_DATE.isnull(),'END_DATE']=f'{yr}-12-31'
     diags=diags.loc[diags.END_DATE>=f'{yr}-01-01'][['PATIENT_ID', 'CIE_VERSION', 'CIE_CODE']]
     diags.CIE_CODE=diags.CIE_CODE.astype(str)
     diags.CIE_VERSION=diags.CIE_VERSION.astype(str)
     diags.CIE_CODE=diags.CIE_CODE.str.replace(r'\s|\/', r'')
-    
+    #Check null values
+    assert all(diags.isnull().sum()==0), f'Null values encountered after cleaning up {config.ICDFILES[yr]}'
+
     #In the diagnoses dataset, ICD10CM dx that start with a digit are related to oncology
     diags.loc[(diags.CIE_VERSION.astype(str).str.startswith('10') & diags.CIE_CODE.str.match('^[0-9]')),'CIE_CODE']='ONCOLOGY'
     
     #ICD10CM and ICD9 only allow for 6 and 5 characters respectively
-    diags.loc[diags.CIE_VERSION.astype(str).str.startswith('10'),'CIE_CODE']=diags.loc[diags.CIE_VERSION.astype(str).str.startswith('10'),'CIE_CODE'].str.slice(0,6)
-    diags.loc[diags.CIE_VERSION.astype(str).str.startswith('9'),'CIE_CODE']=diags.loc[diags.CIE_VERSION.astype(str).str.startswith('10'),'CIE_CODE'].str.slice(0,5)
-    
+    diags.loc[diags.CIE_VERSION.str.startswith('10'),'CIE_CODE']=diags.loc[diags.CIE_VERSION.astype(str).str.startswith('10'),'CIE_CODE'].str.slice(0,6)
+    diags.loc[diags.CIE_VERSION.str.startswith('9'),'CIE_CODE']=diags.loc[diags.CIE_VERSION.astype(str).str.startswith('9'),'CIE_CODE'].str.slice(0,5)
+    #%%
    
     missing_in_icd9=missingDX(icd9,diags.loc[diags.CIE_VERSION.astype(str).str.startswith('9')])
     missing_in_icd10cm=missingDX(icd10cm,diags.loc[diags.CIE_VERSION.astype(str).str.startswith('10')])
-    print('ICD9 CODES PRESENT IN DIAGNOSTIC DATASET BUT MISSING IN THE DICTIONARY:')
     print('Quantity: ', len(missing_in_icd9))
     success, failure=guessingCCS(missing_in_icd9, icd9)
     icd9=assign_success(success,icd9)
     print(f'{len(failure.keys())} codes need manual revision')
     if len(failure.keys())>0: 
-        needsManualRevision(failure, icd9, description=False, appendix=f'nodesc_icd9_{yr}', diags=diags)
+        needsManualRevision(failure, icd9, description=True, appendix=f'desc_icd9_{yr}', diags=diags)
     print('-------'*10)
     print('ICD10 CODES PRESENT IN DIAGNOSTIC DATASET BUT MISSING IN THE DICTIONARY:')
     print('Quantity: ', len(missing_in_icd10cm))
@@ -243,6 +262,8 @@ def generateCCSData(yr,  X,
         needsManualRevision(failure, icd10cm, appendix=f'_icd10_{yr}', diags=diags)
     print('-------'*10)
     
+     # for fname in [f'ccs/manually_revised_icd9_{yr}.csv', f'ccs/manually_revised_icd10_{yr}.csv']
+
     f=os.path.join(config.INDISPENSABLEDATAPATH,f'ccs/manually_revised_icd10_{yr}.csv')
     assert Path(f).is_file(), "Manual revision file not found!!"
     revision=pd.read_csv(f, header=0, names=['CODE', 'CCS', 'NEW_CODE'])
@@ -254,34 +275,47 @@ def generateCCSData(yr,  X,
     for code, new in zip(revision.CODE, revision.NEW_CODE):
         diags.loc[diags.CIE_CODE==code, 'CIE_CODE']=new
         
-    
-    # Add columns of zeros for each CCS category
-    for ccs_number in sorted(list(set(list(icd9.CCS.unique()) + list(icd10cm.CCS.unique())))):
-        X[f'CCS{ccs_number}']=np.int16(0)
-    
-    # Para cada paciente, seleccionar todos sus diagnosticos (icd9_id union icd10_id)
-    # Para cada diagnóstico de cada paciente, buscar la categoria CCS en la tabla correspondiente 
-    # y sumar 1 a dicha categoría en X
+    #%%
 
     #Keep only IDs present in X, because we need patients to have age, sex and 
     #other potential predictors
     diags=diags.loc[diags.PATIENT_ID.isin(X.PATIENT_ID.values)]
+    icd9diags=diags.CIE_VERSION.str.startswith('9')
+    icd10diags=diags.CIE_VERSION.str.startswith('10')
+    
+    diags_with_ccs=pd.DataFrame()
+    icd9['DESCRIPTION']=icd9['CCS LVL 1 LABEL']+icd9['CCS LVL 2 LABEL']+icd9['CCS LVL 3 LABEL']+icd9['CCS LVL 4 LABEL']
+    icd10cm.rename(columns={'CCS CATEGORY DESCRIPTION':'DESCRIPTION'},inplace=True)
+    for version, dictdf in zip( [icd9diags,icd10diags], [icd9, icd10cm]):
+        df=diags.loc[version]
+        df['CODE']=df.CIE_CODE
+        dfmerged=pd.merge(df, dictdf, how='left', on='CODE')[['PATIENT_ID','CIE_CODE','CODE','CCS', 'DESCRIPTION']]
+        diags_with_ccs= pd.concat([diags_with_ccs, dfmerged])      
+        # break 
+    #%%
+    # Add columns of zeros for each CCS category
+    # for ccs_number in sorted(list(['0'])+list(set(list(icd9.CCS.unique()) + list(icd10cm.CCS.unique())))):
+    #     diags_with_ccs[f'CCS{ccs_number}']=np.int16(0)
     i=0
-    for _, df in diags.groupby('PATIENT_ID'): 
-        id=df.PATIENT_ID.values[0]
-        icd9_id=df[df.CIE_VERSION.astype(str).str.startswith('9')]
-        icd10cm_id=df[df.CIE_VERSION.astype(str).str.startswith('10')]
-        for code in icd9_id.CIE_CODE.values:
-            if code in icd9.CODE.values:
-                ccs_number=icd9[icd9.CODE==code].CCS.values[0]
-                X.loc[X.PATIENT_ID==id, f'CCS{ccs_number}']+=np.int16(1)
-        for code in icd10cm_id.CIE_CODE.values:
-            if code in icd10cm.CODE.values:
-                ccs_number=icd10cm[icd10cm.CODE==code].CCS.values[0]
-                X.loc[X.PATIENT_ID==id, f'CCS{ccs_number}']+=np.int16(1)
+    import time
+    t0=time.time()
+    try:
+        X.set_index('PATIENT_ID', inplace=True)
+    except KeyError:
+        pass
+    for ccs_number, df in diags_with_ccs.groupby('CCS'):
+        print(ccs_number,df['DESCRIPTION'].values[0])
+        amount_per_patient=df.groupby('PATIENT_ID').size().to_frame(name=f'CCS{ccs_number}')
+        X[f'CCS{ccs_number}']=np.int16(0)
+        
+        X.update(amount_per_patient)
+        X[f'CCS{ccs_number}'].fillna(0,axis=0,inplace=True)
         i+=1
-        # print(i)
-    print(f'{i} patients processed')
+    X.reset_index()
+    print('TIME : ' , time.time()-t0)
+ 
+    
+    print(f'{i} dfs processed')
     
     
     X.reindex(sorted(X.columns), axis=1).to_csv(os.path.join(config.DATAPATH,f'CCS{yr}.csv'))
@@ -291,7 +325,7 @@ if __name__=='__main__':
     import sys
     sys.path.append('/home/aolza/Desktop/estratificacion/')
     yr=2016
-    X,Y=getData(yr)
+    X,Y=getData(yr, CCS=False)
     # _ , _ =generateCCSData(yr,  X)
     print('positive class ',sum(np.where(Y.urgcms>=1,1,0)))
     

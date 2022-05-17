@@ -147,7 +147,7 @@ def load(filename,directory=config.DATAPATH,predictors=None):
 		predictors=load_predictors(path,predictors)
 		print('Loading ',path)
 		for chunk in pd.read_csv(path, chunksize=100000,usecols=predictors):
-			d = dict.fromkeys(chunk.select_dtypes(np.int64).columns, np.int8)
+			d = dict.fromkeys(chunk.columns, np.int8)
 			d['PATIENT_ID']=np.int64
 			ignore=[]
 			for k in d.keys():
