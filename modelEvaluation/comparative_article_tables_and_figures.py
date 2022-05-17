@@ -22,6 +22,7 @@ util.makeAllPaths()
 
 from dataManipulation.dataPreparation import getData
 from modelEvaluation.calibrate import calibrate
+import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 import re
@@ -72,39 +73,36 @@ def ROC_PR_comparison(models, yr, logistic_model, mode='ROC', **kwargs):
     for curve in display.values():
         curve.plot(ax)
     return(display)
-# def brier_boxplot(df, year, **kwargs):
-#     path=kwargs.get('path',config.FIGUREPATH)
-#     name=kwargs.get('name','')
-#     X=kwargs.get('X',None)
-#     y=kwargs.get('y',None)
-#     if not parent_metrics: #we have to compute them
-#         parent_models=[i for i in detect_models(re.sub('hyperparameter_variability_|fixsample_','',config.MODELPATH))  if 'logistic' in i]
-#         logistic_model=[i for i in detect_latest(parent_models) if 'logistic2022' in i][0]
-#         # logistic_predfile=re.sub('hyperparameter_variability_|fixsample_','',generate_filename(logistic_model,year, calibrated=True))
-#         # logistic_predictions=pd.read_csv(logistic_predfile)
-#         logistic_predictions=calibrate(logistic_model, year,experiment_name=re.sub('hyperparameter_variability_|fixsample_','',config.EXPERIMENT), presentX=X, presentY=y)
-#         brier=brier_score_loss(np.where(logistic_predictions.OBS>=1,1,0), logistic_predictions.PREDCAL)
-#         brierBefore=brier_score_loss(np.where(logistic_predictions.OBS>=1,1,0), logistic_predictions.PRED)
-#         parent_metrics={'Model':[logistic_model],
-#                         'Before':[brierBefore],
-#                         'After':[brier]}
-#     parent_df=pd.DataFrame.from_dict(parent_metrics)   
-#     df['Algorithm']=[re.sub('_|[0-9]', '', model) for model in df['Model'].values]
-    
-#     fig, ax = plt.subplots(figsize=(10,12))
-#     plt.suptitle('')
+def brier_boxplot(df, year, **kwargs):
+    # path=kwargs.get('path',config.FIGUREPATH)
+    # name=kwargs.get('name','')
+    # X=kwargs.get('X',None)
+    # y=kwargs.get('y',None)
 
-#     df.groupby('Before/After').boxplot(column='Brier', by='Algorithm', ax=ax)
-#     for model, value in zip(parent_metrics['Model'], parent_metrics['Brier']):
-#         if parentNeural:
-#             if any(['logistic' in model,'neural' in model]): #exclude other algorithms
-#                 plt.axhline(y = value, linestyle = '-', label=model, color=next(ax._get_lines.prop_cycler)['color'])
-#         else:
-#             if any(['logistic' in model]): #exclude other algorithms
-#                 plt.axhline(y = value, linestyle = '-', label=model, color='r')
-#     plt.legend()
-#     plt.savefig(os.path.join(path,f'hyperparameter_variability_{'Brier'}.png'))
-#     plt.show()
+    # df['Algorithm']=[re.sub('_|[0-9]', '', model) for model in df['Model'].values]
+    parent_metrics=df.loc[df.Algorithm=='logistic']
+    df=df.loc[df.Algorithm!='logistic']
+    fig, ((ax1,ax2, ax3),(ax4,ax5,ax6)) = plt.subplots(2,3,figsize=(10,12))
+    plt.suptitle('')
+    
+    for metric, ax in zip(['Score', 'Recall_20000', 'PPV_20000'],[ax1,ax2,ax3]):
+        df.boxplot(column=metric, by='Algorithm', ax=ax)
+        for model, value in zip(parent_metrics['Model'], parent_metrics[metric]):
+            if any(['logistic' in model]): #exclude other algorithms
+                ax.axhline(y = value, linestyle = '-', label=model, color='r')
+    
+    original_index=df.index
+    df2=pd.concat([df,df])
+    df2['Before/After']='After'
+    df2.loc[original_index, 'Before/After']='Before'
+    df2.loc[original_index, 'Brier']=df2.loc[original_index, 'Brier Before']
+    df2.groupby('Before/After').boxplot(column='Brier', by='Algorithm', ax=ax4)
+    for model, value in zip(parent_metrics['Model'], parent_metrics['Brier']):
+        if any(['logistic' in model]): #exclude other algorithms
+            ax4.axhline(y = value, linestyle = '-', label=model, color='r')
+    plt.legend()
+    # plt.savefig(os.path.join(path,f'hyperparameter_variability_{'Brier'}.png'))
+    plt.show()
 #%%
 
 X,y=getData(2017)
