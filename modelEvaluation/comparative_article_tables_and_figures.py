@@ -87,19 +87,25 @@ def brier_boxplot(df, year, **kwargs):
     
     for metric, ax in zip(['Score', 'Recall_20000', 'PPV_20000'],[ax1,ax2,ax3]):
         df.boxplot(column=metric, by='Algorithm', ax=ax)
-        for model, value in zip(parent_metrics['Model'], parent_metrics[metric]):
-            if any(['logistic' in model]): #exclude other algorithms
-                ax.axhline(y = value, linestyle = '-', label=model, color='r')
-    
+        # print(parent_metrics[metric])
+        try:
+            ax.axhline(y = parent_metrics[metric].values[0], linestyle = '-', label='Logistic', color='r')
+        except:
+            pass
     original_index=df.index
-    df2=pd.concat([df,df])
-    df2['Before/After']='After'
-    df2.loc[original_index, 'Before/After']='Before'
-    df2.loc[original_index, 'Brier']=df2.loc[original_index, 'Brier Before']
-    df2.groupby('Before/After').boxplot(column='Brier', by='Algorithm', ax=ax4)
-    for model, value in zip(parent_metrics['Model'], parent_metrics['Brier']):
-        if any(['logistic' in model]): #exclude other algorithms
-            ax4.axhline(y = value, linestyle = '-', label=model, color='r')
+    df['Before/After']='After'
+    dff=df.copy()
+    dff['Before/After']='Before'
+    dff.Brier=dff['Brier Before']
+    df2=pd.concat([dff,df])
+    # df2['Before/After']='After'
+    # df2.loc[original_index, 'Before/After']='Before'
+    # df2.loc[original_index, 'Brier']=df2.loc[original_index, 'Brier Before']
+    df2.boxplot(column='Brier', by=['Before/After','Algorithm'], ax=ax4)
+    try:
+        ax4.axhline(y =parent_metrics['Brier'], linestyle = '-', label='Logistic', color='r')
+    except:
+        pass
     plt.legend()
     # plt.savefig(os.path.join(path,f'hyperparameter_variability_{'Brier'}.png'))
     plt.show()
