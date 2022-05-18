@@ -23,7 +23,7 @@ util.makeAllPaths()
 from dataManipulation.dataPreparation import getData
 from modelEvaluation.calibrate import calibrate
 import matplotlib.pyplot as plt
-from mpl_toolkits.axes_grid1.inset_locator import zoomed_inset_axes 
+from mpl_toolkits.axes_grid1.inset_locator import zoomed_inset_axes , inset_axes
 from mpl_toolkits.axes_grid1.inset_locator import mark_inset
 
 import pandas as pd
@@ -155,7 +155,7 @@ def brier_boxplot(df, violin, together):
     plt.tight_layout()
     plt.show()
     
-def brier_boxplot_zoom(df):
+def brier_boxplot_zoom(df, violin=True):
     import seaborn as sns
     labels={'randomForest':'RF',
                 'neuralNetworkRandom':'MLP','hgb':'GBDT'}
@@ -177,25 +177,27 @@ def brier_boxplot_zoom(df):
     # df2['Before/After']='After'
     # df2.loc[original_index, 'Before/After']='Before'
     # df2.loc[original_index, 'Brier']=df2.loc[original_index, 'Brier Before']
-    
-    df.boxplot(column='Brier', by=['Before/After','Algorithm'],
-                positions=[0,2,1],
-                ax=ax)
-    ax.set_ylim(0,0.5)
-    ax.set_xlim(0,10)
+    if violin:
+    else:
+        df2.boxplot(column='Brier', by=['Before/After','Algorithm'],
+                    positions=[0,2,1,4,3,5],
+                    ax=ax)
+    # ax.set_ylim(0,0.5)
+    # ax.set_xlim(-0.5,10)
     ax.axhline(y =parent_metrics['Brier'].values[0], linestyle = '-', label='Logistic', color='r')
     
-    x1 = 2.80
-    x2 = 4.27
+    x1 = 3.60
+    x2 = 5.50
     
     # select y-range for zoomed region
-    y1 = 0.175
+    y1 = 0.179
     y2 = 0.22
     
     # Make the zoom-in plot:
-    axins = zoomed_inset_axes(ax, 2, loc=1) # zoom = 2
+    axins = inset_axes(ax, 2.5,5 , loc='upper left', bbox_to_anchor=(0,0), borderpad=3,bbox_transform=ax.figure.transFigure) # zoomed_inset_axes(ax, 2, loc=1) # zoom = 2
     # axins.plot(ts)
-    df2.boxplot(column='Brier', by=['Before/After','Algorithm'],positions=[0,2,1,3,5,4], ax=axins)
+    df2.boxplot(column='Brier', by=['Before/After','Algorithm'],
+                positions=[0,2,1,4,3,5], ax=axins)
     axins.set_xlim(x1, x2)
     axins.set_ylim(y1, y2)
     axins.set_title('')
@@ -205,15 +207,18 @@ def brier_boxplot_zoom(df):
     plt.draw()
     
     # Make the zoom-in plot:
-    x1 = 0.0
-    x2 = 2.3
+    x1 = -0.50
+    x2 = 3.5
     
     # select y-range for zoomed region
-    y1 = 0.04
-    y2 = 0.06
-    axins2 = zoomed_inset_axes(ax, zoom=2, loc='center') # zoom = 2
+    y1 = 0.047
+    y2 = 0.049
+    fig.subplots_adjust(left=1.2,right=1.3 ,bottom=1.4, top=1.5)
+
+    axins2 = inset_axes(ax, 3,3 , loc='lower right', bbox_to_anchor=(0,0), borderpad=3,bbox_transform=ax.figure.transFigure) 
     # axins.plot(ts)
-    df2.boxplot(column='Brier', by=['Before/After','Algorithm'],positions=[0,2,1,3,5,4], ax=axins2)
+    df2.boxplot(column='Brier', by=['Before/After','Algorithm'],
+                positions=[0,2,1,4,3,5], ax=axins2)
     axins2.set_xlim(x1, x2)
     axins2.set_ylim(y1, y2)
     axins2.set_title('')
