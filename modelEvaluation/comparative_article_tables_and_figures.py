@@ -29,7 +29,7 @@ from comparative_article_plotting_functions import *
 #%%
 
 #%%
-
+yr=2018
 X,y=getData(2017)
 X16,y17=getData(2016)
 #%%
@@ -133,7 +133,7 @@ for metric in ['Score', 'AP']:
                 median_models[metric]=[chosen_model]
                 
 
-
+#%%
 """ ROC AND PR FIGURES """
 logistic_model='logistic20220207_122835'
 ROC_PR_comparison(median_models['AP'], 2018, logistic_model, mode='PR')
@@ -146,3 +146,30 @@ for violin in (True, False):
 """ BRIER BOXPLOTS """
 brier_boxplot_zoom(metrics) #violins
 brier_boxplot_zoom(metrics, False) #boxplots
+#%%
+""" CALIBRATION: RELIABILITY DIAGRAMS """
+import modelEvaluation.calibrate as cal
+median_models={}
+for metric in ['Brier', 'Brier Before']:
+    mediandf=metrics.groupby(['Algorithm'])[metric].agg([ median]).stack(level=0)
+    for alg in metrics.Algorithm.unique():
+        if alg=='logistic':
+            continue
+        df_alg=metrics.loc[metrics.Algorithm==alg].to_dict(orient='list')
+        perc50=mediandf.loc[alg]['median']
+        chosen_model=list(df_alg['Model'])[list(df_alg[metric]).index(perc50)]
+        print(metrics.loc[metrics.Model==chosen_model][metric])
+        predpath=re.sub(config.EXPERIMENT,'hyperparameter_variability_'+config.EXPERIMENT,config.PREDPATH)
+        
+        try:
+            median_models[metric][chosen_model]= calibrate(chosen_model, yr,
+                                                           experiment_name='hyperparameter_variability_urgcms_excl_nbinj',
+                                                           filename=os.path.join(predpath,f'{chosen_model}_calibrated_{yr}.csv'))
+        except KeyError:
+            median_models[metric]={chosen_model: calibrate(chosen_model,yr,   experiment_name='hyperparameter_variability_urgcms_excl_nbinj',
+                                                           filename=os.path.join(predpath,f'{chosen_model}_calibrated_{yr}.csv'))}
+        # except KeyError:
+
+    
+cal.plot(median_models['Brier'],consistency_bars=False)
+cal.plot(median_models['Brier Before'],consistency_bars=False)
