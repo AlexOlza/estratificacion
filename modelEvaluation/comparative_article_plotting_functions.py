@@ -75,7 +75,7 @@ def ROC_PR_comparison(models, yr, logistic_model, mode='ROC', **kwargs):
     for curve in display.values():
         curve.plot(ax)
     return(display)
-def brier_boxplot(df, violin, together):
+def boxplots(df, violin, together):
     import seaborn as sns
     labels={'randomForest':'RF',
                 'neuralNetworkRandom':'MLP','hgb':'GBDT'}

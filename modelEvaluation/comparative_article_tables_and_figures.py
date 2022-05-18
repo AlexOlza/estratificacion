@@ -139,4 +139,10 @@ logistic_model='logistic20220207_122835'
 ROC_PR_comparison(median_models['AP'], 2018, logistic_model, mode='PR')
 ROC_PR_comparison(median_models['Score'], 2018, logistic_model, mode='ROC')
 
-brier_boxplot(metrics)
+""" BOXPLOTS """
+for violin in (True, False):
+    for together in (True, False):
+        boxplots(metrics, violin, together)
+""" BRIER BOXPLOTS """
+brier_boxplot_zoom(metrics) #violins
+brier_boxplot_zoom(metrics, False) #boxplots
