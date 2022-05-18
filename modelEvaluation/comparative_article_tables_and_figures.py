@@ -162,14 +162,16 @@ for metric in ['Brier', 'Brier Before']:
         predpath=re.sub(config.EXPERIMENT,'hyperparameter_variability_'+config.EXPERIMENT,config.PREDPATH)
         
         try:
-            median_models[metric][chosen_model]= calibrate(chosen_model, yr,
+            median_models[metric][model_labels([chosen_model])[0]]= cal.calibrate(chosen_model, yr,
                                                            experiment_name='hyperparameter_variability_urgcms_excl_nbinj',
                                                            filename=os.path.join(predpath,f'{chosen_model}_calibrated_{yr}.csv'))
         except KeyError:
-            median_models[metric]={chosen_model: calibrate(chosen_model,yr,   experiment_name='hyperparameter_variability_urgcms_excl_nbinj',
+            median_models[metric]={model_labels([chosen_model])[0]: cal.calibrate(chosen_model,yr,   experiment_name='hyperparameter_variability_urgcms_excl_nbinj',
                                                            filename=os.path.join(predpath,f'{chosen_model}_calibrated_{yr}.csv'))}
-        # except KeyError:
 
-    
-cal.plot(median_models['Brier'],consistency_bars=False)
-cal.plot(median_models['Brier Before'],consistency_bars=False)
+
+median_models['Brier']['LR']= cal.calibrate(logistic_model,yr)
+median_models['Brier Before']['LR']= cal.calibrate(logistic_model,yr)
+
+cal.plot(median_models['Brier'],consistency_bars=True)
+cal.plot(median_models['Brier Before'],consistency_bars=True)

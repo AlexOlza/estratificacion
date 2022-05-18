@@ -157,7 +157,7 @@ def plot(p, consistency_bars=True, **kwargs):
             unique=len(np.unique(probs))
        
             bintot=bin_total(obs, probs, n_bins=20)
-            label=brier_score_loss(obs, probs)
+            label=f'{brier_score_loss(obs, probs):.4f}'
             print('brier ',label)
             notempty=[i for i in range(len(mean_pastPredicted_value)) if bintot[i] != 0]
             mean_pastPredicted_valuex=[mean_pastPredicted_value[i] for i in notempty]
@@ -192,7 +192,7 @@ def plot(p, consistency_bars=True, **kwargs):
     
     handles, labels = ax2.get_legend_handles_labels()
     for f in [fig,fig2]:
-        f.legend(handles, ['Perfectly calibrated']+names,shadow=True, loc='lower center',ncol=3,fontsize=medium,bbox_to_anchor=(0.5,-0.06))
+        f.legend(handles, ['Perfectly calibrated']+names,shadow=True, loc='lower center',ncol=5,fontsize=medium,bbox_to_anchor=(0.5,-0.06))
         f.tight_layout(rect=[0, 1, 1, 0.95],w_pad=4.0)
     gs.tight_layout(fig)
     gs2.tight_layout(fig2)
