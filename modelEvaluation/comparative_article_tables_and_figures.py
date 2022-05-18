@@ -21,11 +21,15 @@ import configurations.utility as util
 util.makeAllPaths()
 
 from dataManipulation.dataPreparation import getData
+
 import pandas as pd
 import numpy as np
 import re
+from comparative_article_plotting_functions import *
 #%%
 
+#%%
+yr=2018
 X,y=getData(2017)
 X16,y17=getData(2016)
 #%%
@@ -34,7 +38,7 @@ female=X['FEMALE']==1
 male=X['FEMALE']==0
 sex=[ 'Women','Men']
 # table1={'Women':pd.DataFrame(), 'Men':pd.DataFrame()}
-table1= pd.DataFrame(index=['N (%)', 'Hospitalized in 2017', 
+table1= pd.DataFrame(index=['N in 2017 (%)', 'Hospitalized in 2018', 
                             'Aged 0-17',
                             'Aged 18-64',
                             'Aged 65-69',
@@ -65,15 +69,109 @@ for group, groupname in zip([female,male],sex):
 print(table1.to_latex())
 
 simdif=len(set(X.PATIENT_ID.values).symmetric_difference(set(X16.PATIENT_ID.values)))
-# simdif=len(set(X.PATIENT_ID.values).symmetric_difference(set(X16.PATIENT_ID.values)))
+
 """ Comments on Table 1 """
 print('The two populations contained...')
 print(simdif, '(simetric difference)')
 print(f'... patients not in common, that is, {simdif*100/len(X):2.2f} %')
+print('Prevalence of admission in 2018:',sum(np.where(y.urgcms>=1,1,0))/len(X))
 #%%
 """ MATERIALS AND METHODS: Comments on variability assessment"""
+K=20000
 metrics=pd.read_csv(re.sub(config.EXPERIMENT, 'hyperparameter_variability_'+config.EXPERIMENT,config.PREDPATH)+'/metrics.csv')
 print('Number of models per algorithm:')
 print( metrics.groupby(['Algorithm'])['Algorithm'].count() )
+
+""" RESULTS. TABLE 2 """
 logisticMetrics=pd.read_csv(config.PREDPATH+'/metrics.csv')
-logisticMetrics.loc[logisticMetrics.Model.str.startswith('logistic')]
+logisticMetrics=logisticMetrics.loc[logisticMetrics.Model.str.startswith('logistic2022')]
+logisticMetrics[f'F1_{K}']=2*logisticMetrics[f'Recall_{K}']*logisticMetrics[f'PPV_{K}']/(logisticMetrics[f'Recall_{K}']+logisticMetrics[f'PPV_{K}'])
+logisticMetrics['Algorithm']=['logistic']
+
+metrics=pd.concat([metrics, logisticMetrics])
+#Discard some algorithms
+metrics=metrics.loc[metrics.Algorithm.isin(('logistic','hgb','randomForest','neuralNetworkRandom'))]
+
+# Option 1: Median --- (Interquartile range)
+table2=pd.DataFrame()
+from scipy.stats import iqr
+for metric in ['Score', 'Recall_20000', 'PPV_20000', 'F1_20000','Brier']:
+    median=metrics.groupby(['Algorithm'])[metric].median()
+    IQR=metrics.groupby(['Algorithm'])[metric].agg(iqr)
+    table2[metric]=[f'{m:1.3f} ({i:.2E})' for m, i in zip(median.values, IQR.values)]
+    table2.index=IQR.index
+  
+print(table2.to_latex())
+
+higher_better={'Score': True, 'Recall_20000': True,
+               'PPV_20000': True, 'Brier':False, 'AP':True}
+def use_f_3(x):
+    return "%.4f" % x
+def use_E(x):
+    return "%.2e" % x
+# Option 2: Subtables with descriptive
+for metric in [ 'Score', 'Recall_20000', 'PPV_20000', 'Brier','AP']:
+    table2=metrics.groupby(['Algorithm'])[metric].describe()[['25%','50%', '75%','std']].sort_values('50%', ascending=[not higher_better[metric]])
+    print(table2.to_latex(formatters=[ use_f_3, use_f_3, use_f_3, use_E]))
+    print('\n'*2)
+
+def median(x):
+    return x.quantile(0.5,interpolation='nearest')
+median_models={}
+for metric in ['Score', 'AP']:
+    mediandf=metrics.groupby(['Algorithm'])[metric].agg([ median]).stack(level=0)
+    for alg in metrics.Algorithm.unique():
+            if alg=='logistic':
+                continue
+            df_alg=metrics.loc[metrics.Algorithm==alg].to_dict(orient='list')
+            perc50=mediandf.loc[alg]['median']
+            chosen_model=list(df_alg['Model'])[list(df_alg[metric]).index(perc50)]
+            print(metrics.loc[metrics.Model==chosen_model][metric])
+            try:
+                median_models[metric].append(chosen_model)
+            except KeyError:
+                median_models[metric]=[chosen_model]
+                
+
+#%%
+""" ROC AND PR FIGURES """
+logistic_model='logistic20220207_122835'
+ROC_PR_comparison(median_models['AP'], 2018, logistic_model, mode='PR')
+ROC_PR_comparison(median_models['Score'], 2018, logistic_model, mode='ROC')
+
+""" BOXPLOTS """
+for violin in (True, False):
+    for together in (True, False):
+        boxplots(metrics, violin, together)
+""" BRIER BOXPLOTS """
+brier_boxplot_zoom(metrics) #violins
+brier_boxplot_zoom(metrics, False) #boxplots
+#%%
+""" CALIBRATION: RELIABILITY DIAGRAMS """
+import modelEvaluation.calibrate as cal
+median_models={}
+for metric in ['Brier', 'Brier Before']:
+    mediandf=metrics.groupby(['Algorithm'])[metric].agg([ median]).stack(level=0)
+    for alg in metrics.Algorithm.unique():
+        if alg=='logistic':
+            continue
+        df_alg=metrics.loc[metrics.Algorithm==alg].to_dict(orient='list')
+        perc50=mediandf.loc[alg]['median']
+        chosen_model=list(df_alg['Model'])[list(df_alg[metric]).index(perc50)]
+        print(metrics.loc[metrics.Model==chosen_model][metric])
+        predpath=re.sub(config.EXPERIMENT,'hyperparameter_variability_'+config.EXPERIMENT,config.PREDPATH)
+        
+        try:
+            median_models[metric][model_labels([chosen_model])[0]]= cal.calibrate(chosen_model, yr,
+                                                           experiment_name='hyperparameter_variability_urgcms_excl_nbinj',
+                                                           filename=os.path.join(predpath,f'{chosen_model}_calibrated_{yr}.csv'))
+        except KeyError:
+            median_models[metric]={model_labels([chosen_model])[0]: cal.calibrate(chosen_model,yr,   experiment_name='hyperparameter_variability_urgcms_excl_nbinj',
+                                                           filename=os.path.join(predpath,f'{chosen_model}_calibrated_{yr}.csv'))}
+
+
+median_models['Brier']['LR']= cal.calibrate(logistic_model,yr)
+median_models['Brier Before']['LR']= cal.calibrate(logistic_model,yr)
+
+cal.plot(median_models['Brier'],consistency_bars=True)
+cal.plot(median_models['Brier Before'],consistency_bars=True)

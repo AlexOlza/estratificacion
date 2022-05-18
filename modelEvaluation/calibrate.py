@@ -49,10 +49,14 @@ def sample(data,uncal):
 
 def calibrate(model_name,yr,**kwargs):
     try:
-        filename=kwargs.get('filename',model_name)
+        filename=kwargs.get('filename',None)
         experiment_name=kwargs.get('experiment_name',config.EXPERIMENT)
-        calibFilename=generate_filename(filename,yr, calibrated=True)
-        uncalFilename=generate_filename(filename,yr, calibrated=False)
+        if filename:
+            calibFilename=filename
+            uncalFilename=re.sub(filename,'calibrated','')
+        else:
+            calibFilename=generate_filename(model_name,yr, calibrated=True)
+            uncalFilename=generate_filename(model_name,yr, calibrated=False)
         if Path(calibFilename).is_file():
             util.vprint('Calibrated predictions found; loading')
             p_calibrated=pd.read_csv(calibFilename)
@@ -153,7 +157,7 @@ def plot(p, consistency_bars=True, **kwargs):
             unique=len(np.unique(probs))
        
             bintot=bin_total(obs, probs, n_bins=20)
-            label=brier_score_loss(obs, probs)
+            label=f'{brier_score_loss(obs, probs):.4f}'
             print('brier ',label)
             notempty=[i for i in range(len(mean_pastPredicted_value)) if bintot[i] != 0]
             mean_pastPredicted_valuex=[mean_pastPredicted_value[i] for i in notempty]
@@ -188,7 +192,7 @@ def plot(p, consistency_bars=True, **kwargs):
     
     handles, labels = ax2.get_legend_handles_labels()
     for f in [fig,fig2]:
-        f.legend(handles, ['Perfectly calibrated']+names,shadow=True, loc='lower center',ncol=3,fontsize=medium,bbox_to_anchor=(0.5,-0.06))
+        f.legend(handles, ['Perfectly calibrated']+names,shadow=True, loc='lower center',ncol=5,fontsize=medium,bbox_to_anchor=(0.5,-0.06))
         f.tight_layout(rect=[0, 1, 1, 0.95],w_pad=4.0)
     gs.tight_layout(fig)
     gs2.tight_layout(fig2)
