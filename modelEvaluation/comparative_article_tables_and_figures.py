@@ -23,6 +23,9 @@ util.makeAllPaths()
 from dataManipulation.dataPreparation import getData
 from modelEvaluation.calibrate import calibrate
 import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1.inset_locator import zoomed_inset_axes 
+from mpl_toolkits.axes_grid1.inset_locator import mark_inset
+
 import pandas as pd
 import numpy as np
 import re
@@ -131,13 +134,96 @@ def brier_boxplot(df, violin, together):
         plt.legend()
         # plt.savefig(os.path.join(path,f'hyperparameter_variability_{'Brier'}.png'))
     else:
-        fig, ax5=plt.subplots(figsize=(6,10))
-        if violin:
-            sns.violinplot(ax=ax5,x="Algorithm", y='Brier', data=df2, hue='Before/After')
-        else:
-            df2.boxplot(column='Brier', by=['Before/After','Algorithm'], ax=ax5)
+        df['Brier Change']=(-df['Brier Before']+df['Brier'])
+        fig, ax5=plt.subplots()
+    if violin:
+        
+        # ax5.axhline(y =-parent_metrics['Brier Before'].values[0]+parent_metrics['Brier'].values[0], linestyle = '-', label='Logistic', color='r')
         ax5.axhline(y =parent_metrics['Brier'].values[0], linestyle = '-', label='Logistic', color='r')
+        sns.violinplot(ax=ax5,x="Algorithm", y='Brier', hue='Before/After', data=df)
+        fig, ax6=plt.subplots()
+        ax6.axhline(y =parent_metrics['Brier Before'].values[0], linestyle = '-', label='LR Before', color='grey')
+        ax6.axhline(y =parent_metrics['Brier'].values[0], linestyle = '-', label='LR After', color='r')
+        sns.violinplot(ax=ax6,x="Algorithm", y='Brier', hue='Before/After', data=dff)
+        # plt.yscale('logit')
+    else:
+        ax5.axhline(y =parent_metrics['Brier'].values[0], linestyle = '-', label='Logistic', color='r', alpha=0.9)
+        df2.boxplot(column='Brier', by=['Before/After','Algorithm'], ax=ax5)
+        
         plt.legend()
+    plt.suptitle('')
+    plt.tight_layout()
+    plt.show()
+    
+def brier_boxplot_zoom(df):
+    import seaborn as sns
+    labels={'randomForest':'RF',
+                'neuralNetworkRandom':'MLP','hgb':'GBDT'}
+
+    # df['Algorithm']=[re.sub('_|[0-9]', '', model) for model in df['Model'].values]
+    parent_metrics=df.copy().loc[df.Algorithm=='logistic']
+    df=df.loc[df.Algorithm!='logistic']
+    df=df.replace({'Algorithm': labels})
+    
+   
+    fig, ax=plt.subplots()
+       
+      
+    df['Before/After']='After'
+    dff=df.copy()
+    dff['Before/After']='Before'
+    dff.Brier=dff['Brier Before']
+    df2=pd.concat([dff,df])
+    # df2['Before/After']='After'
+    # df2.loc[original_index, 'Before/After']='Before'
+    # df2.loc[original_index, 'Brier']=df2.loc[original_index, 'Brier Before']
+    
+    df.boxplot(column='Brier', by=['Before/After','Algorithm'],
+                positions=[0,2,1],
+                ax=ax)
+    ax.set_ylim(0,0.5)
+    ax.set_xlim(0,10)
+    ax.axhline(y =parent_metrics['Brier'].values[0], linestyle = '-', label='Logistic', color='r')
+    
+    x1 = 2.80
+    x2 = 4.27
+    
+    # select y-range for zoomed region
+    y1 = 0.175
+    y2 = 0.22
+    
+    # Make the zoom-in plot:
+    axins = zoomed_inset_axes(ax, 2, loc=1) # zoom = 2
+    # axins.plot(ts)
+    df2.boxplot(column='Brier', by=['Before/After','Algorithm'],positions=[0,2,1,3,5,4], ax=axins)
+    axins.set_xlim(x1, x2)
+    axins.set_ylim(y1, y2)
+    axins.set_title('')
+    plt.xticks(visible=True)
+    plt.yticks(visible=True)
+    mark_inset(ax, axins, loc1=1, loc2=1, fc="none", ec="0.5")
+    plt.draw()
+    
+    # Make the zoom-in plot:
+    x1 = 0.0
+    x2 = 2.3
+    
+    # select y-range for zoomed region
+    y1 = 0.04
+    y2 = 0.06
+    axins2 = zoomed_inset_axes(ax, zoom=2, loc='center') # zoom = 2
+    # axins.plot(ts)
+    df2.boxplot(column='Brier', by=['Before/After','Algorithm'],positions=[0,2,1,3,5,4], ax=axins2)
+    axins2.set_xlim(x1, x2)
+    axins2.set_ylim(y1, y2)
+    axins2.set_title('')
+    plt.xticks(visible=True)
+    plt.yticks(visible=True)
+    mark_inset(ax, axins2, loc1=1, loc2=1, fc="none", ec="0.5")
+    plt.draw()
+    plt.legend()
+   
+    # plt.legend()
     plt.suptitle('')
     plt.tight_layout()
     plt.show()
