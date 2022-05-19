@@ -141,8 +141,21 @@ if cyclic:
 print('Best hyperparameters:')
 print(best_hp_)
 print('---------------------------------------------------'*5)
-print('Retraining (70 epochs):')
-config.keras_code(X,y,X_train,y_train, epochs=70,**best_hp_,
+print('Retraining (100 epochs):')
+config.keras_code(X,y,X_train,y_train, epochs=100,**best_hp_,
                   callbacks=callbacks, save=True, saving_path=model_name, verbose=2)
 util.saveconfig(config,config.USEDCONFIGPATH+model_name.split('/')[-1]+'.json')
 print('Saved ')
+
+#%%
+""" FUTURE IDEAS:
+    EXPLAINABILITY: https://github.com/slundberg/shap"""
+model=keras.models.load_model(model_name)
+import shap
+explainer = shap.KernelExplainer(data=X_test,model=model, output_names=list(X.columns), max_evals=600)
+shap_values = explainer.shap_values(X_test.iloc[0:1000,:])
+
+# visualize the first prediction's explanation (use matplotlib=True to avoid Javascript)
+shap.force_plot(explainer.expected_value, shap_values[0,:], X_test.iloc[0,:], matplotlib=True)
+
+shap.summary_plot(shap_values, X, plot_type="bar")
