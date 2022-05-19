@@ -108,7 +108,7 @@ else:
     print('Tuner: Random')
     tuner = config.MyRandomTuner(X_train, y_train.reshape(-1,1),X_test, y_test.reshape(-1,1),
                  objective=kt.Objective("val_loss", direction="min"),
-                 max_trials=100, 
+                 max_trials=15, 
                  overwrite=True,
                  seed=seed_hparam,
                  cyclic=cyclic,
@@ -152,10 +152,57 @@ print('Saved ')
     EXPLAINABILITY: https://github.com/slundberg/shap"""
 model=keras.models.load_model(model_name)
 import shap
-explainer = shap.KernelExplainer(data=X_test,model=model, output_names=list(X.columns), max_evals=600)
-shap_values = explainer.shap_values(X_test.iloc[0:1000,:])
+explainer = shap.KernelExplainer(data=X_test.iloc[0:100,:],model=model, output_names=list(X.columns), max_evals=600)
+shap_values = explainer.shap_values(X_test.iloc[0:100,:])
 
 # visualize the first prediction's explanation (use matplotlib=True to avoid Javascript)
-shap.force_plot(explainer.expected_value, shap_values[0,:], X_test.iloc[0,:], matplotlib=True)
+# shap.force_plot(explainer.expected_value, shap_values[0], X_test.iloc[0,:], matplotlib=True)
 
-shap.summary_plot(shap_values, X, plot_type="bar")
+shap.summary_plot(shap_values[0], X_test, plot_type="bar")
+# shap.plots.waterfall(explainer.expected_value)
+force=shap.plots.force(explainer.expected_value[0], shap_values[0][1],ordering_keys='reverse',feature_names=list(X.columns),out_names=['neg','pos'],matplotlib=True)
+"""
+PROB INGRESO 0.05
+X_test.iloc[1,:].CCS49
+Out[111]: 0 no diabetes
+
+X_test.iloc[1,:].CCS159
+Out[112]: 2 urinary system diseases
+
+X_test.iloc[1,:].CCS94
+Out[113]: 1 ear conditions
+
+X_test.iloc[1,:].CCS198
+Out[114]: 1 Other inflammatory condition of skin 
+
+X_test.iloc[1,:].CCS174
+Out[115]: 1
+"""
+force=shap.plots.force(explainer.expected_value[0], shap_values[0][44],ordering_keys='reverse',feature_names=list(X.columns),out_names=['neg','pos'],matplotlib=True)
+"""
+PROB INGRESO 0.31
+
+X_test.iloc[44,:].CCS105
+Out[118]: 5 Diseases of the heart
+
+X_test.iloc[44,:].CCS131
+Out[119]: 1 ,Respiratory failure; insufficiency; arrest (adult) [
+
+X_test.iloc[44,:].CCS51
+Out[120]: 6 Other endocrine disorders 
+
+X_test.iloc[44,:].CCS133
+Out[121]: 1  Other lower respiratory disease 
+
+X_test.iloc[44,:].CCS98
+Out[122]: 1
+
+X_test.iloc[44,:].CCS259
+Out[123]: 1
+
+X_test.iloc[44,:].CCS130
+Out[124]: 1
+"""
+# allpoints=shap.plots.force(explainer.expected_value,shap_values[0])
+# shap.plots.scatter(shap_values[:,1], color=shap_values[0])
+# shap.plots.beeswarm(shap_values)
