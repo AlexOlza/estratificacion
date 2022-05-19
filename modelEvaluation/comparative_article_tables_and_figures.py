@@ -7,7 +7,7 @@ Created on Mon May  2 12:24:55 2022
 """
 import sys
 sys.path.append('/home/aolza/Desktop/estratificacion/')#necessary in cluster
-
+logistic_model='logistic20220207_122835'
 chosen_config='configurations.cluster.logistic'
 experiment='configurations.urgcms_excl_nbinj'
 import importlib
@@ -21,7 +21,7 @@ import configurations.utility as util
 util.makeAllPaths()
 
 from dataManipulation.dataPreparation import getData
-
+import modelEvaluation.calibrate as cal
 import pandas as pd
 import numpy as np
 import re
@@ -134,8 +134,43 @@ for metric in ['Score', 'AP']:
                 
 
 #%%
+""" RESULTS - COMMENTS """
+from modelEvaluation.compare import performance
+median_models={}
+correct={}
+incorrect={}
+for metric in ['Recall_20000', 'PPV_20000']:
+    mediandf=metrics.groupby(['Algorithm'])[metric].agg([ median]).stack(level=0)
+    for alg in metrics.Algorithm.unique():
+            if alg=='logistic':
+                continue
+            df_alg=metrics.loc[metrics.Algorithm==alg].to_dict(orient='list')
+            perc50=mediandf.loc[alg]['median']
+            chosen_model=list(df_alg['Model'])[list(df_alg[metric]).index(perc50)]
+            print(metrics.loc[metrics.Model==chosen_model][metric])
+            try:
+                median_models[metric].append(chosen_model)
+            except KeyError:
+                median_models[metric]=[chosen_model]
+    correct[metric]={}     
+    incorrect[metric]={}
+    for model in median_models[metric]+[logistic_model]:
+        if model==logistic_model:
+            preds= cal.calibrate(model, yr)
+        else:
+            predpath=re.sub(config.EXPERIMENT,'hyperparameter_variability_'+config.EXPERIMENT,config.PREDPATH)
+            preds= cal.calibrate(model, yr,  experiment_name='hyperparameter_variability_urgcms_excl_nbinj',
+                                                           filename=os.path.join(predpath,f'{model}_calibrated_{yr}.csv'))
+        tn, fp, fn, tp=performance(preds.OBS,preds.PREDCAL,K,computemetrics=False)
+        correct[metric][model]=tn+tp
+        incorrect[metric][model]=fn+fp
+#%%
+for metric in ['Recall_20000', 'PPV_20000']:
+    print('MLP vs RF ' , correct[metric]['neuralNetworkRandom_43']-correct[metric]['randomForest_59'])       
+    print('MLP vs LR ' , correct[metric]['neuralNetworkRandom_43']-correct[metric][logistic_model])       
+
+#%%
 """ ROC AND PR FIGURES """
-logistic_model='logistic20220207_122835'
 ROC_PR_comparison(median_models['AP'], 2018, logistic_model, mode='PR')
 ROC_PR_comparison(median_models['Score'], 2018, logistic_model, mode='ROC')
 
@@ -148,7 +183,7 @@ brier_boxplot_zoom(metrics) #violins
 brier_boxplot_zoom(metrics, False) #boxplots
 #%%
 """ CALIBRATION: RELIABILITY DIAGRAMS """
-import modelEvaluation.calibrate as cal
+
 median_models={}
 for metric in ['Brier', 'Brier Before']:
     mediandf=metrics.groupby(['Algorithm'])[metric].agg([ median]).stack(level=0)
@@ -173,5 +208,5 @@ for metric in ['Brier', 'Brier Before']:
 median_models['Brier']['LR']= cal.calibrate(logistic_model,yr)
 median_models['Brier Before']['LR']= cal.calibrate(logistic_model,yr)
 
-cal.plot(median_models['Brier'],consistency_bars=True)
-cal.plot(median_models['Brier Before'],consistency_bars=True)
+cal.plot(median_models['Brier'],consistency_bars=False)
+cal.plot(median_models['Brier Before'],consistency_bars=False)

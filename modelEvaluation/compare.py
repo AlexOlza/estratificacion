@@ -101,14 +101,14 @@ def compare(selected,X,y,year,experiment_name=Path(config.MODELPATH).parts[-1],*
 
 import numpy as np
 from sklearn.metrics import confusion_matrix
-def performance(obs,pred,K): 
+def performance(obs,pred,K, computemetrics=True): 
     orderedPred=sorted(pred,reverse=True)
     orderedObs=sorted(obs,reverse=True)
     cutoff=orderedPred[K-1]
-    print(f'Cutoff value ({K} values): {cutoff}')
-    print(f'Observed cutoff value ({K} values): {orderedObs[K-1]}')
+    # print(f'Cutoff value ({K} values): {cutoff}')
+    # print(f'Observed cutoff value ({K} values): {orderedObs[K-1]}')
     newpred=pred>=cutoff
-    print('Length of selected list ',sum(newpred))
+    # print('Length of selected list ',sum(newpred))
     if 'COSTE_TOTAL_ANO2' in config.COLUMNS: #maybe better: not all([int(i)==i for i in obs])
         newobs=obs>=orderedObs[K-1]
     else:
@@ -116,6 +116,8 @@ def performance(obs,pred,K):
     c=confusion_matrix(y_true=newobs, y_pred=newpred)
     print(c)
     tn, fp, fn, tp =c.ravel()
+    if not computemetrics:
+        return(tn, fp, fn, tp)
     print(' tn, fp, fn, tp =',tn, fp, fn, tp)
     recall=c[1][1]/(c[1][0]+c[1][1])
     ppv=c[1][1]/(c[0][1]+c[1][1])
