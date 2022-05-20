@@ -152,14 +152,17 @@ print('Saved ')
     EXPLAINABILITY: https://github.com/slundberg/shap"""
 model=keras.models.load_model(model_name)
 import shap
-explainer = shap.KernelExplainer(data=X_test.iloc[0:100,:],model=model, output_names=list(X.columns), max_evals=600)
-shap_values = explainer.shap_values(X_test.iloc[0:100,:])
+explainer = shap.KernelExplainer(data=shap.sample(X_test, 100),model=model, 
+                                 output_names=list(X.columns),
+                                 max_evals=600)
+
+shap_values = explainer.shap_values(X_test.iloc[:1000,:].to_numpy())
 
 # visualize the first prediction's explanation (use matplotlib=True to avoid Javascript)
 # shap.force_plot(explainer.expected_value, shap_values[0], X_test.iloc[0,:], matplotlib=True)
 
 shap.summary_plot(shap_values[0], X_test, plot_type="bar")
-# shap.plots.waterfall(explainer.expected_value)
+# shap.waterfall_plot(explainer.expected_value)
 force=shap.plots.force(explainer.expected_value[0], shap_values[0][1],ordering_keys='reverse',feature_names=list(X.columns),out_names=['neg','pos'],matplotlib=True)
 """
 PROB INGRESO 0.05
@@ -206,3 +209,19 @@ Out[124]: 1
 # allpoints=shap.plots.force(explainer.expected_value,shap_values[0])
 # shap.plots.scatter(shap_values[:,1], color=shap_values[0])
 # shap.plots.beeswarm(shap_values)
+import lime
+from lime.lime_tabular import LimeTabularExplainer
+#%%
+limeexplainer = LimeTabularExplainer(X_test.iloc[:1000,:].to_numpy().reshape(1,-1),
+                                                      
+                                                   feature_names=list(X.columns),discretize_continuous=False)
+#%%
+import numpy as np
+i = np.random.randint(0, X_test.shape[0])
+#%%
+def predict_proba(x):
+    p=model.predict(x)[0][0]
+    print(np.array([1-p, p]).reshape(1,-1).ravel())
+    return np.array([1-p, p]).reshape(1,-1).ravel()
+exp = limeexplainer.explain_instance(X_test.iloc[i,:].to_numpy().reshape(1,-1), 
+                                     predict_proba)
