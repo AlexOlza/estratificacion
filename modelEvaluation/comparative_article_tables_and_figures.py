@@ -117,21 +117,6 @@ for metric in [ 'Score', 'Recall_20000', 'PPV_20000', 'Brier','AP']:
 
 def median(x):
     return x.quantile(0.5,interpolation='nearest')
-median_models={}
-for metric in ['Score', 'AP']:
-    mediandf=metrics.groupby(['Algorithm'])[metric].agg([ median]).stack(level=0)
-    for alg in metrics.Algorithm.unique():
-            if alg=='logistic':
-                continue
-            df_alg=metrics.loc[metrics.Algorithm==alg].to_dict(orient='list')
-            perc50=mediandf.loc[alg]['median']
-            chosen_model=list(df_alg['Model'])[list(df_alg[metric]).index(perc50)]
-            print(metrics.loc[metrics.Model==chosen_model][metric])
-            try:
-                median_models[metric].append(chosen_model)
-            except KeyError:
-                median_models[metric]=[chosen_model]
-                
 
 #%%
 """ RESULTS - COMMENTS """
@@ -170,7 +155,24 @@ for metric in ['Recall_20000', 'PPV_20000']:
     print('MLP vs LR ' , correct[metric]['neuralNetworkRandom_43']-correct[metric][logistic_model])       
 
 #%%
+
+median_models = {}
+for metric in ['Score', 'AP']:
+    mediandf = metrics.groupby(['Algorithm'])[metric].agg([median]).stack(level=0)
+    for alg in metrics.Algorithm.unique():
+        if alg == 'logistic':
+            continue
+        df_alg = metrics.loc[metrics.Algorithm == alg].to_dict(orient='list')
+        perc50 = mediandf.loc[alg]['median']
+        chosen_model = list(df_alg['Model'])[list(df_alg[metric]).index(perc50)]
+        print(metrics.loc[metrics.Model == chosen_model][metric])
+        try:
+            median_models[metric].append(chosen_model)
+        except KeyError:
+            median_models[metric] = [chosen_model]
+
 """ ROC AND PR FIGURES """
+# os.environ["DISPLAY"] =':99'
 ROC_PR_comparison(median_models['AP'], 2018, logistic_model, mode='PR')
 ROC_PR_comparison(median_models['Score'], 2018, logistic_model, mode='ROC')
 
