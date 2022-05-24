@@ -108,7 +108,7 @@ else:
     print('Tuner: Random')
     tuner = config.MyRandomTuner(X_train, y_train.reshape(-1,1),X_test, y_test.reshape(-1,1),
                  objective=kt.Objective("val_loss", direction="min"),
-                 max_trials=100, 
+                 max_trials=5, 
                  overwrite=True,
                  seed=seed_hparam,
                  cyclic=cyclic,
@@ -124,10 +124,6 @@ print(tuner.search_space_summary())
 """ SAVE TRAINED MODEL """
 """ work in progress """
 best_hp = tuner.get_best_hyperparameters()[0]
-# try:
-#     print('units: ',best_hp.values['units'])
-# except KeyError:
-#     best_hp.values['units']=[]
 best_hp_={k:v for k,v in best_hp.values.items() if not k.startswith('units')}
 best_hp_['units_0']=best_hp.values['units_0']
 best_hp_['hidden_units']={f'units_{i}':best_hp.values[f'units_{i}'] for i in range(1,best_hp.values['n_hidden']+1)}
@@ -141,8 +137,11 @@ if cyclic:
 print('Best hyperparameters:')
 print(best_hp_)
 print('---------------------------------------------------'*5)
-print('Retraining (70 epochs):')
-config.keras_code(X,y,X_train,y_train, epochs=70,**best_hp_,
+print('Retraining (100 epochs):')
+config.keras_code(X,y,X_train,y_train, epochs=100,**best_hp_,
                   callbacks=callbacks, save=True, saving_path=model_name, verbose=2)
 util.saveconfig(config,config.USEDCONFIGPATH+model_name.split('/')[-1]+'.json')
 print('Saved ')
+
+model=keras.models.load_model(model_name)
+print(model.summary())
