@@ -66,11 +66,15 @@ shap_values = explainer.shap_values(Xx.iloc[:300,:].to_numpy())
 # visualize the first prediction's explanation (use matplotlib=True to avoid Javascript)
 # shap.force_plot(explainer.expected_value, shap_values[0], X_test.iloc[0,:], matplotlib=True)
 
-shap.summary_plot(shap_values[0], Xx, plot_type="bar")
+shap.summary_plot(shap_values, Xx, plot_type="bar")
 # shap.plots.beeswarm(explainer.expected_value)
-force0=shap.plots.force(explainer.expected_value[0], shap_values[0][0],ordering_keys='reverse',feature_names=list(X.columns),out_names=['neg','pos'],matplotlib=True)
+force0=shap.plots.force(explainer.expected_value[0], shap_values[0][0],ordering_keys='reverse',feature_names=list(Xx.columns),out_names=['neg','pos'],matplotlib=True)
 
-force44=shap.plots.force(explainer.expected_value[0], shap_values[0][44],ordering_keys='reverse',feature_names=list(X.columns),out_names=['neg','pos'],matplotlib=True)
+force44=shap.plots.force(explainer.expected_value[0], shap_values[0][44],ordering_keys='reverse',feature_names=list(Xx.columns),out_names=['neg','pos'],matplotlib=True)
+sum_shap=[sum(s) for s in shap_values[0]]
+
+forcemax=shap.plots.force(explainer.expected_value[0], shap_values[0][np.argmax(sum_shap)],ordering_keys='reverse',feature_names=list(Xx.columns),out_names=['neg','pos'],matplotlib=True)
+forcemin=shap.plots.force(explainer.expected_value[0], shap_values[0][np.argmin(sum_shap)],ordering_keys='reverse',feature_names=list(Xx.columns),out_names=['neg','pos'],matplotlib=True)
 
 # allpoints=shap.plots.force(explainer.expected_value,shap_values[0])
 # shap.plots.scatter(shap_values[:,1], color=shap_values[0])
