@@ -279,23 +279,6 @@ if __name__=='__main__':
         df=pd.concat([df, available_metrics], ignore_index=True, axis=0)
         df.to_csv(config.PREDPATH+'/metrics.csv', index=False)
         algorithms=['randomForest', 'hgb', 'neuralNetworkRandom']
-        # parent_metrics=pd.read_csv(re.sub('hyperparameter_variability_|fixsample_','',config.PREDPATH+'/metrics.csv')).to_dict('list')
-        boxplots(df.loc[df.Algorithm.isin(algorithms)], year, K=20000, X=X, y=y)
+        
         print(df.groupby('Algorithm').describe().transpose())
-        
-    algorithms=['randomForest', 'hgb', 'neuralNetworkRandom']
-    parent_models=[i for i in detect_models(re.sub('hyperparameter_variability_|fixsample_','',config.MODELPATH))  if 'logistic' in i]
-    logistic_model=[i for i in detect_latest(parent_models) if 'logistic2022' in i][0]
-        
-    roc, pr= model_percentiles(df, 'Score', roc_pr_curves, 2018, logistic_model)
-    
-    fig1, (ax11,ax12, ax13) = plt.subplots(1,3,figsize=(16,8))
-    fig2, (ax21,ax22, ax23) = plt.subplots(1,3,figsize=(16,8))
-    rocaxes=(ax11,ax12, ax13)
-    praxes=(ax21,ax22, ax23)
-    for alg, axroc, axpr in zip(algorithms, rocaxes, praxes):
-        for perc in ['Perc. 05', 'Perc. 50', 'Perc. 95']:
-            roc[alg][perc].plot(axroc)
-            pr[alg][perc].plot(axpr)
-        axroc.set_title(alg)
-        axpr.set_title(alg)
+  
