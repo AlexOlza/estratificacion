@@ -19,7 +19,7 @@ from dataManipulation.generarTablasVariables import prepare,resourceUsageDataFra
 # from matplotlib_venn import venn2
 def listIntersection(a,b): return list(set(a) & set(b))
 # FIXME not robust!!!
-def excludeHosp(df,filtros,criterio):#FIXME the bug is here
+def excludeHosp(df,filtros,criterio):
     filtros=['{0}_{1}'.format(f,criterio) for f in filtros]
 
     assertMissingCols(filtros+[criterio],df,'exclude')
@@ -69,7 +69,7 @@ def getData(yr,columns=config.COLUMNS,previousHosp=config.PREVIOUSHOSP,
         X=acg.drop(response,axis=1)
         return(X.reindex(sorted(X.columns), axis=1),acg[['PATIENT_ID',response]])#Prevents bug #1
 
-    cols=columns.copy() #FIXME find better approach
+    cols=columns.copy() 
     t0=time.time()
     ing=loadIng(config.ALLHOSPITFILE,config.DATAPATH)
     ingT=createYearlyDataFrames(ing)
@@ -99,7 +99,9 @@ def getData(yr,columns=config.COLUMNS,previousHosp=config.PREVIOUSHOSP,
         full16=create_fullacgfiles(config.FULLACGFILES[yr],yr,directory=config.DATAPATH,
                     predictors=predictors)
     elif CCS:
-        full16=generateCCSData(yr,  pd.DataFrame(), predictors=predictors)
+        Xprovisional=load(filename=config.ACGFILES[yr],predictors=predictors)
+        full16=generateCCSData(yr,  Xprovisional, predictors=predictors)
+        # full16=pd.merge(full16, Xprovisional, on='PATIENT_ID')
     else:
         full16=load(filename=config.ACGFILES[yr],predictors=predictors)
    
@@ -131,8 +133,14 @@ def generateCCSData(yr,  X,
     predictors=kwargs.get('predictors',None)
     filename=os.path.join(config.DATAPATH,config.CCSFILES[yr])
     if Path(filename).is_file():
-        return load(config.CCSFILES[yr],directory=config.DATAPATH,
+        print('X number of columns is  ',len(X.columns))
+        Xccs=load(config.CCSFILES[yr],directory=config.DATAPATH,
                     predictors=predictors)
+        print('Xccs number of columns is ',len(Xccs.columns) )
+        assert 'PATIENT_ID' in X.columns
+        assert 'PATIENT_ID' in Xccs.columns
+        Xx=pd.merge(X, Xccs, on='PATIENT_ID', how='outer')
+        return Xx
     def missingDX(dic,diags):
         diagsCodes=diags.CIE_CODE.str.replace(r'\s|\/', r'').values
         dictCodes=dic.CODE.astype(str).str.replace(r'\s|\/', r'').values
@@ -316,7 +324,6 @@ def generateCCSData(yr,  X,
  
     
     print(f'{i} dfs processed')
-    
     
     X.reindex(sorted(X.columns), axis=1).to_csv(os.path.join(config.DATAPATH,f'CCS{yr}.csv'))
     print('Saved ',os.path.join(config.DATAPATH,f'CCS{yr}.csv'))
