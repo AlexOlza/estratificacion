@@ -108,7 +108,7 @@ else:
     print('Tuner: Random')
     tuner = config.MyRandomTuner(X_train, y_train.reshape(-1,1),X_test, y_test.reshape(-1,1),
                  objective=kt.Objective("val_loss", direction="min"),
-                 max_trials=15, 
+                 max_trials=5, 
                  overwrite=True,
                  seed=seed_hparam,
                  cyclic=cyclic,
@@ -162,8 +162,8 @@ shap_values = explainer.shap_values(X_test.iloc[:1000,:].to_numpy())
 # shap.force_plot(explainer.expected_value, shap_values[0], X_test.iloc[0,:], matplotlib=True)
 
 shap.summary_plot(shap_values[0], X_test, plot_type="bar")
-# shap.waterfall_plot(explainer.expected_value)
-force=shap.plots.force(explainer.expected_value[0], shap_values[0][1],ordering_keys='reverse',feature_names=list(X.columns),out_names=['neg','pos'],matplotlib=True)
+# shap.plots.beeswarm(explainer.expected_value)
+force=shap.plots.force(explainer.expected_value[0], shap_values[0][0],ordering_keys='reverse',feature_names=list(X.columns),out_names=['neg','pos'],matplotlib=True)
 """
 PROB INGRESO 0.05
 X_test.iloc[1,:].CCS49
@@ -208,20 +208,20 @@ Out[124]: 1
 """
 # allpoints=shap.plots.force(explainer.expected_value,shap_values[0])
 # shap.plots.scatter(shap_values[:,1], color=shap_values[0])
-# shap.plots.beeswarm(shap_values)
-import lime
-from lime.lime_tabular import LimeTabularExplainer
+# # shap.plots.beeswarm(shap_values)
+# import lime
+# from lime.lime_tabular import LimeTabularExplainer
 #%%
-limeexplainer = LimeTabularExplainer(X_test.iloc[:1000,:].to_numpy().reshape(1,-1),
+# limeexplainer = LimeTabularExplainer(X_test.iloc[:1000,:].to_numpy().reshape(1,-1),
                                                       
-                                                   feature_names=list(X.columns),discretize_continuous=False)
-#%%
-import numpy as np
-i = np.random.randint(0, X_test.shape[0])
-#%%
-def predict_proba(x):
-    p=model.predict(x)[0][0]
-    print(np.array([1-p, p]).reshape(1,-1).ravel())
-    return np.array([1-p, p]).reshape(1,-1).ravel()
-exp = limeexplainer.explain_instance(X_test.iloc[i,:].to_numpy().reshape(1,-1), 
-                                     predict_proba)
+#                                                    feature_names=list(X.columns),discretize_continuous=False)
+# #%%
+# import numpy as np
+# i = np.random.randint(0, X_test.shape[0])
+# #%%
+# def predict_proba(x):
+#     p=model.predict(x)[0][0]
+#     print(np.array([1-p, p]).reshape(1,-1).ravel())
+#     return np.array([1-p, p]).reshape(1,-1).ravel()
+# exp = limeexplainer.explain_instance(X_test.iloc[i,:].to_numpy().reshape(1,-1), 
+#                                      predict_proba)
