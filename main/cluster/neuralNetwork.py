@@ -124,10 +124,6 @@ print(tuner.search_space_summary())
 """ SAVE TRAINED MODEL """
 """ work in progress """
 best_hp = tuner.get_best_hyperparameters()[0]
-# try:
-#     print('units: ',best_hp.values['units'])
-# except KeyError:
-#     best_hp.values['units']=[]
 best_hp_={k:v for k,v in best_hp.values.items() if not k.startswith('units')}
 best_hp_['units_0']=best_hp.values['units_0']
 best_hp_['hidden_units']={f'units_{i}':best_hp.values[f'units_{i}'] for i in range(1,best_hp.values['n_hidden']+1)}
@@ -147,81 +143,5 @@ config.keras_code(X,y,X_train,y_train, epochs=100,**best_hp_,
 util.saveconfig(config,config.USEDCONFIGPATH+model_name.split('/')[-1]+'.json')
 print('Saved ')
 
-#%%
-""" FUTURE IDEAS:
-    EXPLAINABILITY: https://github.com/slundberg/shap"""
 model=keras.models.load_model(model_name)
-import shap
-explainer = shap.KernelExplainer(data=shap.sample(X_test, 100),model=model, 
-                                 output_names=list(X.columns),
-                                 max_evals=600)
-
-shap_values = explainer.shap_values(X_test.iloc[:1000,:].to_numpy())
-
-# visualize the first prediction's explanation (use matplotlib=True to avoid Javascript)
-# shap.force_plot(explainer.expected_value, shap_values[0], X_test.iloc[0,:], matplotlib=True)
-
-shap.summary_plot(shap_values[0], X_test, plot_type="bar")
-# shap.plots.beeswarm(explainer.expected_value)
-force=shap.plots.force(explainer.expected_value[0], shap_values[0][0],ordering_keys='reverse',feature_names=list(X.columns),out_names=['neg','pos'],matplotlib=True)
-"""
-PROB INGRESO 0.05
-X_test.iloc[1,:].CCS49
-Out[111]: 0 no diabetes
-
-X_test.iloc[1,:].CCS159
-Out[112]: 2 urinary system diseases
-
-X_test.iloc[1,:].CCS94
-Out[113]: 1 ear conditions
-
-X_test.iloc[1,:].CCS198
-Out[114]: 1 Other inflammatory condition of skin 
-
-X_test.iloc[1,:].CCS174
-Out[115]: 1
-"""
-force=shap.plots.force(explainer.expected_value[0], shap_values[0][44],ordering_keys='reverse',feature_names=list(X.columns),out_names=['neg','pos'],matplotlib=True)
-"""
-PROB INGRESO 0.31
-
-X_test.iloc[44,:].CCS105
-Out[118]: 5 Diseases of the heart
-
-X_test.iloc[44,:].CCS131
-Out[119]: 1 ,Respiratory failure; insufficiency; arrest (adult) [
-
-X_test.iloc[44,:].CCS51
-Out[120]: 6 Other endocrine disorders 
-
-X_test.iloc[44,:].CCS133
-Out[121]: 1  Other lower respiratory disease 
-
-X_test.iloc[44,:].CCS98
-Out[122]: 1
-
-X_test.iloc[44,:].CCS259
-Out[123]: 1
-
-X_test.iloc[44,:].CCS130
-Out[124]: 1
-"""
-# allpoints=shap.plots.force(explainer.expected_value,shap_values[0])
-# shap.plots.scatter(shap_values[:,1], color=shap_values[0])
-# # shap.plots.beeswarm(shap_values)
-# import lime
-# from lime.lime_tabular import LimeTabularExplainer
-#%%
-# limeexplainer = LimeTabularExplainer(X_test.iloc[:1000,:].to_numpy().reshape(1,-1),
-                                                      
-#                                                    feature_names=list(X.columns),discretize_continuous=False)
-# #%%
-# import numpy as np
-# i = np.random.randint(0, X_test.shape[0])
-# #%%
-# def predict_proba(x):
-#     p=model.predict(x)[0][0]
-#     print(np.array([1-p, p]).reshape(1,-1).ravel())
-#     return np.array([1-p, p]).reshape(1,-1).ravel()
-# exp = limeexplainer.explain_instance(X_test.iloc[i,:].to_numpy().reshape(1,-1), 
-#                                      predict_proba)
+print(model.summary())
