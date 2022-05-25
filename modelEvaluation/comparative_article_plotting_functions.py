@@ -203,8 +203,11 @@ def brier_boxplot_zoom(df, violin=True):
     # Make the zoom-in plot:
      # axins.plot(ts)
     if violin:
-        axins = inset_axes(ax, 4.5,5 , loc='upper left', bbox_to_anchor=(0,0), borderpad=3,bbox_transform=ax.figure.transFigure) # zoomed_inset_axes(ax, 2, loc=1) # zoom = 2
-    
+        axins = inset_axes(ax, 4.5,5 , loc='upper left', bbox_to_anchor=(0,0), borderpad=3,
+                           bbox_transform=ax.figure.transFigure,
+                           ) # zoomed_inset_axes(ax, 2, loc=1) # zoom = 2
+        plt.setp(axins.spines.values(), color='green')
+        plt.setp([axins.get_xticklines(), axins.get_yticklines()], color='green')
         data=df2.copy()
         data['Algorithms']=data['Algorithm']+' '+data['Before/After']
         sns.violinplot(ax=axins,x="Algorithms", y='Brier',scale='count',
@@ -218,12 +221,15 @@ def brier_boxplot_zoom(df, violin=True):
         axins.set_title('')
         plt.xticks(visible=True)
         plt.yticks(visible=True)
-        mark_inset(ax, axins, loc1=1, loc2=1, fc="none", ec="0.5")
+        mark_inset(ax, axins, loc1=1, loc2=1, fc="none", ec="green", ls='--')
         plt.draw()
         
     else:
-        axins = inset_axes(ax, 2.5,5 , loc='upper left', bbox_to_anchor=(0,0), borderpad=3,bbox_transform=ax.figure.transFigure) # zoomed_inset_axes(ax, 2, loc=1) # zoom = 2
-   
+        axins = inset_axes(ax, 2.5,5 , loc='upper left', bbox_to_anchor=(0,0), 
+                           borderpad=3,bbox_transform=ax.figure.transFigure,
+                           ec='green', ls='--') # zoomed_inset_axes(ax, 2, loc=1) # zoom = 2
+        plt.setp(axins.spines.values(), color='green')
+        plt.setp([axins.get_xticklines(), axins.get_yticklines()], color='green')
         df2.boxplot(column='Brier', by=['Before/After','Algorithm'],
                     positions=[0,2,1,4,3,5], ax=axins)
         axins.set_xlim(x1, x2)
@@ -231,7 +237,7 @@ def brier_boxplot_zoom(df, violin=True):
         axins.set_title('')
         plt.xticks(visible=True)
         plt.yticks(visible=True)
-        mark_inset(ax, axins, loc1=1, loc2=1, fc="none", ec="0.5")
+        mark_inset(ax, axins, loc1=1, loc2=1, fc="none", ec="green", ls='--')
         plt.draw()
         
     # Make the zoom-in plot:
@@ -243,7 +249,9 @@ def brier_boxplot_zoom(df, violin=True):
     y2 = 0.049
     fig.subplots_adjust(left=1.2,right=1.3 ,bottom=1.4, top=1.5)
 
-    axins2 = inset_axes(ax, 3.8,4.1 , loc='lower right', bbox_to_anchor=(0,0), borderpad=3,bbox_transform=ax.figure.transFigure) 
+    axins2 = inset_axes(ax, 3.8,4.1 , loc='lower right', bbox_to_anchor=(0,0), borderpad=3,
+                        bbox_transform=ax.figure.transFigure,
+                      ) 
     # axins.plot(ts)
     if violin:
         data=df2.copy()
@@ -257,13 +265,14 @@ def brier_boxplot_zoom(df, violin=True):
         df2.boxplot(column='Brier', by=['Before/After','Algorithm'],
                     positions=[0,2,1,4,3,5], ax=axins2)
     axins2.axhline(y =parent_metrics['Brier'].values[0], linestyle = '-', label='Logistic', color='r')
-    
+    plt.setp(axins2.spines.values(), color='green')
+    plt.setp([axins2.get_xticklines(), axins2.get_yticklines()], color='green')
     axins2.set_xlim(x1, x2)
     axins2.set_ylim(y1, y2)
     axins2.set_title('')
     plt.xticks(visible=True)
     plt.yticks(visible=True)
-    mark_inset(ax, axins2, loc1=1, loc2=1, fc="none", ec="0.5")
+    mark_inset(ax, axins2, loc1=1, loc2=1, fc="none", ec='green', ls='--')
     plt.draw()
     # plt.legend()
    
