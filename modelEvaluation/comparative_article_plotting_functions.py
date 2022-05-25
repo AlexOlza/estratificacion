@@ -77,6 +77,7 @@ def ROC_PR_comparison(models, yr, logistic_model, mode='ROC', **kwargs):
     return(display)
 def boxplots(df, violin, together):
     import seaborn as sns
+    df['AUC']=df['Score']
     labels={'randomForest':'RF',
                 'neuralNetworkRandom':'MLP','hgb':'GBDT'}
     # path=kwargs.get('path',config.FIGUREPATH)
@@ -100,7 +101,7 @@ def boxplots(df, violin, together):
         ax3 = plt.subplot2grid((nrow,ncol),(1,0))
         ax4 = plt.subplot2grid((nrow,ncol),(1,1))
         ax5 = plt.subplot2grid((nrow,ncol),(0,2), rowspan=2, colspan=1)
-        for metric, ax in zip(['Score', 'AP', 'Recall_20000', 'PPV_20000'],[ax1,ax2,ax3, ax4]):
+        for metric, ax in zip(['AUC', 'AP', 'Recall_20000', 'PPV_20000'],[ax1,ax2,ax3, ax4]):
             if not violin:
                 df.boxplot(column=metric, by='Algorithm', ax=ax)
             if violin:
@@ -109,7 +110,7 @@ def boxplots(df, violin, together):
             print(parent_metrics[metric].values[0])
             ax.axhline(y = parent_metrics[metric].values[0], linestyle = '-', label='Logistic', color='r')
     else:
-        for metric in ['Score', 'AP', 'Recall_20000', 'PPV_20000']:
+        for metric in ['AUC', 'AP', 'Recall_20000', 'PPV_20000']:
             fig, ax=plt.subplots()
             if not violin:
                 df.boxplot(column=metric, by='Algorithm', ax=ax)
