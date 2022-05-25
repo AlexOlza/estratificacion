@@ -188,10 +188,9 @@ def brier_boxplot_zoom(df, violin=True):
         df2.boxplot(column='Brier', by=['Before/After','Algorithm'],
                     positions=[0,2,1,4,3,5],
                     ax=ax)
-    # plt.legend()
-    # ax.set_ylim(0,0.5)
-    # ax.set_xlim(-0.5,10)
-    ax.axhline(y =parent_metrics['Brier'].values[0], linestyle = '-', label='Logistic', color='r')
+
+    # ax.axhline(y =parent_metrics['Brier'].values[0], linestyle = '-', label='Logistic', color='r')
+    # ax.axhline(y =parent_metrics['Brier Before'].values[0], linestyle = '-', label='Logistic', color='purple')
     
     x1 = 3.5
     x2 = 5.3
@@ -264,7 +263,8 @@ def brier_boxplot_zoom(df, violin=True):
     else:
         df2.boxplot(column='Brier', by=['Before/After','Algorithm'],
                     positions=[0,2,1,4,3,5], ax=axins2)
-    axins2.axhline(y =parent_metrics['Brier'].values[0], linestyle = '-', label='Logistic', color='r')
+    axins2.axhline(y =parent_metrics['Brier'].values[0], linestyle = '-', label='LR After', color='r')
+    axins2.axhline(y =parent_metrics['Brier Before'].values[0], linestyle = '-', label='LR Before', color='purple')
     plt.setp(axins2.spines.values(), color='green')
     plt.setp([axins2.get_xticklines(), axins2.get_yticklines()], color='green')
     axins2.set_xlim(x1, x2)
@@ -274,7 +274,7 @@ def brier_boxplot_zoom(df, violin=True):
     plt.yticks(visible=True)
     mark_inset(ax, axins2, loc1=1, loc2=1, fc="none", ec='green', ls='--')
     plt.draw()
-    # plt.legend()
+    plt.legend()
    
     # plt.legend()
     plt.suptitle('')
