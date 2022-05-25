@@ -188,6 +188,7 @@ def brier_boxplot_zoom(df, violin=True):
         df2.boxplot(column='Brier', by=['Before/After','Algorithm'],
                     positions=[0,2,1,4,3,5],
                     ax=ax)
+    ax.set_title('Variability of Brier Scores')
 
     # ax.axhline(y =parent_metrics['Brier'].values[0], linestyle = '-', label='Logistic', color='r')
     # ax.axhline(y =parent_metrics['Brier Before'].values[0], linestyle = '-', label='Logistic', color='purple')
@@ -217,7 +218,7 @@ def brier_boxplot_zoom(df, violin=True):
         # y1, y2=0.175, 0.225
         axins.set_xlim(x1, x2)
         axins.set_ylim(0.175, 0.225)
-        axins.set_title('')
+        axins.set_title('Zoom', y=1.0, pad=-14)
         plt.xticks(visible=True)
         plt.yticks(visible=True)
         mark_inset(ax, axins, loc1=1, loc2=1, fc="none", ec="green", ls='--')
@@ -233,7 +234,7 @@ def brier_boxplot_zoom(df, violin=True):
                     positions=[0,2,1,4,3,5], ax=axins)
         axins.set_xlim(x1, x2)
         axins.set_ylim(y1, y2)
-        axins.set_title('')
+        axins.set_title('Zoom', y=1.0, pad=-14)
         plt.xticks(visible=True)
         plt.yticks(visible=True)
         mark_inset(ax, axins, loc1=1, loc2=1, fc="none", ec="green", ls='--')
@@ -269,7 +270,7 @@ def brier_boxplot_zoom(df, violin=True):
     plt.setp([axins2.get_xticklines(), axins2.get_yticklines()], color='green')
     axins2.set_xlim(x1, x2)
     axins2.set_ylim(y1, y2)
-    axins2.set_title('')
+    axins2.set_title('Zoom' , y=1.0, pad=-14)
     plt.xticks(visible=True)
     plt.yticks(visible=True)
     mark_inset(ax, axins2, loc1=1, loc2=1, fc="none", ec='green', ls='--')
