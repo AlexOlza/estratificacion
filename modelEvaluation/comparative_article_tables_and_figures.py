@@ -37,18 +37,41 @@ X16,y17=getData(2016)
 female=X['FEMALE']==1
 male=X['FEMALE']==0
 sex=[ 'Women','Men']
-# table1={'Women':pd.DataFrame(), 'Men':pd.DataFrame()}
+
+comorbidities={'COPD': ['EDC_RES04'],
+               'Chronic Renal Failure': ['EDC_REN01'],
+               'Heart Failure': ['EDC_CAR04'],
+               'Depression': ['EDC_PSY09'],
+               'Diabetes Mellitus': ['EDC_END06','EDC_END07','EDC_END08'],
+               # 'Dis. of Lipid Metabolism': ['EDC_CAR11'],
+               'Hypertension': ['EDC_CAR14','EDC_CAR15'],
+               'Ischemic Heart Disease': ['EDC_CAR03'],
+               'Low back pain': ['EDC_MUS14'],
+               'Osteoporosis': ['EDC_END02'],
+               "Parkinson's disease":['EDC_NUR06'],
+               'Persistent asthma':['EDC_ALL05'],
+               'Rheumatoid arthritis':['EDC_RHU05'],
+               'Schizophrenia & affective dis.': ['EDC_PSY07'],
+               'Seizure disorders': ['EDC_NUR07']
+               }
+
 table1= pd.DataFrame(index=['N in 2017 (%)', 'Hospitalized in 2018', 
                             'Aged 0-17',
                             'Aged 18-64',
                             'Aged 65-69',
                             'Aged 70-79',
                             'Aged 80-84',
-                            'Aged 85+'])
+                            'Aged 85+']+list(comorbidities.keys()))
+comorb={}
 for group, groupname in zip([female,male],sex):
     print(groupname)
     Xgroup=X.loc[group]
     ygroup=y.loc[group]
+    comorb[groupname]=[]
+    for disease, EDClist in comorbidities.items():
+        s=[Xgroup[EDC].sum() for EDC in EDClist]
+        comorb[groupname].append(f'{sum(s)} ({sum(s)*100/len(Xgroup):2.2f} %)')
+        print(disease, s)
     # ygroup18=y.loc[group18]
     a1=sum(Xgroup.AGE_0004)+sum(Xgroup.AGE_0511)+sum(Xgroup.AGE_0511)
     a2=sum(Xgroup.AGE_1834)+sum(Xgroup.AGE_3544)+sum(Xgroup.AGE_4554)+sum(Xgroup.AGE_5564)
@@ -64,7 +87,10 @@ for group, groupname in zip([female,male],sex):
                        f'{a3} ({a3*100/len(Xgroup):2.2f} %) ',
                        f'{a4} ({a4*100/len(Xgroup):2.2f} %) ',
                        f'{a5} ({a5*100/len(Xgroup):2.2f} %) ',
-                       f'{a85plus} ({a85plus*100/len(Xgroup):2.2f} %) ']
+                       f'{a85plus} ({a85plus*100/len(Xgroup):2.2f} %) ']+comorb[groupname]
+    
+    
+    
 
 print(table1.to_latex())
 
