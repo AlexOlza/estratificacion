@@ -17,6 +17,8 @@ echo "Type any additional options (no blank spaces)"
 read OPTIONS
 
 n_iter=30
+for s in "${seeds[@]}" ### loop through values
+do
 sampling_seed=$s
 
 jobname=$OPTIONS${alg:0:3}${s}
@@ -25,6 +27,4 @@ err=$(pwd)"/output/${exp}/ERR$OPTIONS${alg}_$s.txt"
 
 sbatch --output=$out --error=$err --job-name=$jobname --export=ALL,SCRIPT=$scr,ALGORITHM=$alg,EXPERIMENT=$exp,SEED=$s,SAMP_SEED=$sampling_seed,N_ITER=$n_iter,OPTIONS=$OPTIONS hyperparameter_job.sl
 
-echo sbatch --output=$out --error=$err --job-name=$jobname --export=ALL,SCRIPT=$scr,ALGORITHM=$alg,EXPERIMENT=$exp,SEED=$s,SAMP_SEED=$sampling_seed,N_ITER=$n_iter,OPTIONS=$OPTIONS hyperparameter_job.sl
-
-
+done
