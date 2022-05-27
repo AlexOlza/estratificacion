@@ -97,7 +97,11 @@ callbacks = [keras.callbacks.EarlyStopping(monitor='val_loss',mode='min',
                                       patience=5,
                                       restore_best_weights=True)]
 history=model.fit(X, y, callbacks=callbacks, epochs=epochs,
-                   validation_data=(X_test,y_test), verbose=1)
+                   validation_data=(X_test,y_test), verbose=0)
 keras.models.save_model(model, filepath=config.MODELPATH+model_name+'_ret')
-# util.saveconfig(config,config.USEDCONFIGPATH+model_name.split('/')[-1]+'.json')
-# print('Saved ')
+util.saveconfig(config,config.USEDCONFIGPATH+model_name.split('/')[-1]+'.json')
+try:
+    print(history.history)
+except:
+    pass
+print('Saved ')
