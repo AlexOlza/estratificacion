@@ -50,5 +50,5 @@ t0=time()
 fit=logistic.fit(X, y)
 print('fitting time: ',time()-t0)
 #%%
-util.savemodel(config, fit, name='logistic_20220526ingresoprevio')
+util.savemodel(config, fit)
 
