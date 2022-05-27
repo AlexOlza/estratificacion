@@ -63,7 +63,7 @@ import configurations.utility as util
 util.makeAllPaths()
 seed_sampling= args.seed_sampling if hasattr(args, 'seed_sampling') else config.SEED #imported from default configuration
 seed_hparam= args.seed_hparam if hasattr(args, 'seed_hparam') else config.SEED
-model_name= f'neuralNetwork_{seed_hparam}' 
+model_name= f'neuralNetworkRandom_{seed_hparam}' 
 epochs=args.epochs if hasattr(args, 'epochs') else 100
 cyclic=args.cyclic
 #%%
