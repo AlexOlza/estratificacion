@@ -22,7 +22,7 @@ module load SciPy-bundle/2020.11-foss-2020b-skrebate #INCLUDES scikit-learn 0.24
 
 modelname="${ALGORITHM}_${SEED}"
 if ! [ -f "${MODELPATH}/${modelname}.joblib" ]; then
-srun python $ALGORITHM.py --seed-sampling $SAMP_SEED --seed-hparam $SEED --model-name "${ALGORITHM}_${SEED}" --n-iter $N_ITER $OPTIONS $ALGORITHM ${EXPERIMENT}
+srun python $SCRIPT.py --seed-sampling $SAMP_SEED --seed-hparam $SEED --model-name "${ALGORITHM}_${SEED}" --n-iter $N_ITER $OPTIONS $ALGORITHM ${EXPERIMENT}
 else
 echo "${modelpath}/${modelname}.joblib" found, not launching
 fi
