@@ -76,6 +76,8 @@ X_test,y_test=getData(2017)
 assert len(config.COLUMNS)==1, 'This model is built for a single response variable! Modify config.COLUMNS'
 y=np.where(y[config.COLUMNS]>=1,1,0)
 y=y.ravel()
+y_test=np.where(y_test[config.COLUMNS]>=1,1,0)
+y_test=y_test.ravel()
 try:
     X.drop('PATIENT_ID',axis=1,inplace=True)
     X_test.drop('PATIENT_ID',axis=1,inplace=True)
