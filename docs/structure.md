@@ -32,10 +32,9 @@ To define a new experiment (for example, to change the predictors), add a file n
 
 ```
 EXPERIMENT='experiment_name'
-PREDICTORREGEX= Regex string r'...' that matches the columns you want to use as predictors.
+PREDICTORREGEX= Regex string r'...' that matches the columns you want to use as predictors. This may include previous hospitalizations.
 INDICEPRIVACION= False or True ; Wether you want to use the privation index (beware, it has missing values)
 COLUMNS=['...'] String with the name of the response variable. Examples: ['urgcms'], ['urg'], ['COSTE_TOTAL_ANO2']
-PREVIOUSHOSP=[] or [True] To include as predictors wether the patient had previous hospitalizations.
 EXCLUDE=['nbinj'] or ['hdia'] or [] or ['nbinj','hdia'] To exclude birth&delivery and/or day hospital admission, or none.
 EXCLUDEOSI=['OS16','OS22'] To exclude those OSIs (Look up the code of the OSIs you want to exclude)
 RESOURCEUSAGE=False or True, to include the number of consultations, dialisis, cancer treatment..... as predictions

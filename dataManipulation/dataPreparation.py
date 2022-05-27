@@ -34,7 +34,7 @@ def excludeHosp(df,filtros,criterio):
     
 # TODO MOVE ASSERTIONS BEFORE LOADING BIG FILES!!!!
 #OLDBASE IS OBSOLETE
-def getData(yr,columns=config.COLUMNS,previousHosp=config.PREVIOUSHOSP,
+def getData(yr,columns=config.COLUMNS,
             predictors=config.PREDICTORREGEX,
             exclude=config.EXCLUDE,
             resourceUsage=config.RESOURCEUSAGE,

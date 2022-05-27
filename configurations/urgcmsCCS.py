@@ -15,7 +15,6 @@ TRACEBACK=True
 PREDICTORREGEX=r'PATIENT_ID|AGE|FEMALE|CCS|ONCOLOGY'
 INDICEPRIVACION=False
 COLUMNS=['urgcms']#variable respuesta
-PREVIOUSHOSP=[]
 EXCLUDE=['nbinj']
 #Exclude patients from Tolosaldea and Errioxa because they receive
 #most of their care outside of Osakidetza.
