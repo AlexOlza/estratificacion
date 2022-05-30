@@ -114,7 +114,7 @@ else:
     tuner = config.MyRandomTuner(X_train, y_train.reshape(-1,1),X_test, y_test.reshape(-1,1),
                  objective=kt.Objective("val_loss", direction="min"),
                  max_trials=100, 
-                 overwrite=False,
+                 overwrite=True,
                  seed=seed_hparam,
                  cyclic=cyclic,
                  directory=model_name+'_search',
