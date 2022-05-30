@@ -134,6 +134,7 @@ def load_predictors(path,predictors=None):
     else:
         print('Will load full dataset')
         predictors=[col for col in df]
+        print(predictors)
     if not 'PATIENT_ID' in predictors:
         predictors.insert(0,'PATIENT_ID')
 

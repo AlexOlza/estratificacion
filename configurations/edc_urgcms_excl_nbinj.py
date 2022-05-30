@@ -12,7 +12,6 @@ EXPERIMENT='edc_urgcms_excl_nbinj'
 PREDICTORREGEX=r'PATIENT_ID|FEMALE|AGE_[0-9]+$|EDC_|FRAILTY'
 INDICEPRIVACION=False
 COLUMNS=['urgcms']#variable respuesta
-PREVIOUSHOSP=[]
 EXCLUDE=['nbinj']
 #Exclude patients from Tolosaldea and Errioxa because they receive
 #most of their care outside of Osakidetza.

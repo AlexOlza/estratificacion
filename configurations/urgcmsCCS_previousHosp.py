@@ -1,18 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Mon May  9 15:55:10 2022
+Created on Fri May 27 10:03:27 2022
 
 @author: aolza
 """
-
-EXPERIMENT='urgcmsCCS'
-CONFIGNAME='urgcmsCCS.py'
+EXPERIMENT='urgcmsCCS_previousHosp'
+CONFIGNAME='urgcmsCCS_previousHosp.py'
 COLUMNS=['urgcms']
 TRACEBACK=True
 
 """PREDICTORS: They will be different for each script."""
-PREDICTORREGEX=r'PATIENT_ID|AGE|FEMALE|CCS|ONCOLOGY'
+PREDICTORREGEX=r'PATIENT_ID|AGE|FEMALE|CCS|ingresoPrevio'
 INDICEPRIVACION=False
 COLUMNS=['urgcms']#variable respuesta
 EXCLUDE=['nbinj']
