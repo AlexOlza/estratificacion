@@ -34,7 +34,7 @@ def excludeHosp(df,filtros,criterio):
     
 # TODO MOVE ASSERTIONS BEFORE LOADING BIG FILES!!!!
 #OLDBASE IS OBSOLETE
-def getData(yr,columns=config.COLUMNS,previousHosp=config.PREVIOUSHOSP,
+def getData(yr,columns=config.COLUMNS,
             predictors=config.PREDICTORREGEX,
             exclude=config.EXCLUDE,
             resourceUsage=config.RESOURCEUSAGE,
@@ -101,20 +101,11 @@ def getData(yr,columns=config.COLUMNS,previousHosp=config.PREVIOUSHOSP,
     elif CCS:
         Xprovisional=load(filename=config.ACGFILES[yr],predictors=predictors)
         full16=generateCCSData(yr,  Xprovisional, predictors=predictors)
-        # full16=pd.merge(full16, Xprovisional, on='PATIENT_ID')
     else:
         full16=load(filename=config.ACGFILES[yr],predictors=predictors)
    
-    if previousHosp:
-        previousHosp=[previousHosp] if isinstance(previousHosp,str) else previousHosp
-        assert isinstance(previousHosp, list), 'getData accepts str or list or None as previousHosp!'
-        if 'PATIENT_ID' not in previousHosp: 
-            previousHosp.insert(0,'PATIENT_ID')
-        assertMissingCols(previousHosp,ingT[yr],'getData')
-        pred16=pd.merge(full16,ingT[yr][previousHosp],on='PATIENT_ID',how='left').fillna({c:0 for c in previousHosp},inplace=True)
-    else:
-        assert 'PATIENT_ID' in full16.columns
-        pred16=pd.merge(full16,ingT[yr]['PATIENT_ID'],on='PATIENT_ID',how='left')
+    assert 'PATIENT_ID' in full16.columns
+    pred16=pd.merge(full16,ingT[yr]['PATIENT_ID'],on='PATIENT_ID',how='left')
 
             
     y17=pd.merge(ingT[yr+1],full16['PATIENT_ID'],on='PATIENT_ID',how='outer').fillna(0)
@@ -124,8 +115,7 @@ def getData(yr,columns=config.COLUMNS,previousHosp=config.PREVIOUSHOSP,
     print('getData time: ',time.time()-t0)
     finalcols=listIntersection(data.columns,pred16.columns)
     X,y=data[finalcols].reindex(sorted(data[finalcols].columns), axis=1),data[cols]
-    # if CCS:
-    #     X,y=CCSData(yr, X, y, **kwargs)
+    
     return(X[finalcols].reindex(sorted(data[finalcols].columns), axis=1),y[cols])
 
 def generateCCSData(yr,  X,

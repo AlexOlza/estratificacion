@@ -13,7 +13,6 @@ FULLEDCS=True
 PREDICTORREGEX=r'PATIENT_ID|FEMALE|AGE_[0-9]+$|ACG|EDC_|HOSDOM|FRAILTY|RXMG_|INGRED_14GT'
 INDICEPRIVACION=False
 COLUMNS=['COSTE_TOTAL_ANO2']#variable respuesta
-PREVIOUSHOSP=[]
 EXCLUDE=[]
 #Exclude patients from Tolosaldea and Errioxa because they receive
 #most of their care outside of Osakidetza.
