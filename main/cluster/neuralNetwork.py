@@ -49,6 +49,8 @@ parser.add_argument('--random_tuner','-r', dest='random_tuner',action='store_tru
                     help='Use random grid search (default: False, use Bayesian)')
 parser.add_argument('--clr','-c', dest='cyclic',action='store_true', default=False,
                     help='Use Cyclic Learning Rate')
+parser.add_argument('--epochs', metavar='epochs',type=int, default=argparse.SUPPRESS,
+                    help='Number of epochs to train the final model')
 
 args = parser.parse_args()
 
@@ -66,6 +68,7 @@ seed_sampling= args.seed_sampling if hasattr(args, 'seed_sampling') else config.
 seed_hparam= args.seed_hparam if hasattr(args, 'seed_hparam') else config.SEED
 model_name= args.model_name if hasattr(args,'model_name') else 'neuralNetwork' 
 cyclic=args.cyclic
+epochs=args.seed_hparam if hasattr(args, 'epochs') else 500
 #%%
 """ BEGGINNING """
 from dataManipulation.dataPreparation import getData
@@ -80,6 +83,8 @@ except:
     pass
 
 X_train, X_test, y_train, y_test = train_test_split( X, y, test_size=0.2, random_state=42)
+X_test, X_test2, y_test, y_test2 = train_test_split( X_test, y_test, test_size=0.5, random_state=42)
+
 print('Sample size ',len(y_train))
 print('---------------------------------------------------'*5)
 #%% 
@@ -141,8 +146,8 @@ if cyclic:
 print('Best hyperparameters:')
 print(best_hp_)
 print('---------------------------------------------------'*5)
-print('Retraining (500 epochs):')
-config.keras_code(X,y,X_train,y_train, epochs=500,**best_hp_,
+print(f'Retraining ({epochs} epochs):')
+config.keras_code(X,y,X_test2,y_test2, epochs=epochs,**best_hp_,
                   callbacks=callbacks, save=True, saving_path=model_name, verbose=1)
 util.saveconfig(config,config.USEDCONFIGPATH+model_name.split('/')[-1]+'.json')
 print('Saved ')
