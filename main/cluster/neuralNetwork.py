@@ -100,7 +100,7 @@ if not args.random_tuner:
     tuner = config.MyBayesianTuner(X_train, y_train.reshape(-1,1),X_test, y_test.reshape(-1,1),
                      objective=kt.Objective("val_loss", direction="min"),
                      max_trials=100,
-                     overwrite=True,
+                     overwrite=False,
                      num_initial_points=4,
                      seed=seed_hparam,
                      cyclic=cyclic,
@@ -114,7 +114,7 @@ else:
     tuner = config.MyRandomTuner(X_train, y_train.reshape(-1,1),X_test, y_test.reshape(-1,1),
                  objective=kt.Objective("val_loss", direction="min"),
                  max_trials=100, 
-                 overwrite=True,
+                overwrite=False,
                  seed=seed_hparam,
                  cyclic=cyclic,
                  directory=model_name+'_search',
@@ -147,7 +147,7 @@ print('Best hyperparameters:')
 print(best_hp_)
 print('---------------------------------------------------'*5)
 print(f'Retraining ({epochs} epochs):')
-config.keras_code(X,y,X_test2,y_test2, epochs=epochs,**best_hp_,
+config.keras_code(X_train,y_train,X_test2,y_test2, epochs=epochs,**best_hp_,
             callbacks=callbacks, save=True, saving_path=model_name, verbose=1)
 util.saveconfig(config,config.USEDCONFIGPATH+model_name.split('/')[-1]+'.json')
 print('Saved ')
