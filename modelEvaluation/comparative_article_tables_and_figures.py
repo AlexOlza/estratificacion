@@ -92,7 +92,7 @@ for group, groupname in zip([female,male],sex):
     
     
 
-print(table1.to_latex())
+print(table1.style.to_latex())
 
 simdif=len(set(X.PATIENT_ID.values).symmetric_difference(set(X16.PATIENT_ID.values)))
 
@@ -104,7 +104,7 @@ print('Prevalence of admission in 2018:',sum(np.where(y.urgcms>=1,1,0))/len(X))
 #%%
 """ MATERIALS AND METHODS: Comments on variability assessment"""
 K=20000
-metrics=pd.read_csv(re.sub(config.EXPERIMENT, 'hyperparameter_variability_'+config.EXPERIMENT,config.PREDPATH)+'/metrics.csv')
+metrics=pd.read_csv(re.sub(config.EXPERIMENT, 'hyperparameter_variability_urgcms_excl_nbinj',config.PREDPATH)+'/metrics.csv')
 print('Number of models per algorithm:')
 print( metrics.groupby(['Algorithm'])['Algorithm'].count() )
 
@@ -127,7 +127,7 @@ for metric in ['Score', 'Recall_20000', 'PPV_20000', 'F1_20000','Brier']:
     table2[metric]=[f'{m:1.3f} ({i:.2E})' for m, i in zip(median.values, IQR.values)]
     table2.index=IQR.index
   
-print(table2.to_latex())
+print(table2.style.to_latex())
 
 higher_better={'Score': True, 'Recall_20000': True,
                'PPV_20000': True, 'Brier':False, 'AP':True}
@@ -138,7 +138,7 @@ def use_E(x):
 # Option 2: Subtables with descriptive
 for metric in [ 'Score', 'Recall_20000', 'PPV_20000', 'Brier','AP']:
     table2=metrics.groupby(['Algorithm'])[metric].describe()[['25%','50%', '75%','std']].sort_values('50%', ascending=[not higher_better[metric]])
-    print(table2.to_latex(formatters=[ use_f_3, use_f_3, use_f_3, use_E]))
+    print(table2.style.to_latex(formatters=[ use_f_3, use_f_3, use_f_3, use_E]))
     print('\n'*2)
 
 def median(x):
