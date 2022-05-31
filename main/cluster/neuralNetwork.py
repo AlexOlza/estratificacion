@@ -100,7 +100,7 @@ if not args.random_tuner:
     tuner = config.MyBayesianTuner(X_train, y_train.reshape(-1,1),X_test, y_test.reshape(-1,1),
                      objective=kt.Objective("val_loss", direction="min"),
                      max_trials=100,
-                     overwrite=False,
+                     overwrite=True,
                      num_initial_points=4,
                      seed=seed_hparam,
                      cyclic=cyclic,
@@ -114,7 +114,7 @@ else:
     tuner = config.MyRandomTuner(X_train, y_train.reshape(-1,1),X_test, y_test.reshape(-1,1),
                  objective=kt.Objective("val_loss", direction="min"),
                  max_trials=100, 
-                overwrite=False,
+                overwrite=True,
                  seed=seed_hparam,
                  cyclic=cyclic,
                  directory=model_name+'_search',
@@ -137,7 +137,7 @@ best_hp_={k:v for k,v in best_hp.values.items() if not k.startswith('units')}
 best_hp_['units_0']=best_hp.values['units_0']
 best_hp_['hidden_units']={f'units_{i}':best_hp.values[f'units_{i}'] for i in range(1,best_hp.values['n_hidden']+1)}
 callbacks = [keras.callbacks.EarlyStopping(monitor='val_loss',mode='min',
-                                      patience=5,
+                                      patience=25,
                                       restore_best_weights=True)]
 if cyclic:
     callbacks.append(config.clr(best_hp.values['low'], best_hp.values['high'], step=(len(y) // 1024)))
