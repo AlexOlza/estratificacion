@@ -101,7 +101,7 @@ if not args.random_tuner:
                      objective=kt.Objective("val_loss", direction="min"),
                      max_trials=100,
                      overwrite=True,
-                     num_initial_points=4,
+                     num_initial_points=16,#number of random trials before bayesian search
                      seed=seed_hparam,
                      cyclic=cyclic,
                      directory=model_name+'_search',
