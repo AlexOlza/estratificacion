@@ -12,6 +12,7 @@ Created on Tue May 31 11:53:18 2022
 """EXTERNAL IMPORTS"""
 import keras_tuner as kt
 from tensorflow import keras
+from tensorflow.keras import regularizers
 import re
 import argparse
 import importlib
@@ -113,7 +114,7 @@ def build_model(units_0, n_hidden, activ, cyclic, early, **kwargs):
         keras.layers.Dense(
             units=units_0,
             activation=activ,
-            activity_regularizer='l2'
+            activity_regularizer=regularizers.L2(1e-3)
         )
     )
     #hidden layers
@@ -122,22 +123,21 @@ def build_model(units_0, n_hidden, activ, cyclic, early, **kwargs):
         keras.layers.Dense(
             # Tune number of units separately.
             units=hidden_units[f"units_{i}"],
-            activity_regularizer='l1_l2',
+            activity_regularizer=regularizers.L2(1e-3),
             activation=activ))
     #output layer
-    model.add(keras.layers.Dense(1, activation='sigmoid',name='output',
-            kernel_initializer=keras.initializers.he_uniform(seed=seed_hparam)))
+    model.add(keras.layers.Dense(1,activation='sigmoid',name='output'))
 
     if cyclic:
         model.compile(
         optimizer=keras.optimizers.Adam(), 
-           loss="binary_crossentropy", metrics=[keras.metrics.AUC(),
-                                                                  keras.metrics.Recall(),
-                                                                  keras.metrics.Precision()])
+           loss=keras.losses.BinaryCrossentropy(from_logits=True, name='binary_crossentropy'),
+           metrics=[keras.metrics.AUC()])
     else:
         model.compile(
         optimizer=keras.optimizers.Adam(learning_rate=lr), 
-           loss="binary_crossentropy", metrics=[keras.metrics.AUC(),keras.metrics.BinaryCrossentropy()])
+           loss=keras.losses.BinaryCrossentropy(from_logits=True, name='binary_crossentropy'), 
+           metrics=[keras.metrics.AUC()])
    
     
     return model
@@ -181,12 +181,15 @@ def run(tuner, trial, **kwargs):
         #neurons in input layer
         units_0=hp.Int("units_0", min_value=312, max_value=1024, step=32)
         #number of hidden layers
-        n_hidden=hp.Int('n_hidden', min_value=0, max_value=10, step=2)
+        n_hidden=hp.Int('n_hidden', min_value=1, max_value=5, step=1)
         units={}
-
+        width=hp.Int('width', 64, 256, step=32)
+        
         for i in range(1,n_hidden+1):
             # Tune number of units separately.
-            units[f"units_{i}"]=hp.Int(f"units_{i}", min_value=32, max_value=1024, step=32)
+            # units[f"units_{i}"]=hp.Int(f"units_{i}", min_value=32, max_value=1024, step=32)
+            # PYRAMID SHAPE
+            units[f"units_{i}"]=width*(n_hidden+1-i)
         cyclic=hp.Fixed('cyclic', cyclic)
         with hp.conditional_scope('cyclic', False):
             #learning rate
@@ -200,8 +203,8 @@ def run(tuner, trial, **kwargs):
         
        
         early=hp.Fixed('early', True)
-        callbacks = [keras.callbacks.EarlyStopping(monitor='val_loss',mode='min',
-                                      patience=15,
+        callbacks = [keras.callbacks.EarlyStopping(monitor='val_binary_crossentropy',mode='min',
+                                      patience=25,
                                       restore_best_weights=True)]
         if cyclic:
             callbacks.append(clr(low, high, step=len(tuner.y_train // 512)))
