@@ -135,7 +135,12 @@ best_hp = tuner.get_best_hyperparameters()[0]
 #     best_hp.values['units']=[]
 best_hp_={k:v for k,v in best_hp.values.items() if not k.startswith('units')}
 best_hp_['units_0']=best_hp.values['units_0']
-best_hp_['hidden_units']={f'units_{i}':best_hp.values[f'units_{i}'] for i in range(1,best_hp.values['n_hidden']+1)}
+n_hidden=best_hp.values['n_hidden']
+try:
+    best_hp_['hidden_units']={f'units_{i}':best_hp.values[f'units_{i}'] for i in range(1,best_hp.values['n_hidden']+1)}
+except ValueError: 
+    best_hp_['hidden_units']={f'units_{i}':best_hp.values['width']*(n_hidden+1-i) for i in range(1,n_hidden+1)}
+
 callbacks = [keras.callbacks.EarlyStopping(monitor='val_auc',mode='min',
                                       patience=225,
                                       restore_best_weights=True)]
