@@ -154,11 +154,12 @@ def keras_code(x_train, y_train, x_val, y_val,
                ):
     verbose=kwargs.get('verbose',0)
     lr=kwargs.get('lr',None)
+    penalty=kwargs.get('penalty',1e-4)
     batch_size=kwargs.get('batch_size', 256)
     hidden_units=kwargs.get('hidden_units',{})
     # Build model
     model = build_model(units_0, n_hidden, activ, cyclic, early, 
-                        lr=lr, hidden_units=hidden_units)
+                        lr=lr, hidden_units=hidden_units, penalty=penalty)
     callbacks.append(keras.callbacks.Callback())
     # Train & eval model
     history=model.fit(x_train, y_train, callbacks=callbacks, epochs=epochs,
@@ -181,6 +182,7 @@ def run(tuner, trial, **kwargs):
         cyclic=tuner.cyclic
         hp = trial.hyperparameters
         callbacks=kwargs.get('callbacks',[])
+        penalty=hp.Float('penalty',min_value=1e-6, max_value=1e-2)
         #batch size
         batch_size = hp.Int('batch_size', 64, 1024, step=32)
         #neurons in input layer
@@ -213,9 +215,9 @@ def run(tuner, trial, **kwargs):
         #                               restore_best_weights=True)]
         if cyclic:
             callbacks.append(clr(low, high, step=len(tuner.y_train // 512)))
-        print(units_0, n_hidden, activ, units, lr)
+        print(units_0, n_hidden, activ, units, lr, penalty)
         return keras_code(tuner.x_train, tuner.y_train, tuner.x_val, tuner.y_val,
-            units_0, n_hidden, activ, cyclic, early, callbacks,
+            units_0, n_hidden, activ, cyclic, early, callbacks, penalty=penalty,
             hidden_units=units, lr=lr, batch_size=batch_size, epochs=tuner.epochs )
 
 
