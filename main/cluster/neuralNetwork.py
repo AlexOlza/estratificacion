@@ -74,7 +74,7 @@ epochs=args.seed_hparam if hasattr(args, 'epochs') else 500
 from dataManipulation.dataPreparation import getData
 
 X,y=getData(2016)
-X, _, y, _ = train_test_split( X, y, test_size=0.6, random_state=42)
+# X, _, y, _ = train_test_split( X, y, test_size=0.6, random_state=42)
 
 # assert False
 if config.STANDARIZATION:

@@ -206,7 +206,7 @@ def run(tuner, trial, **kwargs):
        
         early=hp.Fixed('early', True)
         callbacks = [keras.callbacks.EarlyStopping(monitor='val_loss',mode='max',
-                                      patience=25,
+                                      patience=int(tuner.epochs/2),
                                       restore_best_weights=True)]
         if cyclic:
             callbacks.append(clr(low, high, step=len(tuner.y_train // 512)))
