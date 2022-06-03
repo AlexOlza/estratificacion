@@ -74,6 +74,8 @@ epochs=args.seed_hparam if hasattr(args, 'epochs') else 500
 from dataManipulation.dataPreparation import getData
 
 X,y=getData(2016)
+X, _, y, _ = train_test_split( X, y, test_size=0.6, random_state=42)
+
 # assert False
 if config.STANDARIZATION:
     from sklearn.preprocessing import StandardScaler
@@ -111,7 +113,8 @@ if not args.random_tuner:
                      seed=seed_hparam,
                      cyclic=cyclic,
                      directory=model_name+'_search',
-                     project_name=name)
+                     project_name=name,
+                     epochs=10)
 else:
     name=re.sub('neuralNetwork','neuralNetworkRandom',model_name)
     name=re.sub('neuralNetworkRandom','neuralNetworkRandomCLR',name) if cyclic else name
@@ -124,9 +127,10 @@ else:
                  seed=seed_hparam,
                  cyclic=cyclic,
                  directory=model_name+'_search',
-                 project_name=name)
+                 project_name=name,
+                 epochs=10)
   
-tuner.search(epochs=50)
+tuner.search(epochs=10)
 print('---------------------------------------------------'*5)
 print('SEARCH SPACE SUMMARY:')
 print(tuner.search_space_summary())  

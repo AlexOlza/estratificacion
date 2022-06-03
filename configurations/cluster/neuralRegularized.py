@@ -214,29 +214,31 @@ def run(tuner, trial, **kwargs):
             units, lr)
         return keras_code(tuner.x_train, tuner.y_train, tuner.x_val, tuner.y_val,
             units_0, n_hidden, activ, cyclic, early, callbacks,
-            hidden_units=units, lr=lr, batch_size=batch_size )
+            hidden_units=units, lr=lr, batch_size=batch_size, epochs=tuner.epochs )
 
 
 class MyRandomTuner(kt.RandomSearch):
-    def __init__(self, x_train, y_train, x_val, y_val, cyclic=False,*args,**kwargs):
+    def __init__(self, x_train, y_train, x_val, y_val, cyclic=False, epochs=50,*args,**kwargs):
         super().__init__(*args,**kwargs)
         self.x_train=x_train
         self.y_train=y_train
         self.x_val=x_val
         self.y_val=y_val
         self.cyclic=cyclic
+        self.epochs=epochs
 
     def run_trial(self, trial, **kwargs):
         return(run(self, trial, **kwargs))
     
 class MyBayesianTuner(kt.BayesianOptimization):
-    def __init__(self, x_train, y_train, x_val, y_val, cyclic=False,*args,**kwargs):
+    def __init__(self, x_train, y_train, x_val, y_val, cyclic=False, epochs=50,*args,**kwargs):
         super().__init__(*args,**kwargs)
         self.x_train=x_train
         self.y_train=y_train
         self.x_val=x_val
         self.y_val=y_val
         self.cyclic=cyclic
+        self.epochs=epochs
         
     def run_trial(self, trial, **kwargs):
         return(run(self, trial, **kwargs))
