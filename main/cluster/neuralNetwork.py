@@ -74,6 +74,12 @@ epochs=args.seed_hparam if hasattr(args, 'epochs') else 500
 from dataManipulation.dataPreparation import getData
 
 X,y=getData(2016)
+# assert False
+if config.STANDARIZATION:
+    from sklearn.preprocessing import StandardScaler
+    X=StandardScaler().fit_transform(X)
+    print('Scaled X')
+# assert False
 assert len(config.COLUMNS)==1, 'This model is built for a single response variable! Modify config.COLUMNS'
 y=np.where(y[config.COLUMNS]>=1,1,0)
 y=y.ravel()
