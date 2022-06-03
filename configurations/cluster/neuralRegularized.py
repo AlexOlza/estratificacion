@@ -108,6 +108,7 @@ def build_model(units_0, n_hidden, activ, cyclic, early, **kwargs):
     lr=kwargs.get('lr',None)
     # low=kwargs.get('low',None)
     # high=kwargs.get('high',None)
+    penalty=kwargs.get('penalty',1e-4)
     hidden_units=kwargs.get('hidden_units',{})
     # BUILD MODEL
     model = keras.Sequential()
@@ -116,7 +117,7 @@ def build_model(units_0, n_hidden, activ, cyclic, early, **kwargs):
         keras.layers.Dense(
             units=units_0,
             activation=activ,
-            activity_regularizer=regularizers.L2(1e-3)
+            activity_regularizer=regularizers.L2(penalty)
         )
     )
     #hidden layers
@@ -125,7 +126,7 @@ def build_model(units_0, n_hidden, activ, cyclic, early, **kwargs):
         keras.layers.Dense(
             # Tune number of units separately.
             units=hidden_units[f"units_{i}"],
-            activity_regularizer=regularizers.L2(1e-3),
+            activity_regularizer=regularizers.L2(penalty),
             activation=activ))
     #output layer
     model.add(keras.layers.Dense(1,activation='sigmoid',name='output'))
@@ -133,12 +134,12 @@ def build_model(units_0, n_hidden, activ, cyclic, early, **kwargs):
     if cyclic:
         model.compile(
         optimizer=keras.optimizers.Adam(), 
-           loss=keras.losses.BinaryCrossentropy(from_logits=True, name='binary_crossentropy'),
+           loss=keras.losses.BinaryCrossentropy(name='binary_crossentropy'),
            metrics=[keras.metrics.AUC()])
     else:
         model.compile(
         optimizer=keras.optimizers.Adam(learning_rate=lr), 
-           loss=keras.losses.BinaryCrossentropy(from_logits=True, name='binary_crossentropy'), 
+           loss=keras.losses.BinaryCrossentropy(name='binary_crossentropy'), 
            metrics=[keras.metrics.AUC()])
    
     
@@ -173,11 +174,13 @@ def keras_code(x_train, y_train, x_val, y_val,
     # y_pred = model.predict(x_val)
     # 
     print(history.history)
-    return({'val_loss':history.history['val_loss'][-1] }) 
+    print('BEST ',min(history.history['val_loss']) )
+    return({'val_loss':min(history.history['val_loss']) }) 
 
 def run(tuner, trial, **kwargs):
         cyclic=tuner.cyclic
         hp = trial.hyperparameters
+        callbacks=kwargs.get('callbacks',[])
         #batch size
         batch_size = hp.Int('batch_size', 64, 1024, step=32)
         #neurons in input layer
@@ -204,14 +207,13 @@ def run(tuner, trial, **kwargs):
         #callbacks and training details
         
        
-        early=hp.Fixed('early', True)
-        callbacks = [keras.callbacks.EarlyStopping(monitor='val_loss',mode='min',
-                                      patience=int(tuner.epochs/2),
-                                      restore_best_weights=True)]
+        early=hp.Fixed('early', True) #FIXME obsolete
+        # callbacks = [keras.callbacks.EarlyStopping(monitor='val_loss',mode='min',
+        #                               patience=int(tuner.epochs/2),
+        #                               restore_best_weights=True)]
         if cyclic:
             callbacks.append(clr(low, high, step=len(tuner.y_train // 512)))
-        print(units_0, n_hidden, activ, cyclic, early, callbacks,
-            units, lr)
+        print(units_0, n_hidden, activ, units, lr)
         return keras_code(tuner.x_train, tuner.y_train, tuner.x_val, tuner.y_val,
             units_0, n_hidden, activ, cyclic, early, callbacks,
             hidden_units=units, lr=lr, batch_size=batch_size, epochs=tuner.epochs )

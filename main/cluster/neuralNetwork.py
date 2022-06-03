@@ -11,6 +11,7 @@ sys.path.append('/home/aolza/Desktop/estratificacion/')
 import numpy as np
 import pandas as pd
 import keras_tuner as kt
+import joblib as job
 from sklearn.model_selection import RandomizedSearchCV, train_test_split
 from tensorflow import keras
 import tensorflow as tf
@@ -79,7 +80,9 @@ X,y=getData(2016)
 # assert False
 if config.STANDARIZATION:
     from sklearn.preprocessing import StandardScaler
-    X=StandardScaler().fit_transform(X)
+    scale=StandardScaler()
+    X=scale.fit_transform(X)
+    job.dump(scale, config.MODELPATH+model_name+'_scaler.joblib')
     print('Scaled X')
 # assert False
 assert len(config.COLUMNS)==1, 'This model is built for a single response variable! Modify config.COLUMNS'
@@ -114,7 +117,7 @@ if not args.random_tuner:
                      cyclic=cyclic,
                      directory=model_name+'_search',
                      project_name=name,
-                     epochs=10)
+                     epochs=50)
 else:
     name=re.sub('neuralNetwork','neuralNetworkRandom',model_name)
     name=re.sub('neuralNetworkRandom','neuralNetworkRandomCLR',name) if cyclic else name
@@ -128,9 +131,12 @@ else:
                  cyclic=cyclic,
                  directory=model_name+'_search',
                  project_name=name,
-                 epochs=10)
+                 epochs=50)
   
-tuner.search(epochs=10)
+tuner.search(epochs=50,
+             callbacks=[tf.keras.callbacks.EarlyStopping(monitor='val_loss',  
+              patience=10)]
+)
 print('---------------------------------------------------'*5)
 print('SEARCH SPACE SUMMARY:')
 print(tuner.search_space_summary())  
