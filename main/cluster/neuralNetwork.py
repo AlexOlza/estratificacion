@@ -151,7 +151,7 @@ try:
 except KeyError: 
     best_hp_['hidden_units']={f'units_{i}':best_hp.values['width']*(n_hidden+1-i) for i in range(1,n_hidden+1)}
 
-callbacks = [keras.callbacks.EarlyStopping(monitor='val_auc',mode='min',
+callbacks = [keras.callbacks.EarlyStopping(monitor='val_loss',mode='min',
                                       patience=225,
                                       restore_best_weights=True)]
 if cyclic:
