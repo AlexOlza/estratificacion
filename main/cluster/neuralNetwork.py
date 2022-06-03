@@ -11,6 +11,7 @@ sys.path.append('/home/aolza/Desktop/estratificacion/')
 import numpy as np
 import pandas as pd
 import keras_tuner as kt
+import joblib as job
 from sklearn.model_selection import RandomizedSearchCV, train_test_split
 from tensorflow import keras
 import tensorflow as tf
@@ -74,6 +75,16 @@ epochs=args.seed_hparam if hasattr(args, 'epochs') else 500
 from dataManipulation.dataPreparation import getData
 
 X,y=getData(2016)
+# X, _, y, _ = train_test_split( X, y, test_size=0.6, random_state=42)
+
+# assert False
+if config.STANDARIZATION:
+    from sklearn.preprocessing import StandardScaler
+    scale=StandardScaler()
+    X=scale.fit_transform(X)
+    job.dump(scale, config.MODELPATH+model_name+'_scaler.joblib')
+    print('Scaled X')
+# assert False
 assert len(config.COLUMNS)==1, 'This model is built for a single response variable! Modify config.COLUMNS'
 y=np.where(y[config.COLUMNS]>=1,1,0)
 y=y.ravel()
@@ -101,11 +112,12 @@ if not args.random_tuner:
                      objective=kt.Objective("val_loss", direction="min"),
                      max_trials=100,
                      overwrite=True,
-                     num_initial_points=4,
+                     num_initial_points=16,#number of random trials before bayesian search
                      seed=seed_hparam,
                      cyclic=cyclic,
                      directory=model_name+'_search',
-                     project_name=name)
+                     project_name=name,
+                     epochs=50)
 else:
     name=re.sub('neuralNetwork','neuralNetworkRandom',model_name)
     name=re.sub('neuralNetworkRandom','neuralNetworkRandomCLR',name) if cyclic else name
@@ -118,9 +130,13 @@ else:
                  seed=seed_hparam,
                  cyclic=cyclic,
                  directory=model_name+'_search',
-                 project_name=name)
+                 project_name=name,
+                 epochs=50)
   
-tuner.search(epochs=30)
+tuner.search(epochs=50,
+             callbacks=[tf.keras.callbacks.EarlyStopping(monitor='val_loss',  
+              patience=10)]
+)
 print('---------------------------------------------------'*5)
 print('SEARCH SPACE SUMMARY:')
 print(tuner.search_space_summary())  
@@ -135,9 +151,14 @@ best_hp = tuner.get_best_hyperparameters()[0]
 #     best_hp.values['units']=[]
 best_hp_={k:v for k,v in best_hp.values.items() if not k.startswith('units')}
 best_hp_['units_0']=best_hp.values['units_0']
-best_hp_['hidden_units']={f'units_{i}':best_hp.values[f'units_{i}'] for i in range(1,best_hp.values['n_hidden']+1)}
+n_hidden=best_hp.values['n_hidden']
+try:
+    best_hp_['hidden_units']={f'units_{i}':best_hp.values[f'units_{i}'] for i in range(1,best_hp.values['n_hidden']+1)}
+except KeyError: 
+    best_hp_['hidden_units']={f'units_{i}':best_hp.values['width']*(n_hidden+1-i) for i in range(1,n_hidden+1)}
+
 callbacks = [keras.callbacks.EarlyStopping(monitor='val_loss',mode='min',
-                                      patience=25,
+                                      patience=225,
                                       restore_best_weights=True)]
 if cyclic:
     callbacks.append(config.clr(best_hp.values['low'], best_hp.values['high'], step=(len(y) // 1024)))
