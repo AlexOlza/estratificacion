@@ -263,9 +263,12 @@ def generateCCSData(yr,  X,
      # for fname in [f'ccs/manually_revised_icd9_{yr}.csv', f'ccs/manually_revised_icd10_{yr}.csv']
 
     f=os.path.join(config.INDISPENSABLEDATAPATH,f'ccs/manually_revised_icd10_{yr}.csv')
-    assert Path(f).is_file(), "Manual revision file not found!!"
+    assert Path(f).is_file(), "Manual revision file not found (icd10)!!"
     revision=pd.read_csv(f, header=0, names=['CODE', 'CCS', 'NEW_CODE'])
-    
+    f2=os.path.join(config.INDISPENSABLEDATAPATH,f'ccs/manually_revised_icd9_{yr}.csv')
+    assert Path(f).is_file(), "Manual revision file not found (icd9)!!"
+    revision2=pd.read_csv(f2, header=0, names=['CODE', 'CCS', 'NEW_CODE'])
+    revision=pd.concat([revision,revision2])
     #Use the manual revision to change diagnostic codes when necessary
     #Those with no NEW_CODE specified are lost -> discard rows with NAs
     #the CCSs are not correct, look at dictionary -> discard column
