@@ -191,7 +191,7 @@ def generateCCSData(yr,  X,
                         writer.writerow([key[0], N])     
     """ ICD 10 CM """
     icd10cm=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,config.ICDTOCCSFILES['ICD10CM']),
-                        dtype=str,)# usecols=['ICD-10-CM CODE', 'CCS CATEGORY'])
+                        dtype=str,)
     #Check no null values at reading time
     assert all(icd10cm.isnull().sum()==0), f'Null values encountered when reading {config.ICDTOCCSFILES["ICD10CM"]}'
 
@@ -212,7 +212,6 @@ def generateCCSData(yr,  X,
     icd9['CCS']=icd9['CCS LVL 1 LABEL']+icd9['CCS LVL 2 LABEL']+icd9['CCS LVL 3 LABEL']+icd9['CCS LVL 4 LABEL']
     icd9.CCS=icd9.CCS.str.extract(r'(?P<CCS>[0-9]+)').CCS
     assert icd9.CCS.describe().isnull().sum()==0, 'Some codes in the ICD9 dictionary have not been assigned a CCS :('
-    # icd9.CCS=icd9.CCS.str.replace(r'[^0-9]', r'') #Keep only numbers (the CCS category)
     icd9.CCS=icd9.CCS.str.replace(r'\s|\/', r'')
     icd9.CODE=icd9.CODE.str.slice(0,5)
     #%%
@@ -291,8 +290,6 @@ def generateCCSData(yr,  X,
     revision=revision.dropna()[['CODE','NEW_CODE']] 
     for code, new in zip(revision.CODE, revision.NEW_CODE):
         diags.loc[diags.CIE_CODE==code, 'CIE_CODE']=new
-        
-    #%%
 
     #Keep only IDs present in X, because we need patients to have age, sex and 
     #other potential predictors
@@ -308,7 +305,7 @@ def generateCCSData(yr,  X,
         df['CODE']=df.CIE_CODE
         dfmerged=pd.merge(df, dictdf, how='left', on='CODE')[['PATIENT_ID','CIE_CODE','CODE','CCS', 'DESCRIPTION']]
         diags_with_ccs= pd.concat([diags_with_ccs, dfmerged])      
-        # break 
+ 
     #%%
     i=0
     import time
