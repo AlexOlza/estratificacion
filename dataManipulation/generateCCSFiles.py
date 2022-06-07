@@ -24,6 +24,6 @@ util.makeAllPaths()
 from dataManipulation.dataPreparation import getData, generateCCSData
 #%%
 
-X,y=getData(year,  predictors=config.PREDICTORREGEX+'|ingresoPrevio')
+X,y=getData(year,  predictors='PATIENT_ID|AGE_|FEMALE')
 # _ , _ =generateCCSData(year,  X)
 

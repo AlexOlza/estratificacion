@@ -247,6 +247,15 @@ def generateCCSData(yr,  X,
     print('Quantity: ', len(missing_in_icd9))
     success, failure=guessingCCS(missing_in_icd9, icd9)
     icd9=assign_success(success,icd9)
+    
+    try:
+        f2=os.path.join(config.INDISPENSABLEDATAPATH,f'ccs/manually_revised_icd9_{yr-1}.csv')
+        revision=pd.read_csv(f2, header=0, names=['CODE', 'NEW_CODE'])
+        keys_to_drop={k[0]:k for k in failure.keys()}
+        failure = {key:val for key, val in failure.items() if key[0] not in revision.CODE.values}
+    except FileNotFoundError:
+        pass
+    
     print(f'{len(failure.keys())} codes need manual revision')
     if len(failure.keys())>0: 
         needsManualRevision(failure, icd9, description=True, appendix=f'desc_icd9_{yr}', diags=diags)
@@ -255,23 +264,30 @@ def generateCCSData(yr,  X,
     print('Quantity: ', len(missing_in_icd10cm))
     success, failure=guessingCCS(missing_in_icd10cm, icd10cm)
     icd10cm=assign_success(success,icd10cm)
+    
+    try:
+        f2=os.path.join(config.INDISPENSABLEDATAPATH,f'ccs/manually_revised_icd10_{yr-1}.csv')
+        revision=pd.read_csv(f2, header=0, names=['CODE', 'NEW_CODE'])
+        for revised_code in revision.CODE.values:
+            failure.pop(revised_code, None)
+    except FileNotFoundError:
+        pass
+    
     print(f'{len(failure.keys())} codes need manual revision')
     if len(failure.keys())>0:
         needsManualRevision(failure, icd10cm, appendix=f'_icd10_{yr}', diags=diags)
     print('-------'*10)
-    
-     # for fname in [f'ccs/manually_revised_icd9_{yr}.csv', f'ccs/manually_revised_icd10_{yr}.csv']
 
     f=os.path.join(config.INDISPENSABLEDATAPATH,f'ccs/manually_revised_icd10_{yr}.csv')
     assert Path(f).is_file(), "Manual revision file not found (icd10)!!"
-    revision=pd.read_csv(f, header=0, names=['CODE', 'CCS', 'NEW_CODE'])
+    revision=pd.read_csv(f, header=0, names=['CODE', '_', 'NEW_CODE'])
     f2=os.path.join(config.INDISPENSABLEDATAPATH,f'ccs/manually_revised_icd9_{yr}.csv')
     assert Path(f).is_file(), "Manual revision file not found (icd9)!!"
-    revision2=pd.read_csv(f2, header=0, names=['CODE', 'CCS', 'NEW_CODE'])
+    revision2=pd.read_csv(f2, header=0, names=['CODE', 'NEW_CODE'])
     revision=pd.concat([revision,revision2])
     #Use the manual revision to change diagnostic codes when necessary
     #Those with no NEW_CODE specified are lost -> discard rows with NAs
-    #the CCSs are not correct, look at dictionary -> discard column
+    
     revision=revision.dropna()[['CODE','NEW_CODE']] 
     for code, new in zip(revision.CODE, revision.NEW_CODE):
         diags.loc[diags.CIE_CODE==code, 'CIE_CODE']=new
@@ -294,9 +310,6 @@ def generateCCSData(yr,  X,
         diags_with_ccs= pd.concat([diags_with_ccs, dfmerged])      
         # break 
     #%%
-    # Add columns of zeros for each CCS category
-    # for ccs_number in sorted(list(['0'])+list(set(list(icd9.CCS.unique()) + list(icd10cm.CCS.unique())))):
-    #     diags_with_ccs[f'CCS{ccs_number}']=np.int16(0)
     i=0
     import time
     t0=time.time()
