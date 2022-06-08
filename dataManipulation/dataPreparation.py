@@ -266,7 +266,7 @@ def generateCCSData(yr,  X,
     
     try:
         f2=os.path.join(config.INDISPENSABLEDATAPATH,f'ccs/manually_revised_icd10_{yr-1}.csv')
-        revision=pd.read_csv(f2, header=0, names=['CODE', 'NEW_CODE'])
+        revision=pd.read_csv(f2)
         for revised_code in revision.CODE.values:
             failure.pop(revised_code, None)
     except FileNotFoundError:
@@ -282,7 +282,7 @@ def generateCCSData(yr,  X,
     revision=pd.read_csv(f, header=0, names=['CODE', '_', 'NEW_CODE'])
     f2=os.path.join(config.INDISPENSABLEDATAPATH,f'ccs/manually_revised_icd9_{yr}.csv')
     assert Path(f).is_file(), "Manual revision file not found (icd9)!!"
-    revision2=pd.read_csv(f2, header=0, names=['CODE', 'NEW_CODE'])
+    revision2=pd.read_csv(f2)
     revision=pd.concat([revision,revision2])
     #Use the manual revision to change diagnostic codes when necessary
     #Those with no NEW_CODE specified are lost -> discard rows with NAs
