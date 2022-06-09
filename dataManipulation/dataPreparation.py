@@ -249,7 +249,7 @@ def generateCCSData(yr,  X,
     
     try:
         f2=os.path.join(config.INDISPENSABLEDATAPATH,f'ccs/manually_revised_icd9_{yr-1}.csv')
-        revision=pd.read_csv(f2, header=0, names=['CODE', 'NEW_CODE'])
+        revision=pd.read_csv(f2)
         keys_to_drop={k[0]:k for k in failure.keys()}
         failure = {key:val for key, val in failure.items() if key[0] not in revision.CODE.values}
     except FileNotFoundError:
