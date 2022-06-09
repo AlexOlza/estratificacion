@@ -265,8 +265,8 @@ def generateCCSData(yr,  X,
     icd10cm=assign_success(success,icd10cm)
     
     try:
-        f2=os.path.join(config.INDISPENSABLEDATAPATH,f'ccs/manually_revised_icd10_{yr-1}.csv')
-        revision=pd.read_csv(f2)
+        f2=os.path.join(config.INDISPENSABLEDATAPATH,f'ccs/manually_revised_icd10_{yr-1}.csv' )
+        revision=pd.read_csv(f2,header=0, names=['CODE','_','NEW_CODE'])
         for revised_code in revision.CODE.values:
             failure.pop(revised_code, None)
     except FileNotFoundError:
