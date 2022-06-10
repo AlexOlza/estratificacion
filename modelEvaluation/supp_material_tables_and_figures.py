@@ -222,65 +222,72 @@ for metric in ['PPV_20000']:
 # print(f'That means {20000-simdif} patients were selected by the four algorithms')
 #%%
 """ TABLE 1:  DEMOGRAPHICS"""
-chosen_model='neuralNetworkRandom_43'
-Xx=X.loc[X.PATIENT_ID.isin(risk_groups[chosen_model])]
-Yy=y.loc[y.PATIENT_ID.isin(risk_groups[chosen_model])]
-female=Xx['FEMALE']==1
-male=Xx['FEMALE']==0
-sex=[ 'Women','Men']
-
-comorbidities={'COPD': ['EDC_RES04'],
-                'Chronic Renal Failure': ['EDC_REN01', 'EDC_REN06'],
-                'Heart Failure': ['EDC_CAR05'],
-                'Depression': ['EDC_PSY09', 'EDC_PSY20'],
-                'Diabetes Mellitus': ['EDC_END06','EDC_END07','EDC_END08', 'EDC_END09'],
-                # 'Dis. of Lipid Metabolism': ['EDC_CAR11'],
-                'Hypertension': ['EDC_CAR14','EDC_CAR15'],
-                'Ischemic Heart Disease': ['EDC_CAR03'],
-                'Low back pain': ['EDC_MUS14'],
-                'Osteoporosis': ['EDC_END02'],
-                "Parkinson's disease":['EDC_NUR06'],
-                'Persistent asthma':['EDC_ALL05', 'EDC_ALL04'],
-                'Rheumatoid arthritis':['EDC_RHU05'],
-                'Schizophrenia & affective dis.': ['EDC_PSY07'],
-                'Seizure disorders': ['EDC_NUR07']
-                }
-
-table1= pd.DataFrame(index=['N in 2017 (%)', 'Hospitalized in 2018', 
-                            'Aged 0-17',
-                            'Aged 18-64',
-                            'Aged 65-69',
-                            'Aged 70-79',
-                            'Aged 80-84',
-                            'Aged 85+']+list(comorbidities.keys()))
-comorb={}
-for group, groupname in zip([female,male],sex):
-    print(groupname)
-    Xgroup=Xx.loc[group]
-    ygroup=Yy.loc[group]
-    comorb[groupname]=[]
-    for disease, EDClist in comorbidities.items():
-        s=[Xgroup[EDC].sum() for EDC in EDClist]
-        comorb[groupname].append(f'{sum(s)} ({sum(s)*100/len(Xgroup):2.2f} %)')
-        print(disease, 'total (M+W): ',sum([Xx[EDC].sum() for EDC in EDClist]))
-    # ygroup18=y.loc[group18]
-    a1=sum(Xgroup.AGE_0004)+sum(Xgroup.AGE_0511)+sum(Xgroup.AGE_0511)
-    a2=sum(Xgroup.AGE_1834)+sum(Xgroup.AGE_3544)+sum(Xgroup.AGE_4554)+sum(Xgroup.AGE_5564)
-    a3=sum(Xgroup.AGE_6569)
-    a4=sum(Xgroup.AGE_7074)+sum(Xgroup.AGE_7579)
-    a5=sum(Xgroup.AGE_8084)
-    a85plus=len(Xgroup)-(a1+a2+a3+a4+a5)
-    positives=sum(np.where(ygroup.urgcms>=1,1,0))
-    table1[groupname]=[f'{len(Xgroup)} ({len(Xgroup)*100/len(Xx):2.2f} %)',
-                        f'{positives} ({positives*100/len(Xgroup):2.2f} %)',
-                        f'{a1} ({a1*100/len(Xgroup):2.2f} %) ',
-                        f'{a2} ({a2*100/len(Xgroup):2.2f} %) ',
-                        f'{a3} ({a3*100/len(Xgroup):2.2f} %) ',
-                        f'{a4} ({a4*100/len(Xgroup):2.2f} %) ',
-                        f'{a5} ({a5*100/len(Xgroup):2.2f} %) ',
-                        f'{a85plus} ({a85plus*100/len(Xgroup):2.2f} %) ']+comorb[groupname]
+# chosen_model='neuralNetworkRandom_43'
+table=pd.DataFrame()
+for chosen_model in ['neuralNetworkRandom_43', logistic_model]:
+    Xx=X.loc[X.PATIENT_ID.isin(risk_groups[chosen_model])]
+    Yy=y.loc[y.PATIENT_ID.isin(risk_groups[chosen_model])]
+    female=Xx['FEMALE']==1
+    male=Xx['FEMALE']==0
+    sex=[ 'Women','Men']
     
+    comorbidities={'COPD': ['EDC_RES04'],
+                    'Chronic Renal Failure': ['EDC_REN01', 'EDC_REN06'],
+                    'Heart Failure': ['EDC_CAR05'],
+                    'Depression': ['EDC_PSY09', 'EDC_PSY20'],
+                    'Diabetes Mellitus': ['EDC_END06','EDC_END07','EDC_END08', 'EDC_END09'],
+                    # 'Dis. of Lipid Metabolism': ['EDC_CAR11'],
+                    'Hypertension': ['EDC_CAR14','EDC_CAR15'],
+                    'Ischemic Heart Disease': ['EDC_CAR03'],
+                    'Low back pain': ['EDC_MUS14'],
+                    'Osteoporosis': ['EDC_END02'],
+                    "Parkinson's disease":['EDC_NUR06'],
+                    'Persistent asthma':['EDC_ALL05', 'EDC_ALL04'],
+                    'Rheumatoid arthritis':['EDC_RHU05'],
+                    'Schizophrenia & affective dis.': ['EDC_PSY07'],
+                    'Seizure disorders': ['EDC_NUR07']
+                    }
     
+    table1= pd.DataFrame(index=['N in 2017 (%)', 'Hospitalized in 2018', 
+                                'Aged 0-17',
+                                'Aged 18-64',
+                                'Aged 65-69',
+                                'Aged 70-79',
+                                'Aged 80-84',
+                                'Aged 85+']+list(comorbidities.keys()))
+    comorb={}
+    for group, groupname in zip([female,male],sex):
+        print(groupname)
+        Xgroup=Xx.loc[group]
+        ygroup=Yy.loc[group]
+        comorb[groupname]=[]
+        for disease, EDClist in comorbidities.items():
+            s=[Xgroup[EDC].sum() for EDC in EDClist]
+            comorb[groupname].append(f'{sum(s)} ({sum(s)*100/len(Xgroup):2.2f} %)')
+            print(disease, 'total (M+W): ',sum([Xx[EDC].sum() for EDC in EDClist]))
+        # ygroup18=y.loc[group18]
+        a1=sum(Xgroup.AGE_0004)+sum(Xgroup.AGE_0511)+sum(Xgroup.AGE_0511)
+        a2=sum(Xgroup.AGE_1834)+sum(Xgroup.AGE_3544)+sum(Xgroup.AGE_4554)+sum(Xgroup.AGE_5564)
+        a3=sum(Xgroup.AGE_6569)
+        a4=sum(Xgroup.AGE_7074)+sum(Xgroup.AGE_7579)
+        a5=sum(Xgroup.AGE_8084)
+        a85plus=len(Xgroup)-(a1+a2+a3+a4+a5)
+        positives=sum(np.where(ygroup.urgcms>=1,1,0))
+        table1[groupname]=[f'{len(Xgroup)} ({len(Xgroup)*100/len(Xx):2.2f} %)',
+                            f'{positives} ({positives*100/len(Xgroup):2.2f} %)',
+                            f'{a1} ({a1*100/len(Xgroup):2.2f} %) ',
+                            f'{a2} ({a2*100/len(Xgroup):2.2f} %) ',
+                            f'{a3} ({a3*100/len(Xgroup):2.2f} %) ',
+                            f'{a4} ({a4*100/len(Xgroup):2.2f} %) ',
+                            f'{a5} ({a5*100/len(Xgroup):2.2f} %) ',
+                            f'{a85plus} ({a85plus*100/len(Xgroup):2.2f} %) ']+comorb[groupname]
+        
+        
+        
+    if chosen_model=='neuralNetworkRandom_43':
+        table=table1
+    else:
+        table=table.join(table1,lsuffix=' - MLP', rsuffix=' - LR')
+print(table.style.to_latex())
     
-
-print(table1.style.to_latex())
+#%%
