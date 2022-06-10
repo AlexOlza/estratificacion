@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Mon May  2 12:24:55 2022
+Created on Fri Jun 10 09:25:11 2022
 
 @author: aolza
 """
@@ -39,21 +39,21 @@ male=X['FEMALE']==0
 sex=[ 'Women','Men']
 
 comorbidities={'COPD': ['EDC_RES04'],
-               'Chronic Renal Failure': ['EDC_REN01', 'EDC_REN06'],
-               'Heart Failure': ['EDC_CAR05'],
-               'Depression': ['EDC_PSY09', 'EDC_PSY20'],
-               'Diabetes Mellitus': ['EDC_END06','EDC_END07','EDC_END08', 'EDC_END09'],
-               # 'Dis. of Lipid Metabolism': ['EDC_CAR11'],
-               'Hypertension': ['EDC_CAR14','EDC_CAR15'],
-               'Ischemic Heart Disease': ['EDC_CAR03'],
-               'Low back pain': ['EDC_MUS14'],
-               'Osteoporosis': ['EDC_END02'],
-               "Parkinson's disease":['EDC_NUR06'],
-               'Persistent asthma':['EDC_ALL05', 'EDC_ALL04'],
-               'Rheumatoid arthritis':['EDC_RHU05'],
-               'Schizophrenia & affective dis.': ['EDC_PSY07'],
-               'Seizure disorders': ['EDC_NUR07']
-               }
+                'Chronic Renal Failure': ['EDC_REN01', 'EDC_REN06'],
+                'Heart Failure': ['EDC_CAR05'],
+                'Depression': ['EDC_PSY09', 'EDC_PSY20'],
+                'Diabetes Mellitus': ['EDC_END06','EDC_END07','EDC_END08', 'EDC_END09'],
+                # 'Dis. of Lipid Metabolism': ['EDC_CAR11'],
+                'Hypertension': ['EDC_CAR14','EDC_CAR15'],
+                'Ischemic Heart Disease': ['EDC_CAR03'],
+                'Low back pain': ['EDC_MUS14'],
+                'Osteoporosis': ['EDC_END02'],
+                "Parkinson's disease":['EDC_NUR06'],
+                'Persistent asthma':['EDC_ALL05', 'EDC_ALL04'],
+                'Rheumatoid arthritis':['EDC_RHU05'],
+                'Schizophrenia & affective dis.': ['EDC_PSY07'],
+                'Seizure disorders': ['EDC_NUR07']
+                }
 
 table1= pd.DataFrame(index=['N in 2017 (%)', 'Hospitalized in 2018', 
                             'Aged 0-17',
@@ -81,35 +81,27 @@ for group, groupname in zip([female,male],sex):
     a85plus=len(Xgroup)-(a1+a2+a3+a4+a5)
     positives=sum(np.where(ygroup.urgcms>=1,1,0))
     table1[groupname]=[f'{len(Xgroup)} ({len(Xgroup)*100/len(X):2.2f} %)',
-                       f'{positives} ({positives*100/len(Xgroup):2.2f} %)',
-                       f'{a1} ({a1*100/len(Xgroup):2.2f} %) ',
-                       f'{a2} ({a2*100/len(Xgroup):2.2f} %) ',
-                       f'{a3} ({a3*100/len(Xgroup):2.2f} %) ',
-                       f'{a4} ({a4*100/len(Xgroup):2.2f} %) ',
-                       f'{a5} ({a5*100/len(Xgroup):2.2f} %) ',
-                       f'{a85plus} ({a85plus*100/len(Xgroup):2.2f} %) ']+comorb[groupname]
+                        f'{positives} ({positives*100/len(Xgroup):2.2f} %)',
+                        f'{a1} ({a1*100/len(Xgroup):2.2f} %) ',
+                        f'{a2} ({a2*100/len(Xgroup):2.2f} %) ',
+                        f'{a3} ({a3*100/len(Xgroup):2.2f} %) ',
+                        f'{a4} ({a4*100/len(Xgroup):2.2f} %) ',
+                        f'{a5} ({a5*100/len(Xgroup):2.2f} %) ',
+                        f'{a85plus} ({a85plus*100/len(Xgroup):2.2f} %) ']+comorb[groupname]
     
     
     
 
 print(table1.style.to_latex())
-
-simdif=len(set(X.PATIENT_ID.values).symmetric_difference(set(X16.PATIENT_ID.values)))
-
-""" Comments on Table 1 """
-print('The two populations contained...')
-print(simdif, '(simetric difference)')
-print(f'... patients not in common, that is, {simdif*100/len(X):2.2f} %')
-print('Prevalence of admission in 2018:',sum(np.where(y.urgcms>=1,1,0))/len(X))
 #%%
 """ MATERIALS AND METHODS: Comments on variability assessment"""
 K=20000
-metrics=pd.read_csv(re.sub(config.EXPERIMENT, 'hyperparameter_variability_urgcms_excl_nbinj',config.PREDPATH)+'/metrics2018.csv')
+metrics=pd.read_csv(re.sub(config.EXPERIMENT, 'hyperparameter_variability_urgcms_excl_nbinj',config.PREDPATH)+'/metrics2017.csv')
 print('Number of models per algorithm:')
 print( metrics.groupby(['Algorithm'])['Algorithm'].count() )
 
 """ RESULTS. TABLE 2 """
-logisticMetrics=pd.read_csv(config.PREDPATH+'/metrics2018.csv')
+logisticMetrics=pd.read_csv(config.PREDPATH+'/metrics2017.csv')
 logisticMetrics=logisticMetrics.loc[logisticMetrics.Model.str.startswith('logistic2022')]
 logisticMetrics[f'F1_{K}']=2*logisticMetrics[f'Recall_{K}']*logisticMetrics[f'PPV_{K}']/(logisticMetrics[f'Recall_{K}']+logisticMetrics[f'PPV_{K}'])
 logisticMetrics['Algorithm']=['logistic']
@@ -138,7 +130,7 @@ def use_E(x):
 # Option 2: Subtables with descriptive
 for metric in [ 'Score', 'Recall_20000', 'PPV_20000', 'Brier','AP']:
     table2=metrics.groupby(['Algorithm'])[metric].describe()[['25%','50%', '75%','std']].sort_values('50%', ascending=[not higher_better[metric]])
-    print(table2.style.to_latex(formatters=[ use_f_3, use_f_3, use_f_3, use_E]))
+    print(table2.to_latex(formatters=[ use_f_3, use_f_3, use_f_3, use_E]))
     print('\n'*2)
 
 def median(x):
