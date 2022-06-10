@@ -33,66 +33,7 @@ yr=2018
 X,y=getData(2017)
 X16,y17=getData(2016)
 #%%
-""" TABLE 1:  DEMOGRAPHICS"""
-female=X['FEMALE']==1
-male=X['FEMALE']==0
-sex=[ 'Women','Men']
 
-comorbidities={'COPD': ['EDC_RES04'],
-                'Chronic Renal Failure': ['EDC_REN01', 'EDC_REN06'],
-                'Heart Failure': ['EDC_CAR05'],
-                'Depression': ['EDC_PSY09', 'EDC_PSY20'],
-                'Diabetes Mellitus': ['EDC_END06','EDC_END07','EDC_END08', 'EDC_END09'],
-                # 'Dis. of Lipid Metabolism': ['EDC_CAR11'],
-                'Hypertension': ['EDC_CAR14','EDC_CAR15'],
-                'Ischemic Heart Disease': ['EDC_CAR03'],
-                'Low back pain': ['EDC_MUS14'],
-                'Osteoporosis': ['EDC_END02'],
-                "Parkinson's disease":['EDC_NUR06'],
-                'Persistent asthma':['EDC_ALL05', 'EDC_ALL04'],
-                'Rheumatoid arthritis':['EDC_RHU05'],
-                'Schizophrenia & affective dis.': ['EDC_PSY07'],
-                'Seizure disorders': ['EDC_NUR07']
-                }
-
-table1= pd.DataFrame(index=['N in 2017 (%)', 'Hospitalized in 2018', 
-                            'Aged 0-17',
-                            'Aged 18-64',
-                            'Aged 65-69',
-                            'Aged 70-79',
-                            'Aged 80-84',
-                            'Aged 85+']+list(comorbidities.keys()))
-comorb={}
-for group, groupname in zip([female,male],sex):
-    print(groupname)
-    Xgroup=X.loc[group]
-    ygroup=y.loc[group]
-    comorb[groupname]=[]
-    for disease, EDClist in comorbidities.items():
-        s=[Xgroup[EDC].sum() for EDC in EDClist]
-        comorb[groupname].append(f'{sum(s)} ({sum(s)*100/len(Xgroup):2.2f} %)')
-        print(disease, 'total (M+W): ',sum([X[EDC].sum() for EDC in EDClist]))
-    # ygroup18=y.loc[group18]
-    a1=sum(Xgroup.AGE_0004)+sum(Xgroup.AGE_0511)+sum(Xgroup.AGE_0511)
-    a2=sum(Xgroup.AGE_1834)+sum(Xgroup.AGE_3544)+sum(Xgroup.AGE_4554)+sum(Xgroup.AGE_5564)
-    a3=sum(Xgroup.AGE_6569)
-    a4=sum(Xgroup.AGE_7074)+sum(Xgroup.AGE_7579)
-    a5=sum(Xgroup.AGE_8084)
-    a85plus=len(Xgroup)-(a1+a2+a3+a4+a5)
-    positives=sum(np.where(ygroup.urgcms>=1,1,0))
-    table1[groupname]=[f'{len(Xgroup)} ({len(Xgroup)*100/len(X):2.2f} %)',
-                        f'{positives} ({positives*100/len(Xgroup):2.2f} %)',
-                        f'{a1} ({a1*100/len(Xgroup):2.2f} %) ',
-                        f'{a2} ({a2*100/len(Xgroup):2.2f} %) ',
-                        f'{a3} ({a3*100/len(Xgroup):2.2f} %) ',
-                        f'{a4} ({a4*100/len(Xgroup):2.2f} %) ',
-                        f'{a5} ({a5*100/len(Xgroup):2.2f} %) ',
-                        f'{a85plus} ({a85plus*100/len(Xgroup):2.2f} %) ']+comorb[groupname]
-    
-    
-    
-
-print(table1.style.to_latex())
 #%%
 """ MATERIALS AND METHODS: Comments on variability assessment"""
 K=20000
@@ -169,8 +110,8 @@ for metric in ['Recall_20000', 'PPV_20000']:
         incorrect[metric][model]=fn+fp
 #%%
 for metric in ['Recall_20000', 'PPV_20000']:
-    print('MLP vs RF ' , correct[metric]['neuralNetworkRandom_43']-correct[metric]['randomForest_59'])       
-    print('MLP vs LR ' , correct[metric]['neuralNetworkRandom_43']-correct[metric][logistic_model])       
+    print('MLP vs RF ' , correct[metric]['neuralNetworkRandom_67']-correct[metric]['randomForest_29'])       
+    print('MLP vs LR ' , correct[metric]['neuralNetworkRandom_67']-correct[metric][logistic_model])       
 
 #%%
 
@@ -230,3 +171,116 @@ median_models['Brier Before']['LR']= cal.calibrate(logistic_model,yr)
 
 cal.plot(median_models['Brier'],consistency_bars=False)
 cal.plot(median_models['Brier Before'],consistency_bars=False)
+
+#%% 
+""" CHARACTERISTICS OF THE RISK GROUP """
+metrics=pd.read_csv(re.sub(config.EXPERIMENT, 'hyperparameter_variability_urgcms_excl_nbinj',config.PREDPATH)+'/metrics2018.csv')
+logisticMetrics=pd.read_csv(config.PREDPATH+'/metrics2018.csv')
+logisticMetrics=logisticMetrics.loc[logisticMetrics.Model.str.startswith('logistic2022')]
+logisticMetrics['Algorithm']=['logistic']
+
+metrics=pd.concat([metrics, logisticMetrics])
+#Discard some algorithms
+metrics=metrics.loc[metrics.Algorithm.isin(('logistic','hgb','randomForest','neuralNetworkRandom'))]
+preds={}
+median_models={}
+risk_groups={}
+for metric in ['PPV_20000']:
+    mediandf=metrics.groupby(['Algorithm'])[metric].agg([ median]).stack(level=0)
+    for alg in metrics.Algorithm.unique():
+            if alg=='logistic':
+                continue
+            df_alg=metrics.loc[metrics.Algorithm==alg].to_dict(orient='list')
+            perc50=mediandf.loc[alg]['median']
+            chosen_model=list(df_alg['Model'])[list(df_alg[metric]).index(perc50)]
+            print(metrics.loc[metrics.Model==chosen_model][metric])
+            try:
+                median_models[metric].append(chosen_model)
+            except KeyError:
+                median_models[metric]=[chosen_model]
+    for model in median_models[metric]+[logistic_model]:
+        print(model)
+        if model==logistic_model:
+            preds[model]= cal.calibrate(model, yr)
+        else:
+            predpath=re.sub(config.EXPERIMENT,'hyperparameter_variability_'+config.EXPERIMENT,config.PREDPATH)
+            preds[model]= cal.calibrate(model, 2018,  experiment_name='hyperparameter_variability_urgcms_excl_nbinj',
+                                                           filename=os.path.join(predpath,f'{model}_calibrated_2018.csv'))
+        risk_group=preds[model].nlargest(20000, 'PREDCAL')
+        print(risk_group.head())
+        risk_groups[model]=risk_group.PATIENT_ID.values
+        
+#%%
+# m1,m2,m3,m4=risk_groups.keys()
+# disj_union=set(risk_groups[m1]).symmetric_difference(set(risk_groups[m2])).symmetric_difference(set(risk_groups[m3])).symmetric_difference(set(risk_groups[m4]))
+
+# simdif=len(disj_union)
+
+# print('The 4 risk groups identified contained...')
+# print(simdif, '(simetric difference)')
+# print(f'... patients not in common, that is, {simdif*100/20000:2.2f} %')
+# print(f'That means {20000-simdif} patients were selected by the four algorithms')
+#%%
+""" TABLE 1:  DEMOGRAPHICS"""
+chosen_model='neuralNetworkRandom_43'
+Xx=X.loc[X.PATIENT_ID.isin(risk_groups[chosen_model])]
+Yy=y.loc[y.PATIENT_ID.isin(risk_groups[chosen_model])]
+female=Xx['FEMALE']==1
+male=Xx['FEMALE']==0
+sex=[ 'Women','Men']
+
+comorbidities={'COPD': ['EDC_RES04'],
+                'Chronic Renal Failure': ['EDC_REN01', 'EDC_REN06'],
+                'Heart Failure': ['EDC_CAR05'],
+                'Depression': ['EDC_PSY09', 'EDC_PSY20'],
+                'Diabetes Mellitus': ['EDC_END06','EDC_END07','EDC_END08', 'EDC_END09'],
+                # 'Dis. of Lipid Metabolism': ['EDC_CAR11'],
+                'Hypertension': ['EDC_CAR14','EDC_CAR15'],
+                'Ischemic Heart Disease': ['EDC_CAR03'],
+                'Low back pain': ['EDC_MUS14'],
+                'Osteoporosis': ['EDC_END02'],
+                "Parkinson's disease":['EDC_NUR06'],
+                'Persistent asthma':['EDC_ALL05', 'EDC_ALL04'],
+                'Rheumatoid arthritis':['EDC_RHU05'],
+                'Schizophrenia & affective dis.': ['EDC_PSY07'],
+                'Seizure disorders': ['EDC_NUR07']
+                }
+
+table1= pd.DataFrame(index=['N in 2017 (%)', 'Hospitalized in 2018', 
+                            'Aged 0-17',
+                            'Aged 18-64',
+                            'Aged 65-69',
+                            'Aged 70-79',
+                            'Aged 80-84',
+                            'Aged 85+']+list(comorbidities.keys()))
+comorb={}
+for group, groupname in zip([female,male],sex):
+    print(groupname)
+    Xgroup=Xx.loc[group]
+    ygroup=Yy.loc[group]
+    comorb[groupname]=[]
+    for disease, EDClist in comorbidities.items():
+        s=[Xgroup[EDC].sum() for EDC in EDClist]
+        comorb[groupname].append(f'{sum(s)} ({sum(s)*100/len(Xgroup):2.2f} %)')
+        print(disease, 'total (M+W): ',sum([Xx[EDC].sum() for EDC in EDClist]))
+    # ygroup18=y.loc[group18]
+    a1=sum(Xgroup.AGE_0004)+sum(Xgroup.AGE_0511)+sum(Xgroup.AGE_0511)
+    a2=sum(Xgroup.AGE_1834)+sum(Xgroup.AGE_3544)+sum(Xgroup.AGE_4554)+sum(Xgroup.AGE_5564)
+    a3=sum(Xgroup.AGE_6569)
+    a4=sum(Xgroup.AGE_7074)+sum(Xgroup.AGE_7579)
+    a5=sum(Xgroup.AGE_8084)
+    a85plus=len(Xgroup)-(a1+a2+a3+a4+a5)
+    positives=sum(np.where(ygroup.urgcms>=1,1,0))
+    table1[groupname]=[f'{len(Xgroup)} ({len(Xgroup)*100/len(Xx):2.2f} %)',
+                        f'{positives} ({positives*100/len(Xgroup):2.2f} %)',
+                        f'{a1} ({a1*100/len(Xgroup):2.2f} %) ',
+                        f'{a2} ({a2*100/len(Xgroup):2.2f} %) ',
+                        f'{a3} ({a3*100/len(Xgroup):2.2f} %) ',
+                        f'{a4} ({a4*100/len(Xgroup):2.2f} %) ',
+                        f'{a5} ({a5*100/len(Xgroup):2.2f} %) ',
+                        f'{a85plus} ({a85plus*100/len(Xgroup):2.2f} %) ']+comorb[groupname]
+    
+    
+    
+
+print(table1.style.to_latex())
