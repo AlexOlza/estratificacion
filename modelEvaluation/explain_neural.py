@@ -84,7 +84,7 @@ explanation.data=sample
 sex = ["Women" if explanation[i,"FEMALE"].data == 1 else "Men" for i in range(explanation.shape[0])]
 shap.plots.bar(explanation.cohorts(sex).abs.mean(0))
 #%%
-shap.plots.bar(explanation.cohorts(2).abs.mean(0))
+shap.plots.bar(explanation.cohorts(2))
 #%%
 # shap.plots.beeswarm(explainer.expected_value)
 sum_shap=[sum(s) for s in shap_values[0]]
@@ -94,5 +94,12 @@ forcemin=shap.plots.force(explainer.expected_value[0], shap_values[0][np.argmin(
 
 shap.plots.force(explanation)
 shap.plots.scatter(explanation)
-#%%
-shap.plots.bar(explanation[0])
+#%% DECISION PLOT
+expected_value = explainer.expected_value
+if isinstance(expected_value, list):
+    expected_value = expected_value[1]
+print(f"Explainer expected value: {expected_value}")
+features = Xx.columns.values
+shap.decision_plot(expected_value[0], shap_values[0],feature_names=list(features))
+shap.decision_plot(explainer.expected_value[0], shap_values[0][np.argmin(sum_shap)],feature_names=list(Xx.columns))
+shap.decision_plot(explainer.expected_value[0], shap_values[0][np.argmax(sum_shap)],feature_names=list(Xx.columns))
