@@ -66,23 +66,27 @@ model=keras.models.load_model(config.MODELPATH+available_models[i])
 #%%
 
 #%%
-explainer = shap.KernelExplainer(data=shap.sample(Xx, 100),model=model, 
+sample=shap.sample(Xx, 10)
+explainer = shap.KernelExplainer(data=sample,model=model, 
                                  output_names=list(Xx.columns),
                                  max_evals=600)
 
-shap_values = explainer.shap_values(shap.sample(Xx, 100))#Xx.iloc[:100,:].to_numpy()
+shap_values = explainer.shap_values(sample)#Xx.iloc[:100,:].to_numpy()
 explanation=shap.Explanation(shap_values[0],feature_names=list(Xx.columns))
 #%%
-# visualize the first prediction's explanation (use matplotlib=True to avoid Javascript)
-# shap.force_plot(explainer.expected_value, shap_values[0], X_test.iloc[0,:], matplotlib=True)
-
+#these work
 shap.summary_plot(shap_values, Xx)
 shap.plots.beeswarm(explanation)
+shap.plots.beeswarm(explanation,order=explanation.abs.max(0))
 shap.plots.bar(explanation,max_display=30)
+#%%
+explanation.data=sample
+sex = ["Women" if explanation[i,"FEMALE"].data == 1 else "Men" for i in range(explanation.shape[0])]
+shap.plots.bar(explanation.cohorts(sex).abs.mean(0))
+#%%
+shap.plots.bar(explanation.cohorts(2).abs.mean(0))
+#%%
 # shap.plots.beeswarm(explainer.expected_value)
-force0=shap.plots.force(explainer.expected_value[0], shap_values[0][0],ordering_keys='reverse',feature_names=list(Xx.columns),out_names=['neg','pos'],matplotlib=True)
-
-force44=shap.plots.force(explainer.expected_value[0], shap_values[0][44],ordering_keys='reverse',feature_names=list(Xx.columns),out_names=['neg','pos'],matplotlib=True)
 sum_shap=[sum(s) for s in shap_values[0]]
 
 forcemax=shap.plots.force(explainer.expected_value[0], shap_values[0][np.argmax(sum_shap)],ordering_keys='reverse',feature_names=list(Xx.columns),out_names=['neg','pos'],matplotlib=True)
@@ -90,20 +94,5 @@ forcemin=shap.plots.force(explainer.expected_value[0], shap_values[0][np.argmin(
 
 shap.plots.force(explanation)
 shap.plots.scatter(explanation)
-# # shap.plots.beeswarm(shap_values)
-
 #%%
-# from lime.lime_tabular import LimeTabularExplainer
-# limeexplainer = LimeTabularExplainer(X_test.iloc[:1000,:].to_numpy().reshape(1,-1),
-                                                      
-#                                                    feature_names=list(X.columns),discretize_continuous=False)
-# #%%
-# import numpy as np
-# i = np.random.randint(0, X_test.shape[0])
-# #%%
-# def predict_proba(x):
-#     p=model.predict(x)[0][0]
-#     print(np.array([1-p, p]).reshape(1,-1).ravel())
-#     return np.array([1-p, p]).reshape(1,-1).ravel()
-# exp = limeexplainer.explain_instance(X_test.iloc[i,:].to_numpy().reshape(1,-1), 
-#                                      predict_proba)
+shap.plots.bar(explanation[0])
