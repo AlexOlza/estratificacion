@@ -61,7 +61,7 @@ Xx=X.drop('PATIENT_ID',axis=1)
 available_models=detect_models()
 for i, m in enumerate(available_models):
     print(i, m)
-i =88# int(input('Choose the number of the desired model: '))
+i = int(input('Choose the number of the desired model: '))
 model=keras.models.load_model(config.MODELPATH+available_models[i])
 #%%
 
