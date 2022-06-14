@@ -31,7 +31,7 @@ from comparative_article_plotting_functions import *
 #%%
 yr=2018
 X,y=getData(2017)
-X16,y17=getData(2016)
+# X16,y17=getData(2016)
 #%%
 
 #%%
@@ -229,6 +229,8 @@ for chosen_model in ['neuralNetworkRandom_43', logistic_model]:
     Yy=y.loc[y.PATIENT_ID.isin(risk_groups[chosen_model])]
     female=Xx['FEMALE']==1
     male=Xx['FEMALE']==0
+    allfemale=X['FEMALE']==1
+    allmale=X['FEMALE']==0
     sex=[ 'Women','Men']
     
     comorbidities={'COPD': ['EDC_RES04'],
@@ -248,7 +250,7 @@ for chosen_model in ['neuralNetworkRandom_43', logistic_model]:
                     'Seizure disorders': ['EDC_NUR07']
                     }
     
-    table1= pd.DataFrame(index=['N in 2017 (%)', 'Hospitalized in 2018', 
+    table1= pd.DataFrame(index=['N in 2017 (%)', 'Hospitalized in 2018', 'FNR', 'FPR', 
                                 'Aged 0-17',
                                 'Aged 18-64',
                                 'Aged 65-69',
@@ -256,8 +258,10 @@ for chosen_model in ['neuralNetworkRandom_43', logistic_model]:
                                 'Aged 80-84',
                                 'Aged 85+']+list(comorbidities.keys()))
     comorb={}
-    for group, groupname in zip([female,male],sex):
+    for group, allgender, groupname in zip([female,male], [allfemale, allmale],sex):
         print(groupname)
+        Xgender=X.loc[allgender]
+        ygender=y.loc[allgender]
         Xgroup=Xx.loc[group]
         ygroup=Yy.loc[group]
         comorb[groupname]=[]
@@ -272,9 +276,14 @@ for chosen_model in ['neuralNetworkRandom_43', logistic_model]:
         a4=sum(Xgroup.AGE_7074)+sum(Xgroup.AGE_7579)
         a5=sum(Xgroup.AGE_8084)
         a85plus=len(Xgroup)-(a1+a2+a3+a4+a5)
-        positives=sum(np.where(ygroup.urgcms>=1,1,0))
+        truepositives=sum(np.where(ygroup.urgcms>=1,1,0))
+        allpositives=sum(np.where(ygender.urgcms>=1,1,0))
+        falsepositives=sum(np.where(ygroup.urgcms>=1,0,1)) #(ygender.PATIENT_ID.isin(ygroup.PATIENT_ID)) & (ygender)
+        # assert False
         table1[groupname]=[f'{len(Xgroup)} ({len(Xgroup)*100/len(Xx):2.2f} %)',
-                            f'{positives} ({positives*100/len(Xgroup):2.2f} %)',
+                            f'{truepositives} ({truepositives*100/len(Xgroup):2.2f} %)',
+                            f'{100-(truepositives*100/allpositives):2.2f} %',
+                            f'{100*falsepositives/len(ygroup):2.2f} %',
                             f'{a1} ({a1*100/len(Xgroup):2.2f} %) ',
                             f'{a2} ({a2*100/len(Xgroup):2.2f} %) ',
                             f'{a3} ({a3*100/len(Xgroup):2.2f} %) ',
