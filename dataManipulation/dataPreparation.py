@@ -225,11 +225,13 @@ def generateCCSData(yr,  X,
     diags.dropna(subset=['CIE_CODE'], inplace=True)
     #KEEP ONLY DX THAT ARE STILL ACTIVE AT THE BEGINNING OF THE CURRENT YEAR
     #Interpret NaN as still active:
-    diags.loc[diags.END_DATE.isnull(),'END_DATE']=f'{yr}-12-31'
-    diags=diags.loc[diags.END_DATE>=f'{yr}-01-01'][['PATIENT_ID', 'CIE_VERSION', 'CIE_CODE']]
+    # diags.loc[diags.END_DATE.isnull(),'END_DATE']=f'{yr}-12-31'
+    # diags=diags.loc[diags.END_DATE>=f'{yr}-01-01'][['PATIENT_ID', 'CIE_VERSION', 'CIE_CODE']]
+   
     diags.CIE_CODE=diags.CIE_CODE.astype(str)
     diags.CIE_VERSION=diags.CIE_VERSION.astype(str)
     diags.CIE_CODE=diags.CIE_CODE.str.replace(r'\s|\/', r'')
+    diags.drop('END_DATE', axis=1, inplace=True)
     #Check null values
     assert all(diags.isnull().sum()==0), f'Null values encountered after cleaning up {config.ICDFILES[yr]}'
 
