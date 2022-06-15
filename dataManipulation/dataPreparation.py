@@ -182,10 +182,11 @@ def generateCCSData(yr,  X,
         with open(f'needs_manual_revision{appendix}.csv', mode) as output:
             writer = csv.writer(output)
             if not all([k in already_there.CODE.values for k in keys_to_revise]):
-                writer.writerow(['CODE','N'])
+                if mode=='w': writer.writerow(['CODE','N'])
                 for key in keys_to_revise:
-                    N=len(diags.loc[diags.CIE_CODE==key].PATIENT_ID.unique())
-                    writer.writerow([key, N])     
+                    if not key in already_there.CODE.values: 
+                        N=len(diags.loc[diags.CIE_CODE==key].PATIENT_ID.unique())
+                        writer.writerow([key, N])     
     
     
     """ ICD 10 CM """
@@ -244,7 +245,8 @@ def generateCCSData(yr,  X,
    
     missing_in_icd9=missingDX(icd9,diags.loc[diags.CIE_VERSION.astype(str).str.startswith('9')])
     missing_in_icd10cm=missingDX(icd10cm,diags.loc[diags.CIE_VERSION.astype(str).str.startswith('10')])
-    print('Quantity: ', len(missing_in_icd9))
+    print('Missing quantity ICD9: ', len(missing_in_icd9))
+    print('Missing quantity ICD10: ', len(missing_in_icd10cm))
     success9, failure9=guessingCCS(missing_in_icd9, icd9)
     icd9=assign_success(success9,icd9)
     
@@ -330,7 +332,7 @@ def generateCCSData(yr,  X,
 if __name__=='__main__':
     import sys
     sys.path.append('/home/aolza/Desktop/estratificacion/')
-    yr=2016
+    yr=2017
     X,Y=getData(yr, CCS=False)
     # _ , _ =generateCCSData(yr,  X)
     print('positive class ',sum(np.where(Y.urgcms>=1,1,0)))
