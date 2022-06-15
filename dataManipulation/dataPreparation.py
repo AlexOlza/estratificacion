@@ -169,26 +169,25 @@ def generateCCSData(yr,  X,
             dic= pd.concat([dic, pd.DataFrame(assign_success)],ignore_index=True)
         return dic
     def needsManualRevision(failure, dictionary, appendix='',
-                            description=True, diags=None,
+                            diags=None,
                             exclude={}):      
-        import csv 
-        with open(f'needs_manual_revision{appendix}.csv', 'w') as output:
+        import csv
+        if Path(f'needs_manual_revision{appendix}.csv').is_file():
+            already_there=pd.read_csv(f'needs_manual_revision{appendix}.csv',dtype=str)
+            mode='a'
+        else:
+            mode='w'   
+            already_there=pd.DataFrame({'CODE':['']})
+        keys_to_revise=[k[0] for k in failure.keys()]
+        with open(f'needs_manual_revision{appendix}.csv', mode) as output:
             writer = csv.writer(output)
-            for key, value in failure.items():
-                if key not in exclude.keys():
-                    if description:
-                        writer.writerow([key[0]+' -> '+key[1],'CCS', 'Description'])
-                        for col in ['CCS LVL 2 LABEL', 'CCS CATEGORY DESCRIPTION']:
-                            try:
-                                for v in value:
-                                    writer.writerow([' ',v, dictionary.loc[dictionary.CCS==v][col].unique()[0]])
-                                writer.writerow(['','',''])
-                            except:
-                                continue
-                    else:
-                        assert isinstance(diags, pd.DataFrame)
-                        N=len(diags.loc[diags.CIE_CODE==key[0]].PATIENT_ID.unique())
-                        writer.writerow([key[0], N])     
+            if not all([k in already_there.CODE.values for k in keys_to_revise]):
+                writer.writerow(['CODE','N'])
+                for key in keys_to_revise:
+                    N=len(diags.loc[diags.CIE_CODE==key].PATIENT_ID.unique())
+                    writer.writerow([key, N])     
+    
+    
     """ ICD 10 CM """
     icd10cm=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,config.ICDTOCCSFILES['ICD10CM']),
                         dtype=str,)
@@ -261,16 +260,16 @@ def generateCCSData(yr,  X,
 
     print(f'{len(failure9.keys())} codes need manual revision')
     if len(failure9.keys())>0: 
-        needsManualRevision(failure9, icd9, description=True, appendix=f'desc_icd9', diags=diags)
+        needsManualRevision(failure9, icd9,  appendix=f'_icd9', diags=diags)
     print('-------'*10)
 
     success10, failure10=guessingCCS(missing_in_icd10cm, icd10cm)
     icd10cm=assign_success(success10,icd10cm)
     # keys_to_drop={k[0]:k for k in failure10.keys()}
     failure10 = {key:val for key, val in failure10.items() if key[0] not in revision10.CODE.values} 
-    print(f'{len(failure.keys())} codes need manual revision')
+    print(f'{len(failure10.keys())} codes need manual revision')
     
-    if len(failure.keys())>0:
+    if len(failure10.keys())>0:
         needsManualRevision(failure10, icd10cm, appendix=f'_icd10', diags=diags)
     print('-------'*10)
 
