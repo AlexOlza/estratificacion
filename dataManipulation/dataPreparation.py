@@ -246,37 +246,32 @@ def generateCCSData(yr,  X,
     missing_in_icd9=missingDX(icd9,diags.loc[diags.CIE_VERSION.astype(str).str.startswith('9')])
     missing_in_icd10cm=missingDX(icd10cm,diags.loc[diags.CIE_VERSION.astype(str).str.startswith('10')])
     print('Quantity: ', len(missing_in_icd9))
-    success, failure=guessingCCS(missing_in_icd9, icd9)
-    icd9=assign_success(success,icd9)
+    success9, failure9=guessingCCS(missing_in_icd9, icd9)
+    icd9=assign_success(success9,icd9)
     
-    try:
-        f2=os.path.join(config.INDISPENSABLEDATAPATH,f'ccs/manually_revised_icd9_{yr-1}.csv')
-        revision=pd.read_csv(f2)
-        keys_to_drop={k[0]:k for k in failure.keys()}
-        failure = {key:val for key, val in failure.items() if key[0] not in revision.CODE.values}
-    except FileNotFoundError:
-        pass
+    f10=os.path.join(config.INDISPENSABLEDATAPATH,f'ccs/manually_revised_icd10.csv')
+    assert Path(f10).is_file(), "Manual revision file not found (icd10)!!"
+    f9=os.path.join(config.INDISPENSABLEDATAPATH,f'ccs/manually_revised_icd9.csv')
+    assert Path(f9).is_file(), "Manual revision file not found (icd9)!!"
     
-    print(f'{len(failure.keys())} codes need manual revision')
-    if len(failure.keys())>0: 
-        needsManualRevision(failure, icd9, description=True, appendix=f'desc_icd9_{yr}', diags=diags)
+    revision9=pd.read_csv(f9)
+    revision10=pd.read_csv(f10)
+    # keys_to_drop={k[0]:k for k in failure9.keys()}
+    failure9 = {key:val for key, val in failure9.items() if key[0] not in revision9.CODE.values}
+
+    print(f'{len(failure9.keys())} codes need manual revision')
+    if len(failure9.keys())>0: 
+        needsManualRevision(failure9, icd9, description=True, appendix=f'desc_icd9', diags=diags)
     print('-------'*10)
-    print('ICD10 CODES PRESENT IN DIAGNOSTIC DATASET BUT MISSING IN THE DICTIONARY:')
-    print('Quantity: ', len(missing_in_icd10cm))
-    success, failure=guessingCCS(missing_in_icd10cm, icd10cm)
-    icd10cm=assign_success(success,icd10cm)
-    
-    try:
-        f2=os.path.join(config.INDISPENSABLEDATAPATH,f'ccs/manually_revised_icd10_{yr-1}.csv' )
-        revision=pd.read_csv(f2,header=0, names=['CODE','_','NEW_CODE'])
-        for revised_code in revision.CODE.values:
-            failure.pop(revised_code, None)
-    except FileNotFoundError:
-        pass
-    
+
+    success10, failure10=guessingCCS(missing_in_icd10cm, icd10cm)
+    icd10cm=assign_success(success10,icd10cm)
+    # keys_to_drop={k[0]:k for k in failure10.keys()}
+    failure10 = {key:val for key, val in failure10.items() if key[0] not in revision10.CODE.values} 
     print(f'{len(failure.keys())} codes need manual revision')
+    
     if len(failure.keys())>0:
-        needsManualRevision(failure, icd10cm, appendix=f'_icd10_{yr}', diags=diags)
+        needsManualRevision(failure10, icd10cm, appendix=f'_icd10', diags=diags)
     print('-------'*10)
 
     f=os.path.join(config.INDISPENSABLEDATAPATH,f'ccs/manually_revised_icd10_{yr}.csv')
