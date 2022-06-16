@@ -275,17 +275,11 @@ def generateCCSData(yr,  X,
         needsManualRevision(failure10, icd10cm, appendix=f'_icd10', diags=diags)
     print('-------'*10)
 
-    f=os.path.join(config.INDISPENSABLEDATAPATH,f'ccs/manually_revised_icd10_{yr}.csv')
-    assert Path(f).is_file(), "Manual revision file not found (icd10)!!"
-    revision=pd.read_csv(f, header=0, names=['CODE', '_', 'NEW_CODE'])
-    f2=os.path.join(config.INDISPENSABLEDATAPATH,f'ccs/manually_revised_icd9_{yr}.csv')
-    assert Path(f).is_file(), "Manual revision file not found (icd9)!!"
-    revision2=pd.read_csv(f2)
-    revision=pd.concat([revision,revision2])
+    revision=pd.concat([revision9,revision10])
     #Use the manual revision to change diagnostic codes when necessary
     #Those with no NEW_CODE specified are lost -> discard rows with NAs
     
-    revision=revision.dropna()[['CODE','NEW_CODE']] 
+    revision=revision.dropna(subset='NEW_CODE')[['CODE','NEW_CODE']] 
     for code, new in zip(revision.CODE, revision.NEW_CODE):
         diags.loc[diags.CIE_CODE==code, 'CIE_CODE']=new
 
