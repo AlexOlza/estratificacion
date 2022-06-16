@@ -279,7 +279,7 @@ def generateCCSData(yr,  X,
     #Use the manual revision to change diagnostic codes when necessary
     #Those with no NEW_CODE specified are lost -> discard rows with NAs
     
-    revision=revision.dropna(subset='NEW_CODE')[['CODE','NEW_CODE']] 
+    revision=revision.dropna(subset=['NEW_CODE'])[['CODE','NEW_CODE']] 
     for code, new in zip(revision.CODE, revision.NEW_CODE):
         diags.loc[diags.CIE_CODE==code, 'CIE_CODE']=new
 
