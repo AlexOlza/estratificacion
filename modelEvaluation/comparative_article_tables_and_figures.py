@@ -39,17 +39,17 @@ male=X['FEMALE']==0
 sex=[ 'Women','Men']
 
 comorbidities={'COPD': ['EDC_RES04'],
-               'Chronic Renal Failure': ['EDC_REN01'],
-               'Heart Failure': ['EDC_CAR04'],
-               'Depression': ['EDC_PSY09'],
-               'Diabetes Mellitus': ['EDC_END06','EDC_END07','EDC_END08'],
+               'Chronic Renal Failure': ['EDC_REN01', 'EDC_REN06'],
+               'Heart Failure': ['EDC_CAR05'],
+               'Depression': ['EDC_PSY09', 'EDC_PSY20'],
+               'Diabetes Mellitus': ['EDC_END06','EDC_END07','EDC_END08', 'EDC_END09'],
                # 'Dis. of Lipid Metabolism': ['EDC_CAR11'],
                'Hypertension': ['EDC_CAR14','EDC_CAR15'],
                'Ischemic Heart Disease': ['EDC_CAR03'],
                'Low back pain': ['EDC_MUS14'],
                'Osteoporosis': ['EDC_END02'],
                "Parkinson's disease":['EDC_NUR06'],
-               'Persistent asthma':['EDC_ALL05'],
+               'Persistent asthma':['EDC_ALL05', 'EDC_ALL04'],
                'Rheumatoid arthritis':['EDC_RHU05'],
                'Schizophrenia & affective dis.': ['EDC_PSY07'],
                'Seizure disorders': ['EDC_NUR07']
@@ -71,7 +71,7 @@ for group, groupname in zip([female,male],sex):
     for disease, EDClist in comorbidities.items():
         s=[Xgroup[EDC].sum() for EDC in EDClist]
         comorb[groupname].append(f'{sum(s)} ({sum(s)*100/len(Xgroup):2.2f} %)')
-        print(disease, s)
+        print(disease, 'total (M+W): ',sum([X[EDC].sum() for EDC in EDClist]))
     # ygroup18=y.loc[group18]
     a1=sum(Xgroup.AGE_0004)+sum(Xgroup.AGE_0511)+sum(Xgroup.AGE_0511)
     a2=sum(Xgroup.AGE_1834)+sum(Xgroup.AGE_3544)+sum(Xgroup.AGE_4554)+sum(Xgroup.AGE_5564)
@@ -104,12 +104,12 @@ print('Prevalence of admission in 2018:',sum(np.where(y.urgcms>=1,1,0))/len(X))
 #%%
 """ MATERIALS AND METHODS: Comments on variability assessment"""
 K=20000
-metrics=pd.read_csv(re.sub(config.EXPERIMENT, 'hyperparameter_variability_urgcms_excl_nbinj',config.PREDPATH)+'/metrics.csv')
+metrics=pd.read_csv(re.sub(config.EXPERIMENT, 'hyperparameter_variability_urgcms_excl_nbinj',config.PREDPATH)+'/metrics2018.csv')
 print('Number of models per algorithm:')
 print( metrics.groupby(['Algorithm'])['Algorithm'].count() )
 
 """ RESULTS. TABLE 2 """
-logisticMetrics=pd.read_csv(config.PREDPATH+'/metrics.csv')
+logisticMetrics=pd.read_csv(config.PREDPATH+'/metrics2018.csv')
 logisticMetrics=logisticMetrics.loc[logisticMetrics.Model.str.startswith('logistic2022')]
 logisticMetrics[f'F1_{K}']=2*logisticMetrics[f'Recall_{K}']*logisticMetrics[f'PPV_{K}']/(logisticMetrics[f'Recall_{K}']+logisticMetrics[f'PPV_{K}'])
 logisticMetrics['Algorithm']=['logistic']

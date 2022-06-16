@@ -283,8 +283,8 @@ if __name__ == '__main__':
     else:
         selected = detect_latest(available_models)
 
-    if Path(config.PREDPATH + '/metrics.csv').is_file():
-        available_metrics = pd.read_csv(config.PREDPATH + '/metrics.csv')
+    if Path(config.PREDPATH +  f'/metrics{year}.csv').is_file():
+        available_metrics = pd.read_csv(config.PREDPATH + f'/metrics{year}.csv')
     else:
         available_metrics = pd.DataFrame.from_dict({'Model': []})
     if all([s in available_metrics.Model.values for s in selected]):
@@ -299,8 +299,11 @@ if __name__ == '__main__':
         selected = [s for s in selected if not (s in available_metrics.Model.values)]
 
         X, y = getData(year - 1)
-        pastX, pasty = getData(year - 2)
-
+        try:
+            pastX, pasty = getData(year - 2)
+        except AssertionError:
+            print(f'getData: HOSPITALIZATION DATA FOR YEAR {year-2} NOT AVAILABLE. PERFORMING INTERNAL VALIDATION.')
+            pastX, pasty = X,y
         if not nested:
             metrics = compare(selected, X, y, year, pastX=pastX, pastY=pasty)
 
@@ -319,7 +322,7 @@ if __name__ == '__main__':
         df = pd.concat([df, available_metrics], ignore_index=True, axis=0)
         df['Algorithm'] = [re.sub('_|[0-9]', '', model) for model in df['Model'].values]
 
-        df.to_csv(config.PREDPATH + '/metrics.csv', index=False)
+        df.to_csv(config.PREDPATH +  f'/metrics{year}.csv', index=False)
 
         algorithms = ['randomForest', 'hgb', 'neuralNetworkRandom']
         # parent_metrics=pd.read_csv(re.sub('hyperparameter_variability_|fixsample_','',config.PREDPATH+'/metrics.csv')).to_dict('list')
