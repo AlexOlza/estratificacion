@@ -100,7 +100,7 @@ def getData(yr,columns=config.COLUMNS,
                     predictors=predictors)
     elif CCS:
         Xprovisional=load(filename=config.ACGFILES[yr],predictors=predictors)
-        full16=generateCCSData(yr,  Xprovisional, predictors=predictors)
+        full16=generateCCSData(yr,  Xprovisional)
     else:
         full16=load(filename=config.ACGFILES[yr],predictors=predictors)
    
@@ -129,7 +129,8 @@ def generateCCSData(yr,  X,
         print('Xccs number of columns is ',len(Xccs.columns) )
         assert 'PATIENT_ID' in X.columns
         assert 'PATIENT_ID' in Xccs.columns
-        Xx=pd.merge(X, Xccs, on='PATIENT_ID', how='outer')
+        cols_to_merge=['PATIENT_ID']+[c for c in X if (('AGE' in c) or ('FEMALE' in c))]
+        Xx=pd.merge(X, Xccs, on=cols_to_merge, how='outer')
         return Xx
     def missingDX(dic,diags):
         diagsCodes=diags.CIE_CODE.str.replace(r'\s|\/', r'').values
