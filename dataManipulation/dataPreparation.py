@@ -250,23 +250,7 @@ def generateCCSData(yr,  X,
     """ DIAGNOSES ASSERTIONS""" 
     #Check null values
     assert all(diags.isnull().sum()==0), f'Null values encountered after cleaning up {config.ICDFILES[yr]}'
- 
-    #%%
-    codes=['2720','2721','2722','2723','2724']
-    l=[]
-    for c in codes:
-        df=diags.loc[diags.CIE_CODE==c]
-        l.append(len(df))
-        print(l[-1])
-    print(l)
-    print(sum(l))
-    #%%
-    #%%
-    codes=['2720','2721','2722','2723','2724']
-    l=[]
-    for c in codes:
-        df=icd9.loc[icd9.CODE==c]
-        print(df)
+
     #%%
    
     missing_in_icd9=missingDX(icd9,diags.loc[diags.CIE_VERSION.astype(str).str.startswith('9')])
@@ -283,7 +267,7 @@ def generateCCSData(yr,  X,
     
     revision9=pd.read_csv(f9)
     revision10=pd.read_csv(f10)
-    # keys_to_drop={k[0]:k for k in failure9.keys()}
+
     failure9 = {key:val for key, val in failure9.items() if key[0] not in revision9.CODE.values}
 
     print(f'{len(failure9.keys())} codes need manual revision')
@@ -305,8 +289,6 @@ def generateCCSData(yr,  X,
     
     #Use the manual revision to change diagnostic codes when necessary
     #Those with no NEW_CODE specified are lost -> discard rows with NAs
-    
-    # revision=revision.dropna(subset=['NEW_CODE'])[['CODE','NEW_CODE']] 
     diags2=diags.copy()
     for code, new in zip(revision.CODE, revision.NEW_CODE):
         diags.loc[diags.CIE_CODE==code, 'CIE_CODE']=new
@@ -317,22 +299,7 @@ def generateCCSData(yr,  X,
     #other potential predictors
     diags=diags.loc[diags.PATIENT_ID.isin(X.PATIENT_ID.values)]
     print(f'We have discarded {L-len(diags)} diagnoses because the patients have no additional predictors such as Age')
-    # icd9diags=diags.CIE_VERSION.str.startswith('9')
-    # icd10diags=diags.CIE_VERSION.str.startswith('10')
-    
-    # diags_with_ccs=pd.DataFrame({'PATIENT_ID':[],'CODE':[],'CCS':[], 'DESCRIPTION':[]})
-    # icd9['DESCRIPTION']=icd9['CCS LVL 1 LABEL']+icd9['CCS LVL 2 LABEL']+icd9['CCS LVL 3 LABEL']+icd9['CCS LVL 4 LABEL']
-    # icd10cm.rename(columns={'CCS CATEGORY DESCRIPTION':'DESCRIPTION'},inplace=True)
-    # for version, dictdf in zip( [icd9diags,icd10diags], [icd9, icd10cm]):
-    #     df=diags.loc[version]
-    #     df['CODE']=df.CIE_CODE.astype(str)
-    #     dictdf.CODE=dictdf.CODE.astype(str)
-    #     dfmerged=pd.merge(df, dictdf[['CODE', 'CCS']], on='CODE')[['PATIENT_ID','CIE_CODE','CODE','CCS']]
-        
-    #     diags_with_ccs= pd.concat([diags_with_ccs, dfmerged])  
-    #     unique=diags_with_ccs[['CODE','CIE_CODE','CCS']].drop_duplicates()
-    #     print(unique.loc[unique.CCS=='53'])
-    #     break
+
     
     #%%
     icd9['DESCRIPTION']=icd9['CCS LVL 1 LABEL']+icd9['CCS LVL 2 LABEL']+icd9['CCS LVL 3 LABEL']+icd9['CCS LVL 4 LABEL']
@@ -348,15 +315,6 @@ def generateCCSData(yr,  X,
     df['CODE']=df.CIE_CODE.astype(str)
     diags_with_ccs=pd.merge(df, fulldict, on=['CODE','CIE_VERSION'], how='inner')[['PATIENT_ID','CIE_CODE','CODE','CCS']]
     
-    #%%
-    codes=['2720','2721','2722','2723','2724']
-    l=[]
-    for c in codes:
-        df=diags_with_ccs.loc[diags_with_ccs.CCS=='53']
-        l.append(len(df))
-        print(l[-1])
-    print(l)
-    print(sum(l))
     #%%
     i=0
     import time
