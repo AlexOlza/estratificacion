@@ -242,6 +242,23 @@ def generateCCSData(yr,  X,
     #ICD10CM and ICD9 only allow for 6 and 5 characters respectively
     diags.loc[diags.CIE_VERSION.str.startswith('10'),'CIE_CODE']=diags.loc[diags.CIE_VERSION.astype(str).str.startswith('10'),'CIE_CODE'].str.slice(0,6)
     diags.loc[diags.CIE_VERSION.str.startswith('9'),'CIE_CODE']=diags.loc[diags.CIE_VERSION.astype(str).str.startswith('9'),'CIE_CODE'].str.slice(0,5)
+    
+    #%%
+    codes=['2720','2721','2722','2723','2724']
+    l=[]
+    for c in codes:
+        df=diags.loc[diags.CIE_CODE.str.startswith(c)]
+        l.append(len(df))
+        print(l[-1])
+    print(l)
+    print(sum(l))
+    #%%
+    #%%
+    codes=['2720','2721','2722','2723','2724']
+    l=[]
+    for c in codes:
+        df=icd9.loc[icd9.CODE.str.startswith(c)]
+        print(df)
     #%%
    
     missing_in_icd9=missingDX(icd9,diags.loc[diags.CIE_VERSION.astype(str).str.startswith('9')])
@@ -277,10 +294,12 @@ def generateCCSData(yr,  X,
     print('-------'*10)
 
     revision=pd.concat([revision9,revision10])
+    
     #Use the manual revision to change diagnostic codes when necessary
     #Those with no NEW_CODE specified are lost -> discard rows with NAs
     
     revision=revision.dropna(subset=['NEW_CODE'])[['CODE','NEW_CODE']] 
+    diags2=diags.copy()
     for code, new in zip(revision.CODE, revision.NEW_CODE):
         diags.loc[diags.CIE_CODE==code, 'CIE_CODE']=new
 
@@ -298,7 +317,15 @@ def generateCCSData(yr,  X,
         df['CODE']=df.CIE_CODE
         dfmerged=pd.merge(df, dictdf, how='left', on='CODE')[['PATIENT_ID','CIE_CODE','CODE','CCS', 'DESCRIPTION']]
         diags_with_ccs= pd.concat([diags_with_ccs, dfmerged])      
- 
+    #%%
+    codes=['2720','2721','2722','2723','2724']
+    l=[]
+    for c in codes:
+        df=diags_with_ccs.loc[diags_with_ccs.CCS=='53']
+        l.append(len(df))
+        print(l[-1])
+    print(l)
+    print(sum(l))
     #%%
     i=0
     import time
@@ -308,12 +335,13 @@ def generateCCSData(yr,  X,
     except KeyError:
         pass
     for ccs_number, df in diags_with_ccs.groupby('CCS'):
-        print(ccs_number,df['DESCRIPTION'].values[0])
+        # print(ccs_number,df['DESCRIPTION'].values[0])
         amount_per_patient=df.groupby('PATIENT_ID').size().to_frame(name=f'CCS{ccs_number}')
         X[f'CCS{ccs_number}']=np.int16(0)
         
         X.update(amount_per_patient)
         X[f'CCS{ccs_number}'].fillna(0,axis=0,inplace=True)
+        print(f'CCS{ccs_number}', X[f'CCS{ccs_number}'].sum())
         i+=1
     X.reset_index()
     print('TIME : ' , time.time()-t0)
