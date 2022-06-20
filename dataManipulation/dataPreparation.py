@@ -155,6 +155,8 @@ def generateCCSData(yr,  X,
             #In the diagnoses dataset, ICD10CM dx that start with a digit are related to oncology
             df.loc[(df.CIE_VERSION.astype(str).str.startswith('10') & df.CIE_CODE.str.match('^[0-9]')),'CIE_CODE']='ONCOLOGY' 
             #ICD10CM and ICD9 only allow for 6 and 5 characters respectively
+            df.loc[df.CIE_VERSION.str.startswith('9'),'CIE_VERSION']='9'
+            df.loc[df.CIE_VERSION.str.startswith('10'),'CIE_VERSION']='10'
             df.loc[df.CIE_VERSION.str.startswith('10'),'CIE_CODE']=df.loc[df.CIE_VERSION.astype(str).str.startswith('10'),'CIE_CODE'].str.slice(0,6)
             df.loc[df.CIE_VERSION.str.startswith('9'),'CIE_CODE']=df.loc[df.CIE_VERSION.astype(str).str.startswith('9'),'CIE_CODE'].str.slice(0,5)
             print('Dropping NULL codes:')
@@ -309,42 +311,48 @@ def generateCCSData(yr,  X,
     for code, new in zip(revision.CODE, revision.NEW_CODE):
         diags.loc[diags.CIE_CODE==code, 'CIE_CODE']=new
     diags=diags.dropna(subset=['CIE_CODE'])
+    L=len(diags)
+    print(f'We have lost {len(diags2)-len(diags)} diagnoses that still have no CCS')
     #Keep only IDs present in X, because we need patients to have age, sex and 
     #other potential predictors
     diags=diags.loc[diags.PATIENT_ID.isin(X.PATIENT_ID.values)]
-    icd9diags=diags.CIE_VERSION.str.startswith('9')
-    icd10diags=diags.CIE_VERSION.str.startswith('10')
+    print(f'We have discarded {L-len(diags)} diagnoses because the patients have no additional predictors such as Age')
+    # icd9diags=diags.CIE_VERSION.str.startswith('9')
+    # icd10diags=diags.CIE_VERSION.str.startswith('10')
     
-    diags_with_ccs=pd.DataFrame({'PATIENT_ID':[],'CODE':[],'CCS':[], 'DESCRIPTION':[]})
-    icd9['DESCRIPTION']=icd9['CCS LVL 1 LABEL']+icd9['CCS LVL 2 LABEL']+icd9['CCS LVL 3 LABEL']+icd9['CCS LVL 4 LABEL']
-    icd10cm.rename(columns={'CCS CATEGORY DESCRIPTION':'DESCRIPTION'},inplace=True)
-    for version, dictdf in zip( [icd9diags,icd10diags], [icd9, icd10cm]):
-        df=diags.loc[version]
-        df['CODE']=df.CIE_CODE.astype(str)
-        dictdf.CODE=dictdf.CODE.astype(str)
-        dfmerged=pd.merge(df, dictdf[['CODE', 'CCS']], on='CODE')[['PATIENT_ID','CIE_CODE','CODE','CCS']]
+    # diags_with_ccs=pd.DataFrame({'PATIENT_ID':[],'CODE':[],'CCS':[], 'DESCRIPTION':[]})
+    # icd9['DESCRIPTION']=icd9['CCS LVL 1 LABEL']+icd9['CCS LVL 2 LABEL']+icd9['CCS LVL 3 LABEL']+icd9['CCS LVL 4 LABEL']
+    # icd10cm.rename(columns={'CCS CATEGORY DESCRIPTION':'DESCRIPTION'},inplace=True)
+    # for version, dictdf in zip( [icd9diags,icd10diags], [icd9, icd10cm]):
+    #     df=diags.loc[version]
+    #     df['CODE']=df.CIE_CODE.astype(str)
+    #     dictdf.CODE=dictdf.CODE.astype(str)
+    #     dfmerged=pd.merge(df, dictdf[['CODE', 'CCS']], on='CODE')[['PATIENT_ID','CIE_CODE','CODE','CCS']]
         
-        diags_with_ccs= pd.concat([diags_with_ccs, dfmerged])  
-        unique=diags_with_ccs[['CODE','CIE_CODE','CCS']].drop_duplicates()
-        print(unique.loc[unique.CCS=='53'])
-        break
+    #     diags_with_ccs= pd.concat([diags_with_ccs, dfmerged])  
+    #     unique=diags_with_ccs[['CODE','CIE_CODE','CCS']].drop_duplicates()
+    #     print(unique.loc[unique.CCS=='53'])
+    #     break
     
     #%%
     icd9['DESCRIPTION']=icd9['CCS LVL 1 LABEL']+icd9['CCS LVL 2 LABEL']+icd9['CCS LVL 3 LABEL']+icd9['CCS LVL 4 LABEL']
     icd10cm.rename(columns={'CCS CATEGORY DESCRIPTION':'DESCRIPTION'},inplace=True)
-    dict9=icd9[['CODE', 'CCS', 'DESCRIPTION']]
-    dict10=icd10cm[['CODE', 'CCS', 'DESCRIPTION']]
-    fulldict=pd.concat([dict9,dict10])
+    icd9['CIE_VERSION']='9'
+    icd10cm['CIE_VERSION']='10'
+    dict9=icd9[['CODE', 'CCS', 'DESCRIPTION', 'CIE_VERSION']]
+    dict10=icd10cm[['CODE', 'CCS', 'DESCRIPTION', 'CIE_VERSION']]
+    fulldict=pd.concat([dict9,dict10]).drop_duplicates()
+    #Drop codes that were not diagnosed to any patient in the current year
     diags_with_ccs=pd.DataFrame({'PATIENT_ID':[],'CODE':[],'CCS':[], 'DESCRIPTION':[]})
     df=diags.copy()
     df['CODE']=df.CIE_CODE.astype(str)
-    diags_with_ccs=pd.merge(df, fulldict, on='CODE', how='left')[['PATIENT_ID','CIE_CODE','CODE','CCS']]
+    diags_with_ccs=pd.merge(df, fulldict, on=['CODE','CIE_VERSION'], how='inner')[['PATIENT_ID','CIE_CODE','CODE','CCS']]
     
     #%%
     codes=['2720','2721','2722','2723','2724']
     l=[]
     for c in codes:
-        df=diags_with_ccs.loc[diags_with_ccs.CODE.str.startswith(c)]
+        df=diags_with_ccs.loc[diags_with_ccs.CCS=='53']
         l.append(len(df))
         print(l[-1])
     print(l)
