@@ -75,7 +75,7 @@ def ROC_PR_comparison(models, yr, logistic_model, mode='ROC', **kwargs):
     for curve in display.values():
         curve.plot(ax)
     return(display)
-def boxplots(df, violin, together, **kwargs):
+def boxplots(df, **kwargs):
     import seaborn as sns
     order=kwargs.get('order',None)
     hue=kwargs.get('hue',None)
@@ -83,42 +83,15 @@ def boxplots(df, violin, together, **kwargs):
     df['AUC']=df['Score']
     labels={'randomForest':'RF',
                 'neuralNetworkRandom':'MLP','hgb':'GBDT'}
-    # path=kwargs.get('path',config.FIGUREPATH)
-    # name=kwargs.get('name','')
-    # X=kwargs.get('X',None)
-    # y=kwargs.get('y',None)
 
-    # df['Algorithm']=[re.sub('_|[0-9]', '', model) for model in df['Model'].values]
     parent_metrics=df.copy().loc[df.Algorithm=='logistic']
     df=df.loc[df.Algorithm!='logistic']
     df=df.replace({'Algorithm': labels},regex=True)
     
-    # fig, ((ax1,ax2, ax3),(ax4,ax5,ax6)) = plt.subplots(2,3,figsize=(10,12), gridspec_kw={'width_ratios': [1,1,1,3]})
-    
-    # if together:
-    #     fig=plt.figure(figsize=(8.5,5.8))
-    #     nrow=2
-    #     ncol=3
-    #     ax1 = plt.subplot2grid((nrow,ncol),(0,0))
-    #     ax2 = plt.subplot2grid((nrow,ncol),(0,1))
-    #     ax3 = plt.subplot2grid((nrow,ncol),(1,0))
-    #     ax4 = plt.subplot2grid((nrow,ncol),(1,1))
-    #     ax5 = plt.subplot2grid((nrow,ncol),(0,2), rowspan=2, colspan=1)
-    #     for metric, ax in zip(['AUC', 'AP', 'Recall_20000', 'PPV_20000'],[ax1,ax2,ax3, ax4]):
-    #         if not violin:
-    #             df.boxplot(column=metric, by='Algorithm', ax=ax)
-    #         if violin:
-    #             sns.violinplot(ax=ax,x="Algorithm", y=metric, data=df,hue=hue)
-    
-    #         print(parent_metrics[metric].values[0])
-    #         ax.axhline(y = parent_metrics[metric].values[0], linestyle = '-', label='Logistic', color='r')
-    # else:
     for metric in ['AUC', 'AP', 'Recall_20000', 'PPV_20000']:
         fig, ax=plt.subplots()
-        if not violin:
-            df.boxplot(column=metric, by='Algorithm', ax=ax)
-        if violin:
-            sns.violinplot(ax=ax,x="Algorithm", y=metric,hue=hue, data=df)
+        
+        sns.violinplot(ax=ax,x="Algorithm", y=metric,hue=hue, data=df)
             
         print(parent_metrics[metric].values[0])
         ls='--' if supplementary else '-'
@@ -136,32 +109,17 @@ def boxplots(df, violin, together, **kwargs):
     dff['Before/After']='Before'
     dff.Brier=dff['Brier Before']
     df2=pd.concat([dff,df])
-    # df2['Before/After']='After'
-    # df2.loc[original_index, 'Before/After']='Before'
-    # df2.loc[original_index, 'Brier']=df2.loc[original_index, 'Brier Before']
-    if together:
-        df2.boxplot(column='Brier', by=['Before/After','Algorithm'], ax=ax5)
-        ax5.axhline(y =parent_metrics['Brier'].values[0], linestyle = '-', label='Logistic', color='r')
-        plt.legend()
-        # plt.savefig(os.path.join(path,f'hyperparameter_variability_{'Brier'}.png'))
-    else:
-        df['Brier Change']=(-df['Brier Before']+df['Brier'])
-        fig, ax5=plt.subplots()
-    if violin:
-        
-        # ax5.axhline(y =-parent_metrics['Brier Before'].values[0]+parent_metrics['Brier'].values[0], linestyle = '-', label='Logistic', color='r')
-        ax5.axhline(y =parent_metrics['Brier'].values[0], linestyle = '-', label='Logistic', color='r')
-        sns.violinplot(ax=ax5,x="Algorithm", y='Brier', hue='Before/After', data=df)
-        fig, ax6=plt.subplots()
-        ax6.axhline(y =parent_metrics['Brier Before'].values[0], linestyle = '-', label='LR Before', color='grey')
-        ax6.axhline(y =parent_metrics['Brier'].values[0], linestyle = '-', label='LR After', color='r')
-        sns.violinplot(ax=ax6,x="Algorithm", y='Brier', hue='Before/After', data=dff)
-        # plt.yscale('logit')
-    else:
-        ax5.axhline(y =parent_metrics['Brier'].values[0], linestyle = '-', label='Logistic', color='r', alpha=0.9)
-        df2.boxplot(column='Brier', by=['Before/After','Algorithm'], ax=ax5)
-        
-        plt.legend()
+ 
+    df['Brier Change']=(-df['Brier Before']+df['Brier'])
+    fig, ax5=plt.subplots()
+    ax5.axhline(y =parent_metrics['Brier'].values[0], linestyle = '-', label='Logistic', color='r')
+    sns.violinplot(ax=ax5,x="Algorithm", y='Brier', hue='Before/After', data=df)
+    fig, ax6=plt.subplots()
+    ax6.axhline(y =parent_metrics['Brier Before'].values[0], linestyle = '-', label='LR Before', color='grey')
+    ax6.axhline(y =parent_metrics['Brier'].values[0], linestyle = '-', label='LR After', color='r')
+    sns.violinplot(ax=ax6,x="Algorithm", y='Brier', hue='Before/After', data=dff)
+   
+    plt.legend()
     plt.suptitle('')
     plt.tight_layout()
     plt.show()

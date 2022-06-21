@@ -225,16 +225,7 @@ for metric in ['PPV_20000']:
         print(risk_group.head())
         risk_groups[model]=risk_group.PATIENT_ID.values
         
-#%%
-# m1,m2,m3,m4=risk_groups.keys()
-# disj_union=set(risk_groups[m1]).symmetric_difference(set(risk_groups[m2])).symmetric_difference(set(risk_groups[m3])).symmetric_difference(set(risk_groups[m4]))
 
-# simdif=len(disj_union)
-
-# print('The 4 risk groups identified contained...')
-# print(simdif, '(simetric difference)')
-# print(f'... patients not in common, that is, {simdif*100/20000:2.2f} %')
-# print(f'That means {20000-simdif} patients were selected by the four algorithms')
 #%%
 """ TABLE 1:  DEMOGRAPHICS"""
 # chosen_model='neuralNetworkRandom_43'
@@ -242,11 +233,6 @@ table=pd.DataFrame()
 for chosen_model in ['neuralNetworkRandom_43', logistic_model]:
     Xx=X.loc[X.PATIENT_ID.isin(risk_groups[chosen_model])]
     Yy=y.loc[y.PATIENT_ID.isin(risk_groups[chosen_model])]
-    female=Xx['FEMALE']==1
-    male=Xx['FEMALE']==0
-    allfemale=X['FEMALE']==1
-    allmale=X['FEMALE']==0
-    sex=[ 'Women','Men']
     
     comorbidities={'COPD': ['EDC_RES04'],
                     'Chronic Renal Failure': ['EDC_REN01', 'EDC_REN06'],
@@ -273,41 +259,36 @@ for chosen_model in ['neuralNetworkRandom_43', logistic_model]:
                                 'Aged 80-84',
                                 'Aged 85+']+list(comorbidities.keys()))
     comorb={}
-    for group, allgender, groupname in zip([female,male], [allfemale, allmale],sex):
-        print(groupname)
-        Xgender=X.loc[allgender]
-        ygender=y.loc[allgender]
-        Xgroup=Xx.loc[group]
-        ygroup=Yy.loc[group]
-        comorb[groupname]=[]
-        for disease, EDClist in comorbidities.items():
-            s=[Xgroup[EDC].sum() for EDC in EDClist]
-            comorb[groupname].append(f'{sum(s)} ({sum(s)*100/len(Xgroup):2.2f} %)')
-            print(disease, 'total (M+W): ',sum([Xx[EDC].sum() for EDC in EDClist]))
-        # ygroup18=y.loc[group18]
-        a1=sum(Xgroup.AGE_0004)+sum(Xgroup.AGE_0511)+sum(Xgroup.AGE_0511)
-        a2=sum(Xgroup.AGE_1834)+sum(Xgroup.AGE_3544)+sum(Xgroup.AGE_4554)+sum(Xgroup.AGE_5564)
-        a3=sum(Xgroup.AGE_6569)
-        a4=sum(Xgroup.AGE_7074)+sum(Xgroup.AGE_7579)
-        a5=sum(Xgroup.AGE_8084)
-        a85plus=len(Xgroup)-(a1+a2+a3+a4+a5)
-        truepositives=sum(np.where(ygroup.urgcms>=1,1,0))
-        allpositives=sum(np.where(ygender.urgcms>=1,1,0))
-        falsepositives=sum(np.where(ygroup.urgcms>=1,0,1)) #(ygender.PATIENT_ID.isin(ygroup.PATIENT_ID)) & (ygender)
-        # assert False
-        table1[groupname]=[f'{len(Xgroup)} ({len(Xgroup)*100/len(Xx):2.2f} %)',
-                            f'{truepositives} ({truepositives*100/len(Xgroup):2.2f} %)',
-                            f'{100-(truepositives*100/allpositives):2.2f} %',
-                            f'{100*falsepositives/len(ygroup):2.2f} %',
-                            f'{a1} ({a1*100/len(Xgroup):2.2f} %) ',
-                            f'{a2} ({a2*100/len(Xgroup):2.2f} %) ',
-                            f'{a3} ({a3*100/len(Xgroup):2.2f} %) ',
-                            f'{a4} ({a4*100/len(Xgroup):2.2f} %) ',
-                            f'{a5} ({a5*100/len(Xgroup):2.2f} %) ',
-                            f'{a85plus} ({a85plus*100/len(Xgroup):2.2f} %) ']+comorb[groupname]
-        
-        
-        
+    
+    
+    comorb=[]
+    for disease, EDClist in comorbidities.items():
+        s=[Xx[EDC].sum() for EDC in EDClist]
+        comorb.append(f'{sum(s)} ({sum(s)*100/len(Xx):2.2f} %)')
+        print(disease, 'total (M+W): ',sum([Xx[EDC].sum() for EDC in EDClist]))
+    # Yy18=y.loc[group18]
+    a1=sum(Xx.AGE_0004)+sum(Xx.AGE_0511)+sum(Xx.AGE_0511)
+    a2=sum(Xx.AGE_1834)+sum(Xx.AGE_3544)+sum(Xx.AGE_4554)+sum(Xx.AGE_5564)
+    a3=sum(Xx.AGE_6569)
+    a4=sum(Xx.AGE_7074)+sum(Xx.AGE_7579)
+    a5=sum(Xx.AGE_8084)
+    a85plus=len(Xx)-(a1+a2+a3+a4+a5)
+    truepositives=sum(np.where(Yy.urgcms>=1,1,0))
+    allpositives=sum(np.where(y.urgcms>=1,1,0))
+    falsepositives=sum(np.where(Yy.urgcms>=1,0,1)) #(y.PATIENT_ID.isin(Yy.PATIENT_ID)) & (y)
+    # assert False
+    table1[chosen_model]=[
+                        f'{truepositives} ({truepositives*100/len(Xx):2.2f} %)',
+                        
+                        f'{a1} ({a1*100/len(Xx):2.2f} %) ',
+                        f'{a2} ({a2*100/len(Xx):2.2f} %) ',
+                        f'{a3} ({a3*100/len(Xx):2.2f} %) ',
+                        f'{a4} ({a4*100/len(Xx):2.2f} %) ',
+                        f'{a5} ({a5*100/len(Xx):2.2f} %) ',
+                        f'{a85plus} ({a85plus*100/len(Xx):2.2f} %) ']+comorb
+    
+    
+    # table1=pd.DataFrame({chosen_model:table1})
     if chosen_model=='neuralNetworkRandom_43':
         table=table1
     else:
