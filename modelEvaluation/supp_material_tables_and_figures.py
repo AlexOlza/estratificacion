@@ -153,7 +153,7 @@ ROC_PR_comparison(median_models['Score'], 2018, logistic_model, mode='ROC')
 
 # for violin in (True, False):
 #     for together in (True, False):
-boxplots(allmetrics, violin=True, together=False, hue='Year')
+boxplots(allmetrics, violin=True, together=False, hue='Year',supplementary=True)
 """ BRIER BOXPLOTS """
 brier_boxplot_zoom(metrics) #violins
 brier_boxplot_zoom(metrics, False) #boxplots

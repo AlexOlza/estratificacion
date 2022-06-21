@@ -79,6 +79,7 @@ def boxplots(df, violin, together, **kwargs):
     import seaborn as sns
     order=kwargs.get('order',None)
     hue=kwargs.get('hue',None)
+    supplementary=kwargs.get('supplementary', False)
     df['AUC']=df['Score']
     labels={'randomForest':'RF',
                 'neuralNetworkRandom':'MLP','hgb':'GBDT'}
@@ -94,34 +95,42 @@ def boxplots(df, violin, together, **kwargs):
     
     # fig, ((ax1,ax2, ax3),(ax4,ax5,ax6)) = plt.subplots(2,3,figsize=(10,12), gridspec_kw={'width_ratios': [1,1,1,3]})
     
-    if together:
-        fig=plt.figure(figsize=(8.5,5.8))
-        nrow=2
-        ncol=3
-        ax1 = plt.subplot2grid((nrow,ncol),(0,0))
-        ax2 = plt.subplot2grid((nrow,ncol),(0,1))
-        ax3 = plt.subplot2grid((nrow,ncol),(1,0))
-        ax4 = plt.subplot2grid((nrow,ncol),(1,1))
-        ax5 = plt.subplot2grid((nrow,ncol),(0,2), rowspan=2, colspan=1)
-        for metric, ax in zip(['AUC', 'AP', 'Recall_20000', 'PPV_20000'],[ax1,ax2,ax3, ax4]):
-            if not violin:
-                df.boxplot(column=metric, by='Algorithm', ax=ax)
-            if violin:
-                sns.violinplot(ax=ax,x="Algorithm", y=metric, data=df,hue=hue)
+    # if together:
+    #     fig=plt.figure(figsize=(8.5,5.8))
+    #     nrow=2
+    #     ncol=3
+    #     ax1 = plt.subplot2grid((nrow,ncol),(0,0))
+    #     ax2 = plt.subplot2grid((nrow,ncol),(0,1))
+    #     ax3 = plt.subplot2grid((nrow,ncol),(1,0))
+    #     ax4 = plt.subplot2grid((nrow,ncol),(1,1))
+    #     ax5 = plt.subplot2grid((nrow,ncol),(0,2), rowspan=2, colspan=1)
+    #     for metric, ax in zip(['AUC', 'AP', 'Recall_20000', 'PPV_20000'],[ax1,ax2,ax3, ax4]):
+    #         if not violin:
+    #             df.boxplot(column=metric, by='Algorithm', ax=ax)
+    #         if violin:
+    #             sns.violinplot(ax=ax,x="Algorithm", y=metric, data=df,hue=hue)
     
-            print(parent_metrics[metric].values[0])
-            ax.axhline(y = parent_metrics[metric].values[0], linestyle = '-', label='Logistic', color='r')
-    else:
-        for metric in ['AUC', 'AP', 'Recall_20000', 'PPV_20000']:
-            fig, ax=plt.subplots()
-            if not violin:
-                df.boxplot(column=metric, by='Algorithm', ax=ax)
-            if violin:
-                sns.violinplot(ax=ax,x="Algorithm", y=metric,hue=hue, data=df)
-    
-            print(parent_metrics[metric].values[0])
-            ax.axhline(y = parent_metrics[metric].values[0], linestyle = '-', label='Logistic', color='r')
-
+    #         print(parent_metrics[metric].values[0])
+    #         ax.axhline(y = parent_metrics[metric].values[0], linestyle = '-', label='Logistic', color='r')
+    # else:
+    for metric in ['AUC', 'AP', 'Recall_20000', 'PPV_20000']:
+        fig, ax=plt.subplots()
+        if not violin:
+            df.boxplot(column=metric, by='Algorithm', ax=ax)
+        if violin:
+            sns.violinplot(ax=ax,x="Algorithm", y=metric,hue=hue, data=df)
+            
+        print(parent_metrics[metric].values[0])
+        ls='--' if supplementary else '-'
+        c=['blue', 'orange'] if supplementary else 'red'
+        if supplementary:
+            ax.axhline(y = parent_metrics.loc[parent_metrics.Year==2017][metric].values[0], 
+                       linestyle = ls, label='LR 2017', color=c[0])
+            ax.axhline(y = parent_metrics.loc[parent_metrics.Year==2018][metric].values[0], 
+                       linestyle = ls, label='LR 2018', color=c[1])
+        else:
+            ax.axhline(y = parent_metrics[metric].values[0], linestyle = ls, label='Logistic', color=c)
+        plt.legend()
     df['Before/After']='After'
     dff=df.copy()
     dff['Before/After']='Before'
