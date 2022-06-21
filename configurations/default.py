@@ -21,6 +21,11 @@ ALLHOSPITFILE='ingresos2016_2018.csv'
 ACGFILES={2016:'ing2016-2017Activos.csv',
           2017:'ing2017-2018Activos.csv',
           2018:'ing2018-2019Activos.csv'}
+""" not "active" diagnoses:
+ACGFILES={2016:'indispensable/2016.txt',
+          2017:'indispensable/2017.txt',
+          2018:'indispensable/2018.txt'}
+"""
 ACGINDPRIVFILES={2016:'ing2016-2017ActivosIndPriv.csv',
                   2017:'ing2017-2018ActivosIndPriv.csv',
                   2018:'ing2018-2019ActivosIndPriv.csv'}
