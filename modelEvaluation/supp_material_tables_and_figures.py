@@ -10,11 +10,13 @@ sys.path.append('/home/aolza/Desktop/estratificacion/')#necessary in cluster
 logistic_model='logistic20220207_122835'
 chosen_config='configurations.cluster.logistic'
 experiment='configurations.urgcms_excl_nbinj'
+
 import importlib
 importlib.invalidate_caches()
 from python_settings import settings as config
-logistic_settings=importlib.import_module(chosen_config,package='estratificacion')
+
 if not config.configured:
+    logistic_settings=importlib.import_module(chosen_config,package='estratificacion')
     config.configure(logistic_settings) # configure() receives a python module
 assert config.configured 
 import configurations.utility as util
@@ -25,7 +27,7 @@ import modelEvaluation.calibrate as cal
 import pandas as pd
 import numpy as np
 import re
-from comparative_article_plotting_functions import *
+from modelEvaluation.comparative_article_plotting_functions import *
 #%%
 
 #%%
@@ -37,6 +39,16 @@ X,y=getData(2017)
 #%%
 """ MATERIALS AND METHODS: Comments on variability assessment"""
 K=20000
+
+test_metrics=pd.read_csv(re.sub(config.EXPERIMENT, 'hyperparameter_variability_urgcms_excl_nbinj',config.PREDPATH)+'/metrics2018.csv')
+test_metrics=test_metrics.loc[test_metrics.Algorithm.isin(('logistic','hgb','randomForest','neuralNetworkRandom'))]
+test_logisticMetrics=pd.read_csv(config.PREDPATH+'/metrics2018.csv')
+test_logisticMetrics=test_logisticMetrics.loc[test_logisticMetrics.Algorithm=='logistic']
+# test_logisticMetrics.Algorithm=['logistic 2018']
+test_metrics=pd.concat([test_metrics,test_logisticMetrics])
+test_metrics['Year']=2018
+# test_logisticMetrics.Algorithm=test_logisticMetrics.Algorithm+' Test'
+
 metrics=pd.read_csv(re.sub(config.EXPERIMENT, 'hyperparameter_variability_urgcms_excl_nbinj',config.PREDPATH)+'/metrics2017.csv')
 print('Number of models per algorithm:')
 print( metrics.groupby(['Algorithm'])['Algorithm'].count() )
@@ -50,7 +62,9 @@ logisticMetrics['Algorithm']=['logistic']
 metrics=pd.concat([metrics, logisticMetrics])
 #Discard some algorithms
 metrics=metrics.loc[metrics.Algorithm.isin(('logistic','hgb','randomForest','neuralNetworkRandom'))]
+metrics['Year']=2017
 
+allmetrics=pd.concat([metrics, test_metrics])
 # Option 1: Median --- (Interquartile range)
 table2=pd.DataFrame()
 from scipy.stats import iqr
@@ -136,9 +150,10 @@ ROC_PR_comparison(median_models['AP'], 2018, logistic_model, mode='PR')
 ROC_PR_comparison(median_models['Score'], 2018, logistic_model, mode='ROC')
 
 """ BOXPLOTS """
-for violin in (True, False):
-    for together in (True, False):
-        boxplots(metrics, violin, together)
+
+# for violin in (True, False):
+#     for together in (True, False):
+boxplots(allmetrics, violin=True, together=False, hue='Year')
 """ BRIER BOXPLOTS """
 brier_boxplot_zoom(metrics) #violins
 brier_boxplot_zoom(metrics, False) #boxplots

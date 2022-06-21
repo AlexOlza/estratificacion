@@ -75,8 +75,10 @@ def ROC_PR_comparison(models, yr, logistic_model, mode='ROC', **kwargs):
     for curve in display.values():
         curve.plot(ax)
     return(display)
-def boxplots(df, violin, together):
+def boxplots(df, violin, together, **kwargs):
     import seaborn as sns
+    order=kwargs.get('order',None)
+    hue=kwargs.get('hue',None)
     df['AUC']=df['Score']
     labels={'randomForest':'RF',
                 'neuralNetworkRandom':'MLP','hgb':'GBDT'}
@@ -88,7 +90,7 @@ def boxplots(df, violin, together):
     # df['Algorithm']=[re.sub('_|[0-9]', '', model) for model in df['Model'].values]
     parent_metrics=df.copy().loc[df.Algorithm=='logistic']
     df=df.loc[df.Algorithm!='logistic']
-    df=df.replace({'Algorithm': labels})
+    df=df.replace({'Algorithm': labels},regex=True)
     
     # fig, ((ax1,ax2, ax3),(ax4,ax5,ax6)) = plt.subplots(2,3,figsize=(10,12), gridspec_kw={'width_ratios': [1,1,1,3]})
     
@@ -105,7 +107,7 @@ def boxplots(df, violin, together):
             if not violin:
                 df.boxplot(column=metric, by='Algorithm', ax=ax)
             if violin:
-                sns.violinplot(ax=ax,x="Algorithm", y=metric, data=df)
+                sns.violinplot(ax=ax,x="Algorithm", y=metric, data=df,hue=hue)
     
             print(parent_metrics[metric].values[0])
             ax.axhline(y = parent_metrics[metric].values[0], linestyle = '-', label='Logistic', color='r')
@@ -115,7 +117,7 @@ def boxplots(df, violin, together):
             if not violin:
                 df.boxplot(column=metric, by='Algorithm', ax=ax)
             if violin:
-                sns.violinplot(ax=ax,x="Algorithm", y=metric, data=df)
+                sns.violinplot(ax=ax,x="Algorithm", y=metric,hue=hue, data=df)
     
             print(parent_metrics[metric].values[0])
             ax.axhline(y = parent_metrics[metric].values[0], linestyle = '-', label='Logistic', color='r')
