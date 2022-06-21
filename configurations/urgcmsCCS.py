@@ -12,7 +12,7 @@ COLUMNS=['urgcms']
 TRACEBACK=True
 
 """PREDICTORS: They will be different for each script."""
-PREDICTORREGEX=r'PATIENT_ID|AGE|FEMALE|CCS|ONCOLOGY'
+PREDICTORREGEX=r'PATIENT_ID|AGE|FEMALE|CCS|ONCOLO'
 INDICEPRIVACION=False
 COLUMNS=['urgcms']#variable respuesta
 EXCLUDE=['nbinj']
