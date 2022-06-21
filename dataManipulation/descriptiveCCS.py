@@ -28,6 +28,8 @@ from dataManipulation.dataPreparation import getData, generateCCSData
 #%%
 
 X,y=getData(year)
+drop=[c for c in X if (('AGE' in c) or ('FEMALE' in c))]
+X.drop(drop, axis=1, inplace=True)
 #%%
 n,p={},{}
 for c in X.drop('PATIENT_ID',axis=1):
@@ -54,10 +56,10 @@ ccs=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,config.ICDTOCCSFILES['
                         dtype=str, usecols=['CCS CATEGORY', 'CCS CATEGORY DESCRIPTION'])
 ccs.drop_duplicates(inplace=True)
 #%%
-def to_df(List, ccsDF):
+def to_df(List, ccsDF, col='N'):
     keys=[re.sub('CCS','',e[0]) for e in List]
     numbers=[e[1] for e in List]
-    df=pd.DataFrame({'CCS CATEGORY': keys, 'N':numbers})
+    df=pd.DataFrame({'CCS CATEGORY': keys, col:numbers})
     df=pd.merge(df, ccsDF, how='left')
     return df
 
@@ -67,11 +69,13 @@ print(mc)
 mc.to_excel(f'most_common_CCSs_{year}.xlsx',index=False)
 
 print('MOST PREVALENT CCSs:')
-mp=to_df(most_prevalent, ccs)
+mp=to_df(most_prevalent, ccs,'Prevalence')
+mp['N']=mp['Prevalence']*len(X)
+mp.N=mp.N.astype(int)
 print(mp)
 mp.to_excel(f'most_prevalent_CCSs_{year}.xlsx',index=False)
 
 print('CHECKS')
-print( mc['CCS CATEGORY DESCRIPTION'].isnull().sum())
-print(mc.loc[mc['CCS CATEGORY']=='50'])
-print(mc.loc[mc['CCS CATEGORY']=='49'])
+print( mp['CCS CATEGORY DESCRIPTION'].isnull().sum())
+print(mp.loc[mp['CCS CATEGORY']=='50'])
+print(mp.loc[mp['CCS CATEGORY']=='49'])
