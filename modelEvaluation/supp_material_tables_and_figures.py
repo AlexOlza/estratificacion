@@ -225,12 +225,14 @@ for metric in ['PPV_20000']:
         print(risk_group.head())
         risk_groups[model]=risk_group.PATIENT_ID.values
         
-
+#%%
+risk_groups['General Population']=X.PATIENT_ID.values
 #%%
 """ TABLE 1:  DEMOGRAPHICS"""
 # chosen_model='neuralNetworkRandom_43'
 table=pd.DataFrame()
-for chosen_model in ['neuralNetworkRandom_43', logistic_model]:
+columns=['neuralNetworkRandom_43', logistic_model,'General Population']
+for chosen_model in columns:
     Xx=X.loc[X.PATIENT_ID.isin(risk_groups[chosen_model])]
     Yy=y.loc[y.PATIENT_ID.isin(risk_groups[chosen_model])]
     
@@ -251,7 +253,7 @@ for chosen_model in ['neuralNetworkRandom_43', logistic_model]:
                     'Seizure disorders': ['EDC_NUR07']
                     }
     
-    table1= pd.DataFrame(index=['N in 2017 (%)', 'Hospitalized in 2018', 'FNR', 'FPR', 
+    table1= pd.DataFrame(index=[ 'Hospitalized in 2018', 
                                 'Aged 0-17',
                                 'Aged 18-64',
                                 'Aged 65-69',
