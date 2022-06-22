@@ -154,38 +154,6 @@ ROC_PR_comparison(median_models['Score'], 2018, logistic_model, mode='ROC')
 # for violin in (True, False):
 #     for together in (True, False):
 boxplots(allmetrics, violin=True, together=False, hue='Year',supplementary=True)
-""" BRIER BOXPLOTS """
-brier_boxplot_zoom(metrics) #violins
-brier_boxplot_zoom(metrics, False) #boxplots
-#%%
-""" CALIBRATION: RELIABILITY DIAGRAMS """
-
-median_models={}
-for metric in ['Brier', 'Brier Before']:
-    mediandf=metrics.groupby(['Algorithm'])[metric].agg([ median]).stack(level=0)
-    for alg in metrics.Algorithm.unique():
-        if alg=='logistic':
-            continue
-        df_alg=metrics.loc[metrics.Algorithm==alg].to_dict(orient='list')
-        perc50=mediandf.loc[alg]['median']
-        chosen_model=list(df_alg['Model'])[list(df_alg[metric]).index(perc50)]
-        print(metrics.loc[metrics.Model==chosen_model][metric])
-        predpath=re.sub(config.EXPERIMENT,'hyperparameter_variability_'+config.EXPERIMENT,config.PREDPATH)
-        
-        try:
-            median_models[metric][model_labels([chosen_model])[0]]= cal.calibrate(chosen_model, yr,
-                                                           experiment_name='hyperparameter_variability_urgcms_excl_nbinj',
-                                                           filename=os.path.join(predpath,f'{chosen_model}_calibrated_{yr}.csv'))
-        except KeyError:
-            median_models[metric]={model_labels([chosen_model])[0]: cal.calibrate(chosen_model,yr,   experiment_name='hyperparameter_variability_urgcms_excl_nbinj',
-                                                           filename=os.path.join(predpath,f'{chosen_model}_calibrated_{yr}.csv'))}
-
-
-median_models['Brier']['LR']= cal.calibrate(logistic_model,yr)
-median_models['Brier Before']['LR']= cal.calibrate(logistic_model,yr)
-
-cal.plot(median_models['Brier'],consistency_bars=False)
-cal.plot(median_models['Brier Before'],consistency_bars=False)
 
 #%% 
 """ CHARACTERISTICS OF THE RISK GROUP """
@@ -225,11 +193,9 @@ for metric in ['PPV_20000']:
         print(risk_group.head())
         risk_groups[model]=risk_group.PATIENT_ID.values
         
-#%%
+
 risk_groups['General Population']=X.PATIENT_ID.values
 #%%
-""" TABLE 1:  DEMOGRAPHICS"""
-# chosen_model='neuralNetworkRandom_43'
 table=pd.DataFrame()
 columns=['neuralNetworkRandom_43', logistic_model,'General Population']
 for chosen_model in columns:
@@ -254,6 +220,7 @@ for chosen_model in columns:
                     }
     
     table1= pd.DataFrame(index=[ 'Hospitalized in 2018', 
+                                '% of women',
                                 'Aged 0-17',
                                 'Aged 18-64',
                                 'Aged 65-69',
@@ -281,7 +248,7 @@ for chosen_model in columns:
     # assert False
     table1[chosen_model]=[
                         f'{truepositives} ({truepositives*100/len(Xx):2.2f} %)',
-                        
+                        f'{100*Xx.FEMALE.sum()/len(Xx):2.2f} %',
                         f'{a1} ({a1*100/len(Xx):2.2f} %) ',
                         f'{a2} ({a2*100/len(Xx):2.2f} %) ',
                         f'{a3} ({a3*100/len(Xx):2.2f} %) ',
