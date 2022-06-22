@@ -75,20 +75,23 @@ def compare_cohorts(variable: str, model_name: str, X, y, preds, K=20000, **kwar
         options=X[variable].unique()
     preds_with_cohort_variable=pd.merge(preds, X[['PATIENT_ID',variable]],
                                         on='PATIENT_ID').groupby(variable)
+    metrics = {'Score': {}, f'Recall_{K}': {}, f'PPV_{K}': {},
+               'Brier': {}, 'Brier Before': {}, 'AP': {}}
     for option in options:
         group=preds_with_cohort_variable.get_group(option)
-        print(variable, option)
+        print( f'{model_name} {variable}={option}')
         obs=np.where(group.OBS >= 1, 1, 0)
-        metrics = {'Score': {}, f'Recall_{K}': {}, f'PPV_{K}': {},
-                   'Brier': {}, 'Brier Before': {}, 'AP': {}}
-        metrics['Score'][f'{model_name} {variable}={option}'] = roc_auc_score(obs, group.PREDCAL)
-        metrics[f'Recall_{K}'][f'{model_name} {variable}={option}'], metrics[f'PPV_{K}'][f'{model_name} {variable}={option}'], _, _ = performance(obs,
+        metrics['Score'][f'{model_name}{variable}={option}'] = roc_auc_score(obs, group.PREDCAL)
+        metrics[f'Recall_{K}'][f'{model_name}{variable}={option}'], metrics[f'PPV_{K}'][f'{model_name}{variable}={option}'], _, _ = performance(obs,
                                                                               group.PREDCAL, K)
-        metrics['Brier'][f'{model_name} {variable}={option}'] = brier_score_loss(obs, group.PREDCAL)
-        metrics['Brier Before'][f'{model_name} {variable}={option}'] = brier_score_loss(obs, group.PRED)
-        metrics['AP'][f'{model_name} {variable}={option}'] = average_precision_score(obs, group.PREDCAL)
-    metrics=pd.DataFrame(metrics)
-    print(metrics)
+        metrics['Brier'][f'{model_name}{variable}={option}'] = brier_score_loss(obs, group.PREDCAL)
+        metrics['Brier Before'][f'{model_name}{variable}={option}'] = brier_score_loss(obs, group.PRED)
+        metrics['AP'][f'{model_name}{variable}={option}'] = average_precision_score(obs, group.PREDCAL)
+    # score, recall, ppv, brier, brierBefore, ap = [list(array.values()) for array in list(metrics.values())]
+    # models=[list(array.values()) for array in list(metrics['Brier'].values())]
+    # metrics = pd.DataFrame(list(zip(models,selected, score, recall, ppv, brier, brierBefore, ap)),
+    #                   columns=['Model'] + list(metrics.keys()))
+    print(metrics['AP'].keys())
     return metrics
 def compare_nested(available_models, X, y, year):
     available_models = [m for m in available_models if ('nested' in m)]
@@ -107,7 +110,8 @@ def compare(selected, X, y, year,
     import traceback
     K = kwargs.get('K', 20000)
     cohorts=kwargs.get('cohorts', None)
-    cohort_metrics=pd.DataFrame()
+    cohort_metrics= {'Score': {}, f'Recall_{K}': {}, f'PPV_{K}': {},
+               'Brier': {}, 'Brier Before': {}, 'AP': {}}
     predictors = kwargs.get('predictors', {m: config.PREDICTORREGEX for m in selected})
     metrics = {'Score': {}, f'Recall_{K}': {}, f'PPV_{K}': {},
                'Brier': {}, 'Brier Before': {}, 'AP': {}}
@@ -125,13 +129,20 @@ def compare(selected, X, y, year,
             metrics['Brier'][m] = brier_score_loss(obs, probs.PREDCAL)
             metrics['Brier Before'][m] = brier_score_loss(obs, probs.PRED)
             metrics['AP'][m] = average_precision_score(obs, probs.PREDCAL)
-            cohort_metrics=pd.concat([cohort_metrics,compare_cohorts(cohorts,m, X, y, probs, K)])
+            cohort_metrics_model=compare_cohorts(cohorts,m, X, y, probs, K)
+            # print(cohort_metrics_model)
+            for k,dic in cohort_metrics_model.items():
+                # print(dic)
+                for key, value in dic.items():
+                    # print(key,value)
+                    cohort_metrics[k][key]=value
         except Exception as exc:
             print('Something went wrong for model ', m)
             print(traceback.format_exc())
             print(exc)
         if cohorts:
-            metrics=pd.concat([pd.DataFrame(metrics), pd.DataFrame(cohort_metrics)])
+            metrics=cohort_metrics
+            # metrics=pd.concat([pd.DataFrame(metrics), pd.DataFrame(cohort_metrics)])
     return (metrics)
 
 
