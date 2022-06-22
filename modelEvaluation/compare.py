@@ -87,11 +87,7 @@ def compare_cohorts(variable: str, model_name: str, X, y, preds, K=20000, **kwar
         metrics['Brier'][f'{model_name}{variable}={option}'] = brier_score_loss(obs, group.PREDCAL)
         metrics['Brier Before'][f'{model_name}{variable}={option}'] = brier_score_loss(obs, group.PRED)
         metrics['AP'][f'{model_name}{variable}={option}'] = average_precision_score(obs, group.PREDCAL)
-    # score, recall, ppv, brier, brierBefore, ap = [list(array.values()) for array in list(metrics.values())]
-    # models=[list(array.values()) for array in list(metrics['Brier'].values())]
-    # metrics = pd.DataFrame(list(zip(models,selected, score, recall, ppv, brier, brierBefore, ap)),
-    #                   columns=['Model'] + list(metrics.keys()))
-    print(metrics['AP'].keys())
+
     return metrics
 def compare_nested(available_models, X, y, year):
     available_models = [m for m in available_models if ('nested' in m)]
@@ -130,18 +126,18 @@ def compare(selected, X, y, year,
             metrics['Brier Before'][m] = brier_score_loss(obs, probs.PRED)
             metrics['AP'][m] = average_precision_score(obs, probs.PREDCAL)
             cohort_metrics_model=compare_cohorts(cohorts,m, X, y, probs, K)
-            # print(cohort_metrics_model)
+
             for k,dic in cohort_metrics_model.items():
-                # print(dic)
                 for key, value in dic.items():
-                    # print(key,value)
                     cohort_metrics[k][key]=value
         except Exception as exc:
             print('Something went wrong for model ', m)
             print(traceback.format_exc())
             print(exc)
         if cohorts:
-            metrics=cohort_metrics
+            for k,dic in cohort_metrics.items():
+                for key, value in dic.items():
+                    metrics[k][key]=value
             # metrics=pd.concat([pd.DataFrame(metrics), pd.DataFrame(cohort_metrics)])
     return (metrics)
 
@@ -311,7 +307,7 @@ if __name__ == '__main__':
     year = int(input('YEAR TO PREDICT: ')) if not hasattr(args, 'year') else args.year
     nested = eval(input('NESTED MODEL COMPARISON? (True/False) ')) if not hasattr(args, 'nested') else args.nested
     all_models = eval(input('COMPARE ALL MODELS? (True/False) ')) if not hasattr(args, 'all') else args.all
-
+    cohort_variable=input('Cohort variable:')
     available_models = detect_models()
 
     if nested:
@@ -343,7 +339,7 @@ if __name__ == '__main__':
             print(f'getData: HOSPITALIZATION DATA FOR YEAR {year-2} NOT AVAILABLE. PERFORMING INTERNAL VALIDATION.')
             pastX, pasty = X,y
         if not nested:
-            metrics = compare(selected, X, y, year, pastX=pastX, pastY=pasty)
+            metrics = compare(selected, X, y, year, pastX=pastX, pastY=pasty,cohorts=cohort_variable)
 
         if nested:
             metrics = compare_nested(available_models, X, y, year)
@@ -353,17 +349,16 @@ if __name__ == '__main__':
                                columns=['Model', 'Predictors'] + list(metrics.keys())).to_markdown(index=False))
         else:
             score, recall, ppv, brier, brierBefore, ap = [list(array.values()) for array in list(metrics.values())]
-            df = pd.DataFrame(list(zip(selected, score, recall, ppv, brier, brierBefore, ap)),
+            df = pd.DataFrame(list(zip(metrics['Score'].keys(), score, recall, ppv, brier, brierBefore, ap)),
                               columns=['Model'] + list(metrics.keys()))
             print(df.to_markdown(index=False, ))
 
         df = pd.concat([df, available_metrics], ignore_index=True, axis=0)
         df['Algorithm'] = [re.sub('_|[0-9]', '', model) for model in df['Model'].values]
 
-        df.to_csv(config.PREDPATH +  f'/metrics{year}.csv', index=False)
+        df.to_csv(config.PREDPATH +  f'/metrics{cohort_variable}{year}.csv', index=False)
 
-        algorithms = ['randomForest', 'hgb', 'neuralNetworkRandom']
-        # parent_metrics=pd.read_csv(re.sub('hyperparameter_variability_|fixsample_','',config.PREDPATH+'/metrics.csv')).to_dict('list')
-        boxplots(df.loc[df.Algorithm.isin(algorithms)], year, K=20000, X=X, y=y)
+                
+
         print(df.groupby('Algorithm').describe().transpose())
 
