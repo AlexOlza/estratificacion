@@ -13,8 +13,7 @@ Created on Tue Dec 14 16:13:19 2021
     Prompt user for consent about the selected models
     Load models
     Predict (if necessary, i.e. if config.PREDPATH+'/{0}__{1}.csv'.format(model_name,yr) is not found )
-    Save into big dataframe (not sure this is clever)
-    Calibrate (coming soon)
+    Calibrate
     Compare
 
 """
@@ -69,6 +68,10 @@ from modelEvaluation.calibrate import calibrate
 
 
 # %%
+
+def cohorts(variable: str, options: dict):
+    pass
+
 def compare_nested(available_models, X, y, year):
     available_models = [m for m in available_models if ('nested' in m)]
     available_models.sort()
