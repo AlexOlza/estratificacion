@@ -69,9 +69,24 @@ from modelEvaluation.calibrate import calibrate
 
 # %%
 
-def cohorts(variable: str, options: dict):
-    pass
-
+def compare_cohorts(variable: str, X, y, preds, K=20000, **kwargs):
+    options=kwargs.get('options',None)
+    preds_with_cohort_variable=pd.merge([preds, X[['PATIENT_ID',variable]]],
+                                        on='PATIENT_ID').groupby(variable)
+    for option in options:
+        metrics[option]={}
+        group=preds_with_cohort_variable.get_group(option)
+        print(variable, option)
+        print(group)
+        obs=np.where(group.OBS >= 1, 1, 0)
+        metrics[option]['Score'] = roc_auc_score(obs, group.PREDCAL)
+        metrics[option][f'Recall_{K}'], metrics[option][f'PPV_{K}'], _, _ = performance(obs,
+                                                                              group.PREDCAL, K)
+        metrics[option]['Brier'] = brier_score_loss(obs, group.PREDCAL)
+        metrics[option]['Brier Before'] = brier_score_loss(obs, group.PRED)
+        metrics[option]['AP'] = average_precision_score(obs, group.PREDCAL)
+    print(metrics)
+    return metrics
 def compare_nested(available_models, X, y, year):
     available_models = [m for m in available_models if ('nested' in m)]
     available_models.sort()
@@ -83,9 +98,12 @@ def compare_nested(available_models, X, y, year):
     return (metrics)
 
 
-def compare(selected, X, y, year, experiment_name=Path(config.MODELPATH).parts[-1], **kwargs):
+def compare(selected, X, y, year, 
+            experiment_name=Path(config.MODELPATH).parts[-1],
+            **kwargs):
     import traceback
     K = kwargs.get('K', 20000)
+    # cohorts=kwargs.get('cohorts', None)
     predictors = kwargs.get('predictors', {m: config.PREDICTORREGEX for m in selected})
     metrics = {'Score': {}, f'Recall_{K}': {}, f'PPV_{K}': {},
                'Brier': {}, 'Brier Before': {}, 'AP': {}}
