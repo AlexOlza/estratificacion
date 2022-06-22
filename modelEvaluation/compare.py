@@ -69,22 +69,25 @@ from modelEvaluation.calibrate import calibrate
 
 # %%
 
-def compare_cohorts(variable: str, X, y, preds, K=20000, **kwargs):
+def compare_cohorts(variable: str, model_name: str, X, y, preds, K=20000, **kwargs):
     options=kwargs.get('options',None)
-    preds_with_cohort_variable=pd.merge([preds, X[['PATIENT_ID',variable]]],
+    if not options:
+        options=X[variable].unique()
+    preds_with_cohort_variable=pd.merge(preds, X[['PATIENT_ID',variable]],
                                         on='PATIENT_ID').groupby(variable)
     for option in options:
-        metrics[option]={}
         group=preds_with_cohort_variable.get_group(option)
         print(variable, option)
-        print(group)
         obs=np.where(group.OBS >= 1, 1, 0)
-        metrics[option]['Score'] = roc_auc_score(obs, group.PREDCAL)
-        metrics[option][f'Recall_{K}'], metrics[option][f'PPV_{K}'], _, _ = performance(obs,
+        metrics = {'Score': {}, f'Recall_{K}': {}, f'PPV_{K}': {},
+                   'Brier': {}, 'Brier Before': {}, 'AP': {}}
+        metrics['Score'][f'{model_name} {variable}={option}'] = roc_auc_score(obs, group.PREDCAL)
+        metrics[f'Recall_{K}'][f'{model_name} {variable}={option}'], metrics[f'PPV_{K}'][f'{model_name} {variable}={option}'], _, _ = performance(obs,
                                                                               group.PREDCAL, K)
-        metrics[option]['Brier'] = brier_score_loss(obs, group.PREDCAL)
-        metrics[option]['Brier Before'] = brier_score_loss(obs, group.PRED)
-        metrics[option]['AP'] = average_precision_score(obs, group.PREDCAL)
+        metrics['Brier'][f'{model_name} {variable}={option}'] = brier_score_loss(obs, group.PREDCAL)
+        metrics['Brier Before'][f'{model_name} {variable}={option}'] = brier_score_loss(obs, group.PRED)
+        metrics['AP'][f'{model_name} {variable}={option}'] = average_precision_score(obs, group.PREDCAL)
+    metrics=pd.DataFrame(metrics)
     print(metrics)
     return metrics
 def compare_nested(available_models, X, y, year):
@@ -103,7 +106,8 @@ def compare(selected, X, y, year,
             **kwargs):
     import traceback
     K = kwargs.get('K', 20000)
-    # cohorts=kwargs.get('cohorts', None)
+    cohorts=kwargs.get('cohorts', None)
+    cohort_metrics=pd.DataFrame()
     predictors = kwargs.get('predictors', {m: config.PREDICTORREGEX for m in selected})
     metrics = {'Score': {}, f'Recall_{K}': {}, f'PPV_{K}': {},
                'Brier': {}, 'Brier Before': {}, 'AP': {}}
@@ -121,11 +125,13 @@ def compare(selected, X, y, year,
             metrics['Brier'][m] = brier_score_loss(obs, probs.PREDCAL)
             metrics['Brier Before'][m] = brier_score_loss(obs, probs.PRED)
             metrics['AP'][m] = average_precision_score(obs, probs.PREDCAL)
+            cohort_metrics=pd.concat([cohort_metrics,compare_cohorts(cohorts,m, X, y, probs, K)])
         except Exception as exc:
             print('Something went wrong for model ', m)
             print(traceback.format_exc())
             print(exc)
-
+        if cohorts:
+            metrics=pd.concat([pd.DataFrame(metrics), pd.DataFrame(cohort_metrics)])
     return (metrics)
 
 
