@@ -10,11 +10,13 @@ sys.path.append('/home/aolza/Desktop/estratificacion/')#necessary in cluster
 logistic_model='logistic20220207_122835'
 chosen_config='configurations.cluster.logistic'
 experiment='configurations.urgcms_excl_nbinj'
+
 import importlib
 importlib.invalidate_caches()
 from python_settings import settings as config
-logistic_settings=importlib.import_module(chosen_config,package='estratificacion')
+
 if not config.configured:
+    logistic_settings=importlib.import_module(chosen_config,package='estratificacion')
     config.configure(logistic_settings) # configure() receives a python module
 assert config.configured 
 import configurations.utility as util
@@ -25,7 +27,7 @@ import modelEvaluation.calibrate as cal
 import pandas as pd
 import numpy as np
 import re
-from comparative_article_plotting_functions import *
+from modelEvaluation.comparative_article_plotting_functions import *
 #%%
 
 #%%
@@ -37,6 +39,16 @@ X,y=getData(2017)
 #%%
 """ MATERIALS AND METHODS: Comments on variability assessment"""
 K=20000
+
+test_metrics=pd.read_csv(re.sub(config.EXPERIMENT, 'hyperparameter_variability_urgcms_excl_nbinj',config.PREDPATH)+'/metrics2018.csv')
+test_metrics=test_metrics.loc[test_metrics.Algorithm.isin(('logistic','hgb','randomForest','neuralNetworkRandom'))]
+test_logisticMetrics=pd.read_csv(config.PREDPATH+'/metrics2018.csv')
+test_logisticMetrics=test_logisticMetrics.loc[test_logisticMetrics.Algorithm=='logistic']
+# test_logisticMetrics.Algorithm=['logistic 2018']
+test_metrics=pd.concat([test_metrics,test_logisticMetrics])
+test_metrics['Year']=2018
+# test_logisticMetrics.Algorithm=test_logisticMetrics.Algorithm+' Test'
+
 metrics=pd.read_csv(re.sub(config.EXPERIMENT, 'hyperparameter_variability_urgcms_excl_nbinj',config.PREDPATH)+'/metrics2017.csv')
 print('Number of models per algorithm:')
 print( metrics.groupby(['Algorithm'])['Algorithm'].count() )
@@ -50,7 +62,9 @@ logisticMetrics['Algorithm']=['logistic']
 metrics=pd.concat([metrics, logisticMetrics])
 #Discard some algorithms
 metrics=metrics.loc[metrics.Algorithm.isin(('logistic','hgb','randomForest','neuralNetworkRandom'))]
+metrics['Year']=2017
 
+allmetrics=pd.concat([metrics, test_metrics])
 # Option 1: Median --- (Interquartile range)
 table2=pd.DataFrame()
 from scipy.stats import iqr
@@ -136,41 +150,10 @@ ROC_PR_comparison(median_models['AP'], 2018, logistic_model, mode='PR')
 ROC_PR_comparison(median_models['Score'], 2018, logistic_model, mode='ROC')
 
 """ BOXPLOTS """
-for violin in (True, False):
-    for together in (True, False):
-        boxplots(metrics, violin, together)
-""" BRIER BOXPLOTS """
-brier_boxplot_zoom(metrics) #violins
-brier_boxplot_zoom(metrics, False) #boxplots
-#%%
-""" CALIBRATION: RELIABILITY DIAGRAMS """
 
-median_models={}
-for metric in ['Brier', 'Brier Before']:
-    mediandf=metrics.groupby(['Algorithm'])[metric].agg([ median]).stack(level=0)
-    for alg in metrics.Algorithm.unique():
-        if alg=='logistic':
-            continue
-        df_alg=metrics.loc[metrics.Algorithm==alg].to_dict(orient='list')
-        perc50=mediandf.loc[alg]['median']
-        chosen_model=list(df_alg['Model'])[list(df_alg[metric]).index(perc50)]
-        print(metrics.loc[metrics.Model==chosen_model][metric])
-        predpath=re.sub(config.EXPERIMENT,'hyperparameter_variability_'+config.EXPERIMENT,config.PREDPATH)
-        
-        try:
-            median_models[metric][model_labels([chosen_model])[0]]= cal.calibrate(chosen_model, yr,
-                                                           experiment_name='hyperparameter_variability_urgcms_excl_nbinj',
-                                                           filename=os.path.join(predpath,f'{chosen_model}_calibrated_{yr}.csv'))
-        except KeyError:
-            median_models[metric]={model_labels([chosen_model])[0]: cal.calibrate(chosen_model,yr,   experiment_name='hyperparameter_variability_urgcms_excl_nbinj',
-                                                           filename=os.path.join(predpath,f'{chosen_model}_calibrated_{yr}.csv'))}
-
-
-median_models['Brier']['LR']= cal.calibrate(logistic_model,yr)
-median_models['Brier Before']['LR']= cal.calibrate(logistic_model,yr)
-
-cal.plot(median_models['Brier'],consistency_bars=False)
-cal.plot(median_models['Brier Before'],consistency_bars=False)
+# for violin in (True, False):
+#     for together in (True, False):
+boxplots(allmetrics, violin=True, together=False, hue='Year',supplementary=True)
 
 #%% 
 """ CHARACTERISTICS OF THE RISK GROUP """
@@ -210,28 +193,14 @@ for metric in ['PPV_20000']:
         print(risk_group.head())
         risk_groups[model]=risk_group.PATIENT_ID.values
         
-#%%
-# m1,m2,m3,m4=risk_groups.keys()
-# disj_union=set(risk_groups[m1]).symmetric_difference(set(risk_groups[m2])).symmetric_difference(set(risk_groups[m3])).symmetric_difference(set(risk_groups[m4]))
 
-# simdif=len(disj_union)
-
-# print('The 4 risk groups identified contained...')
-# print(simdif, '(simetric difference)')
-# print(f'... patients not in common, that is, {simdif*100/20000:2.2f} %')
-# print(f'That means {20000-simdif} patients were selected by the four algorithms')
+risk_groups['General Population']=X.PATIENT_ID.values
 #%%
-""" TABLE 1:  DEMOGRAPHICS"""
-# chosen_model='neuralNetworkRandom_43'
 table=pd.DataFrame()
-for chosen_model in ['neuralNetworkRandom_43', logistic_model]:
+columns=['neuralNetworkRandom_43', logistic_model,'General Population']
+for chosen_model in columns:
     Xx=X.loc[X.PATIENT_ID.isin(risk_groups[chosen_model])]
     Yy=y.loc[y.PATIENT_ID.isin(risk_groups[chosen_model])]
-    female=Xx['FEMALE']==1
-    male=Xx['FEMALE']==0
-    allfemale=X['FEMALE']==1
-    allmale=X['FEMALE']==0
-    sex=[ 'Women','Men']
     
     comorbidities={'COPD': ['EDC_RES04'],
                     'Chronic Renal Failure': ['EDC_REN01', 'EDC_REN06'],
@@ -250,7 +219,8 @@ for chosen_model in ['neuralNetworkRandom_43', logistic_model]:
                     'Seizure disorders': ['EDC_NUR07']
                     }
     
-    table1= pd.DataFrame(index=['N in 2017 (%)', 'Hospitalized in 2018', 'FNR', 'FPR', 
+    table1= pd.DataFrame(index=[ 'Hospitalized in 2018', 
+                                '% of women',
                                 'Aged 0-17',
                                 'Aged 18-64',
                                 'Aged 65-69',
@@ -258,41 +228,36 @@ for chosen_model in ['neuralNetworkRandom_43', logistic_model]:
                                 'Aged 80-84',
                                 'Aged 85+']+list(comorbidities.keys()))
     comorb={}
-    for group, allgender, groupname in zip([female,male], [allfemale, allmale],sex):
-        print(groupname)
-        Xgender=X.loc[allgender]
-        ygender=y.loc[allgender]
-        Xgroup=Xx.loc[group]
-        ygroup=Yy.loc[group]
-        comorb[groupname]=[]
-        for disease, EDClist in comorbidities.items():
-            s=[Xgroup[EDC].sum() for EDC in EDClist]
-            comorb[groupname].append(f'{sum(s)} ({sum(s)*100/len(Xgroup):2.2f} %)')
-            print(disease, 'total (M+W): ',sum([Xx[EDC].sum() for EDC in EDClist]))
-        # ygroup18=y.loc[group18]
-        a1=sum(Xgroup.AGE_0004)+sum(Xgroup.AGE_0511)+sum(Xgroup.AGE_0511)
-        a2=sum(Xgroup.AGE_1834)+sum(Xgroup.AGE_3544)+sum(Xgroup.AGE_4554)+sum(Xgroup.AGE_5564)
-        a3=sum(Xgroup.AGE_6569)
-        a4=sum(Xgroup.AGE_7074)+sum(Xgroup.AGE_7579)
-        a5=sum(Xgroup.AGE_8084)
-        a85plus=len(Xgroup)-(a1+a2+a3+a4+a5)
-        truepositives=sum(np.where(ygroup.urgcms>=1,1,0))
-        allpositives=sum(np.where(ygender.urgcms>=1,1,0))
-        falsepositives=sum(np.where(ygroup.urgcms>=1,0,1)) #(ygender.PATIENT_ID.isin(ygroup.PATIENT_ID)) & (ygender)
-        # assert False
-        table1[groupname]=[f'{len(Xgroup)} ({len(Xgroup)*100/len(Xx):2.2f} %)',
-                            f'{truepositives} ({truepositives*100/len(Xgroup):2.2f} %)',
-                            f'{100-(truepositives*100/allpositives):2.2f} %',
-                            f'{100*falsepositives/len(ygroup):2.2f} %',
-                            f'{a1} ({a1*100/len(Xgroup):2.2f} %) ',
-                            f'{a2} ({a2*100/len(Xgroup):2.2f} %) ',
-                            f'{a3} ({a3*100/len(Xgroup):2.2f} %) ',
-                            f'{a4} ({a4*100/len(Xgroup):2.2f} %) ',
-                            f'{a5} ({a5*100/len(Xgroup):2.2f} %) ',
-                            f'{a85plus} ({a85plus*100/len(Xgroup):2.2f} %) ']+comorb[groupname]
-        
-        
-        
+    
+    
+    comorb=[]
+    for disease, EDClist in comorbidities.items():
+        s=[Xx[EDC].sum() for EDC in EDClist]
+        comorb.append(f'{sum(s)} ({sum(s)*100/len(Xx):2.2f} %)')
+        print(disease, 'total (M+W): ',sum([Xx[EDC].sum() for EDC in EDClist]))
+    # Yy18=y.loc[group18]
+    a1=sum(Xx.AGE_0004)+sum(Xx.AGE_0511)+sum(Xx.AGE_0511)
+    a2=sum(Xx.AGE_1834)+sum(Xx.AGE_3544)+sum(Xx.AGE_4554)+sum(Xx.AGE_5564)
+    a3=sum(Xx.AGE_6569)
+    a4=sum(Xx.AGE_7074)+sum(Xx.AGE_7579)
+    a5=sum(Xx.AGE_8084)
+    a85plus=len(Xx)-(a1+a2+a3+a4+a5)
+    truepositives=sum(np.where(Yy.urgcms>=1,1,0))
+    allpositives=sum(np.where(y.urgcms>=1,1,0))
+    falsepositives=sum(np.where(Yy.urgcms>=1,0,1)) #(y.PATIENT_ID.isin(Yy.PATIENT_ID)) & (y)
+    # assert False
+    table1[chosen_model]=[
+                        f'{truepositives} ({truepositives*100/len(Xx):2.2f} %)',
+                        f'{100*Xx.FEMALE.sum()/len(Xx):2.2f} %',
+                        f'{a1} ({a1*100/len(Xx):2.2f} %) ',
+                        f'{a2} ({a2*100/len(Xx):2.2f} %) ',
+                        f'{a3} ({a3*100/len(Xx):2.2f} %) ',
+                        f'{a4} ({a4*100/len(Xx):2.2f} %) ',
+                        f'{a5} ({a5*100/len(Xx):2.2f} %) ',
+                        f'{a85plus} ({a85plus*100/len(Xx):2.2f} %) ']+comorb
+    
+    
+    # table1=pd.DataFrame({chosen_model:table1})
     if chosen_model=='neuralNetworkRandom_43':
         table=table1
     else:
