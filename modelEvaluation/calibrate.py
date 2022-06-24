@@ -47,7 +47,8 @@ def sample(data,uncal):
     idx.append(np.argmax(uncal))
     return(idx,unique)
 
-def calibrate(model_name,yr,**kwargs):
+def calibrate(model_name,yr, compressed=True,**kwargs):
+    import zipfile
     try:
         filename=kwargs.get('filename',None)
         experiment_name=kwargs.get('experiment_name',config.EXPERIMENT)
@@ -57,7 +58,17 @@ def calibrate(model_name,yr,**kwargs):
         else:
             calibFilename=generate_filename(model_name,yr, calibrated=True)
             uncalFilename=generate_filename(model_name,yr, calibrated=False)
-        if Path(calibFilename).is_file():
+        if zipfile.is_zipfile(str(Path(calibFilename).parent)+'.zip') and compressed:
+            
+            util.vprint('Calibrated predictions found; loading')
+            zipf=zipfile.ZipFile(str(Path(calibFilename).parent)+'.zip')
+            try:
+                p_calibrated=pd.read_csv(zipf.open(calibFilename.split('/')[-1])) 
+            except KeyError:
+                f=os.path.join(calibFilename.split('/')[-2]+'/'+calibFilename.split('/')[-1])
+                p_calibrated=pd.read_csv(zipf.open(f)) 
+            return(p_calibrated)
+        elif Path(calibFilename).is_file() and not compressed:
             util.vprint('Calibrated predictions found; loading')
             p_calibrated=pd.read_csv(calibFilename)
             return(p_calibrated)
