@@ -68,7 +68,7 @@ def calibrate(model_name,yr, compressed=True,**kwargs):
                 f=os.path.join(calibFilename.split('/')[-2]+'/'+calibFilename.split('/')[-1])
                 p_calibrated=pd.read_csv(zipf.open(f)) 
             return(p_calibrated)
-        elif Path(calibFilename).is_file() and not compressed:
+        elif Path(calibFilename).is_file():
             util.vprint('Calibrated predictions found; loading')
             p_calibrated=pd.read_csv(calibFilename)
             return(p_calibrated)
