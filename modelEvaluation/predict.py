@@ -15,6 +15,8 @@ import numpy as np
 import csv
 import pandas as pd
 from tensorflow import keras
+import zipfile
+
 #%%
 msg='Full path to configuration json file'
 import argparse
@@ -123,7 +125,8 @@ def predict(model_name,experiment_name,year,**kwargs):
         
     if Path(calibFilename).is_file():
         print('Calibrated predictions found; loading')
-        probs=pd.read_csv(calibFilename) 
+        zipf=zipfile.ZipFile(str(Path(calibFilename).parent)+'.zip')
+        probs=pd.read_csv(zipf.open(calibFilename.split('/')[-1])) 
         probs=probs[['PATIENT_ID', 'PRED', 'OBS']]
     else:
         probs=pd.read_csv(predFilename) 
