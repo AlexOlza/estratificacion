@@ -20,7 +20,7 @@ if not config.configured:
     config_used=os.path.join(os.environ['USEDCONFIG_PATH'],input('Experiment...'),input('Model...')+'.json')
     configuration=util.configure(config_used)
 
-from modelEvaluation.predict import predict, generate_filename
+from modelEvaluation.predict import predict, generate_filename, to_zip
 from modelEvaluation.detect import detect_models, detect_latest
 from dataManipulation.dataPreparation import getData
 from modelEvaluation.reliableDiagram import reliabilityConsistency
@@ -58,19 +58,39 @@ def calibrate(model_name,yr, compressed=True,**kwargs):
         else:
             calibFilename=generate_filename(model_name,yr, calibrated=True)
             uncalFilename=generate_filename(model_name,yr, calibrated=False)
-        if zipfile.is_zipfile(str(Path(calibFilename).parent)+'.zip') and compressed:
-            
-            util.vprint('Calibrated predictions found; loading')
-            zipf=zipfile.ZipFile(str(Path(calibFilename).parent)+'.zip')
-            try:
-                p_calibrated=pd.read_csv(zipf.open(calibFilename.split('/')[-1])) 
-            except KeyError:
-                f=os.path.join(calibFilename.split('/')[-2]+'/'+calibFilename.split('/')[-1])
-                p_calibrated=pd.read_csv(zipf.open(f)) 
-            return(p_calibrated)
+        #Conditions
+        calibrated_predictions_found= Path(calibFilename).is_file()
+        uncalibrated_predictions_found= Path(uncalFilename).is_file()
+        no_predictions_found=(not uncalibrated_predictions_found) and (not calibrated_predictions_found)
+        zipfilename=str(Path(calibFilename).parent)+'.zip'
+        zipfile_found=zipfile.is_zipfile(zipfilename)
+        
+        if zipfile_found:
+            zfile=zipfile.ZipFile(zipfilename,'r')
+            zipfile_contains_calibrated=os.path.basename(calibFilename) in zfile.namelist()
+            zipfile_contains_uncalibrated=os.path.basename(uncalFilename) in zfile.namelist()
+            if zipfile_contains_calibrated:
+                print('Calibrated predictions found; loading from zip')           
+                try:
+                    p_calibrated=pd.read_csv(zfile.open(calibFilename.split('/')[-1])) 
+                except KeyError:
+                    f=os.path.join(calibFilename.split('/')[-2]+'/'+calibFilename.split('/')[-1])
+                    p_calibrated=pd.read_csv(zfile.open(f)) 
+                return(p_calibrated)
+        
+        # if zipfile_found and compressed:            
+        #     util.vprint('Calibrated predictions found; loading')
+        #     zipf=zipfile.ZipFile(str(Path(calibFilename).parent)+'.zip')
+        #     try:
+        #         p_calibrated=pd.read_csv(zipf.open(calibFilename.split('/')[-1])) 
+        #     except KeyError:
+        #         f=os.path.join(calibFilename.split('/')[-2]+'/'+calibFilename.split('/')[-1])
+        #         p_calibrated=pd.read_csv(zipf.open(f)) 
+        #     return(p_calibrated)
         elif Path(calibFilename).is_file():
             util.vprint('Calibrated predictions found; loading')
             p_calibrated=pd.read_csv(calibFilename)
+            to_zip(calibFilename)
             return(p_calibrated)
         predictors=kwargs.get('predictors',config.PREDICTORREGEX)
         pastX=kwargs.get('pastX',None)

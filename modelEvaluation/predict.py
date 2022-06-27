@@ -132,6 +132,7 @@ def predict(model_name,experiment_name,year,**kwargs):
     uncalibrated_predictions_found= Path(predFilename).is_file()
     no_predictions_found=(not uncalibrated_predictions_found) and (not calibrated_predictions_found)
     zipfile_found=zipfile.is_zipfile(zipfilename)
+    print(calibrated_predictions_found,uncalibrated_predictions_found,no_predictions_found,zipfile_found)
     if zipfile_found:
         zfile=zipfile.ZipFile(zipfilename,'r')
         zipfile_contains_calibrated=os.path.basename(calibFilename) in zfile.namelist()
@@ -140,26 +141,40 @@ def predict(model_name,experiment_name,year,**kwargs):
             print('Calibrated predictions found; loading from zip')           
             probs=pd.read_csv(zfile.open(os.path.basename(calibFilename))) 
             probs=probs[['PATIENT_ID', 'PRED', 'OBS']]
+            if 'COSTE_TOTAL_ANO2' in config.COLUMNS:
+                score=r2_score(probs.OBS, probs.PRED)
+            else:
+                score=roc_auc_score(np.where(probs.OBS>=1,1,0), probs.PRED)
+            print('score ',score) 
+            return (probs,score)
         elif zipfile_contains_uncalibrated:
             print('Uncalibrated predictions found; loading from zip')   
             probs=pd.read_csv(zfile.open(os.path.basename(predFilename))) 
+            if 'COSTE_TOTAL_ANO2' in config.COLUMNS:
+                score=r2_score(probs.OBS, probs.PRED)
+            else:
+                score=roc_auc_score(np.where(probs.OBS>=1,1,0), probs.PRED)
+            print('score ',score) 
+            return (probs,score)
         else:
             print('Zip file does not contain the wanted predictions')
 
-    else:      
-        if  no_predictions_found:
-            predict_save(year, model,model_name, Xx, Yy, 
-                         filename=filename,
-                         predictors=predictors, verbose=False)
-            
-        elif calibrated_predictions_found:
-            print('Calibrated predictions found; loading')
-            probs=pd.read_csv(calibFilename) 
-            probs=probs[['PATIENT_ID', 'PRED', 'OBS']]
-            to_zip(calibFilename)
-        elif uncalibrated_predictions_found: 
-            probs=pd.read_csv(predFilename) 
-            to_zip(predFilename)
+    
+    if  no_predictions_found:
+        print('No predictions found')
+        predict_save(year, model,model_name, Xx, Yy, 
+                     filename=filename,
+                     predictors=predictors, verbose=False)
+        
+    elif calibrated_predictions_found:
+        print('Calibrated predictions found; loading')
+        probs=pd.read_csv(calibFilename) 
+        # probs=probs[['PATIENT_ID', 'PRED', 'OBS']]
+        to_zip(calibFilename)
+    elif uncalibrated_predictions_found: 
+        print('Uncalibrated predictions found; loading')
+        probs=pd.read_csv(predFilename) 
+        to_zip(predFilename)
     if 'COSTE_TOTAL_ANO2' in config.COLUMNS:
         score=r2_score(probs.OBS, probs.PRED)
     else:

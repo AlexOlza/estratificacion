@@ -317,7 +317,7 @@ if __name__ == '__main__':
     else:
         selected = detect_latest(available_models)
 
-    if Path(config.PREDPATH +  f'/metrics{year}.csv').is_file():
+    if Path(config.METRICSPATH +  f'/metrics{year}.csv').is_file():
         available_metrics = pd.read_csv(config.PREDPATH + f'/metrics{year}.csv')
     else:
         available_metrics = pd.DataFrame.from_dict({'Model': []})
@@ -356,7 +356,7 @@ if __name__ == '__main__':
         df = pd.concat([df, available_metrics], ignore_index=True, axis=0)
         df['Algorithm'] = [re.sub('_|[0-9]', '', model) for model in df['Model'].values]
 
-        df.to_csv(config.PREDPATH +  f'/metrics{cohort_variable}{year}.csv', index=False)
+        df.to_csv(config.METRICSPATH +  f'/metrics{cohort_variable}{year}.csv', index=False)
 
                 
 
