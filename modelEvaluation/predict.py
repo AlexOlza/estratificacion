@@ -93,6 +93,8 @@ def predict_save(yr,model,model_name,X,y,**kwargs):
                 del element
 
     print('saved',filename) 
+    to_zip(filename)
+def to_zip(filename)
     zipfilename = '/'.join(filename.split('/')[:-1])+'.zip'
     mode='a' if zipfile.is_zipfile(zipfilename) else 'w'
     zfile= zipfile.ZipFile(zipfilename, mode=mode)
