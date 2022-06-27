@@ -165,8 +165,8 @@ def predict(model_name,experiment_name,year,**kwargs):
         predict_save(year, model,model_name, Xx, Yy, 
                      filename=filename,
                      predictors=predictors, verbose=False)
-        
-    elif calibrated_predictions_found:
+        uncalibrated_predictions_found=True
+    if calibrated_predictions_found:
         print('Calibrated predictions found; loading')
         probs=pd.read_csv(calibFilename) 
         # probs=probs[['PATIENT_ID', 'PRED', 'OBS']]
