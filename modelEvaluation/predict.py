@@ -93,6 +93,12 @@ def predict_save(yr,model,model_name,X,y,**kwargs):
                 del element
 
     print('saved',filename) 
+    zipfilename = '/'.join(filename.split('/')[:-1])+'.zip'
+    mode='a' if zipfile.is_zipfile(zipfilename) else 'w'
+    zfile= zipfile.ZipFile(zipfilename, mode=mode)
+    zfile.write(filename, arcname=filename.split('/')[-1])
+    zfile.close()
+    print('saved in zip ',zipfilename)
 import re
 def predict(model_name,experiment_name,year,**kwargs):
     predictors=kwargs.get('predictors',config.PREDICTORREGEX)
