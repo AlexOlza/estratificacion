@@ -15,6 +15,8 @@ import numpy as np
 import csv
 import pandas as pd
 from tensorflow import keras
+import zipfile
+
 #%%
 msg='Full path to configuration json file'
 import argparse
@@ -55,7 +57,7 @@ def predict_save(yr,model,model_name,X,y,**kwargs):
     columns=kwargs.get('columns',config.COLUMNS[0])
     verbose=kwargs.get('verbose',config.VERBOSE)
     predictors=kwargs.get('predictors',config.PREDICTORREGEX)
-    filename=kwargs.get('filename',model_name)
+    filename=kwargs.get('filename',None)
     # X=X.filter(regex=predictors)
     # print(predictors, len(X.filter(regex=predictors).columns))
     from more_itertools import sliced
@@ -64,8 +66,8 @@ def predict_save(yr,model,model_name,X,y,**kwargs):
     index_slices = sliced(range(len(X)), CHUNK_SIZE)
     i=0
     n=len(X)/CHUNK_SIZE
-    filename=generate_filename(filename,yr)
-    print('predfilename ',filename)
+    filename=generate_filename(filename,yr,calibrated=False) if not filename else filename
+
     if 'neural' in model_name:
         pred=model.predict
     else:
@@ -83,18 +85,25 @@ def predict_save(yr,model,model_name,X,y,**kwargs):
                 predictions=model.predict(chunk.drop('PATIENT_ID',axis=1)) # predicted cost
             else:
                 if 'neural' in model_name:
-                    predictions=pred(chunk.drop('PATIENT_ID',axis=1))[:,0] #Probab of hospitalization
+                    predictions=pred(chunk.drop('PATIENT_ID',axis=1))[:,0] #Probab of hospitalization (Keras)
                 else:
-                    predictions=pred(chunk.drop('PATIENT_ID',axis=1))[:,1] #Probab of hospitalization
+                    predictions=pred(chunk.drop('PATIENT_ID',axis=1))[:,1] #Probab of hospitalization (sklearn)
             for element in zip(chunk['PATIENT_ID'],ychunk['PATIENT_ID'],predictions,ychunk[columns]):
                 csv_out.writerow(element)
                 del element
 
     print('saved',filename) 
+def to_zip(filename):
+    zipfilename = '/'.join(filename.split('/')[:-1])+'.zip'
+    mode='a' if zipfile.is_zipfile(zipfilename) else 'w'
+    zfile= zipfile.ZipFile(zipfilename, mode=mode)
+    zfile.write(filename, arcname=filename.split('/')[-1])
+    zfile.close()
+    print('saved in zip ',zipfilename)
 import re
 def predict(model_name,experiment_name,year,**kwargs):
     predictors=kwargs.get('predictors',config.PREDICTORREGEX)
-    filename=kwargs.get('filename',model_name)
+    # filename=kwargs.get('filename',model_name)
     modelfilename=os.path.join(re.sub(config.EXPERIMENT,experiment_name,config.MODELPATH),model_name)
     if 'neural' in model_name:
         load=keras.models.load_model
@@ -114,20 +123,57 @@ def predict(model_name,experiment_name,year,**kwargs):
     Yy=kwargs.get('y',None)
     if (not isinstance(Xx,pd.DataFrame)) or (not isinstance(Yy,pd.DataFrame)):
         Xx,Yy=getData(year-1,predictors=predictors)
-    predFilename=generate_filename(filename,year)
-    calibFilename=generate_filename(filename,year, calibrated=True)
-    if (not Path(predFilename).is_file()) and (not Path(calibFilename).is_file()) :
+
+    predFilename=generate_filename(model_name,year)
+    calibFilename=generate_filename(model_name,year, calibrated=True)
+    zipfilename = '/'.join(predFilename.split('/')[:-1])+'.zip'
+    #Conditions
+    calibrated_predictions_found= Path(calibFilename).is_file()
+    uncalibrated_predictions_found= Path(predFilename).is_file()
+    no_predictions_found=(not uncalibrated_predictions_found) and (not calibrated_predictions_found)
+    zipfile_found=zipfile.is_zipfile(zipfilename)
+    
+    if zipfile_found:
+        zfile=zipfile.ZipFile(zipfilename,'r')
+        zipfile_contains_calibrated=os.path.basename(calibFilename) in zfile.namelist()
+        zipfile_contains_uncalibrated=os.path.basename(predFilename) in zfile.namelist()
+        if zipfile_contains_calibrated:
+            print('Calibrated predictions found; loading from zip')           
+            probs=pd.read_csv(zfile.open(os.path.basename(calibFilename))) 
+            probs=probs[['PATIENT_ID', 'PRED', 'OBS']]
+            if 'COSTE_TOTAL_ANO2' in config.COLUMNS:
+                score=r2_score(probs.OBS, probs.PRED)
+            else:
+                score=roc_auc_score(np.where(probs.OBS>=1,1,0), probs.PRED)
+            print('score ',score) 
+            return (probs,score)
+        elif zipfile_contains_uncalibrated:
+            print('Uncalibrated predictions found; loading from zip')   
+            probs=pd.read_csv(zfile.open(os.path.basename(predFilename))) 
+            if 'COSTE_TOTAL_ANO2' in config.COLUMNS:
+                score=r2_score(probs.OBS, probs.PRED)
+            else:
+                score=roc_auc_score(np.where(probs.OBS>=1,1,0), probs.PRED)
+            print('score ',score) 
+            return (probs,score)
+        else:
+            print('Zip file does not contain the wanted predictions')
+
+    
+    if  no_predictions_found:
+        print('No predictions found')
         predict_save(year, model,model_name, Xx, Yy, 
-                     filename=filename,
+                     filename=predFilename,
                      predictors=predictors, verbose=False)
-        
-    if Path(calibFilename).is_file():
+        uncalibrated_predictions_found=True
+    if calibrated_predictions_found:
         print('Calibrated predictions found; loading')
         probs=pd.read_csv(calibFilename) 
-        probs=probs[['PATIENT_ID', 'PRED', 'OBS']]
-    else:
+        # probs=probs[['PATIENT_ID', 'PRED', 'OBS']]
+        to_zip(calibFilename)
+    elif uncalibrated_predictions_found: 
+        print('Uncalibrated predictions found; loading')
         probs=pd.read_csv(predFilename) 
-        
     if 'COSTE_TOTAL_ANO2' in config.COLUMNS:
         score=r2_score(probs.OBS, probs.PRED)
     else:

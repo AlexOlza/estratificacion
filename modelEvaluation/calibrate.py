@@ -20,7 +20,7 @@ if not config.configured:
     config_used=os.path.join(os.environ['USEDCONFIG_PATH'],input('Experiment...'),input('Model...')+'.json')
     configuration=util.configure(config_used)
 
-from modelEvaluation.predict import predict, generate_filename
+from modelEvaluation.predict import predict, generate_filename, to_zip
 from modelEvaluation.detect import detect_models, detect_latest
 from dataManipulation.dataPreparation import getData
 from modelEvaluation.reliableDiagram import reliabilityConsistency
@@ -47,19 +47,42 @@ def sample(data,uncal):
     idx.append(np.argmax(uncal))
     return(idx,unique)
 
-def calibrate(model_name,yr,**kwargs):
+def calibrate(model_name,yr, **kwargs):
+    import zipfile
     try:
-        filename=kwargs.get('filename',None)
+        # filename=kwargs.get('filename',None)
         experiment_name=kwargs.get('experiment_name',config.EXPERIMENT)
-        if filename:
-            calibFilename=filename
-            uncalFilename=re.sub(filename,'calibrated','')
-        else:
-            calibFilename=generate_filename(model_name,yr, calibrated=True)
-            uncalFilename=generate_filename(model_name,yr, calibrated=False)
-        if Path(calibFilename).is_file():
+        # if filename:
+        #     calibFilename=generate_filename(filename,yr, calibrated=True)
+        #     uncalFilename=generate_filename(filename,yr, calibrated=False)
+        # else:
+        calibFilename=generate_filename(model_name,yr, calibrated=True)
+        uncalFilename=generate_filename(model_name,yr, calibrated=False)
+
+        #Conditions
+        calibrated_predictions_found= Path(calibFilename).is_file()
+        uncalibrated_predictions_found= Path(uncalFilename).is_file()
+        no_predictions_found=(not uncalibrated_predictions_found) and (not calibrated_predictions_found)
+        zipfilename=str(Path(calibFilename).parent)+'.zip'
+        zipfile_found=zipfile.is_zipfile(zipfilename)
+        
+        if zipfile_found:
+            zfile=zipfile.ZipFile(zipfilename,'r')
+            zipfile_contains_calibrated=os.path.basename(calibFilename) in zfile.namelist()
+            zipfile_contains_uncalibrated=os.path.basename(uncalFilename) in zfile.namelist()
+            if zipfile_contains_calibrated:
+                print('Calibrated predictions found; loading from zip')           
+                try:
+                    p_calibrated=pd.read_csv(zfile.open(calibFilename.split('/')[-1])) 
+                except KeyError:
+                    f=os.path.join(calibFilename.split('/')[-2]+'/'+calibFilename.split('/')[-1])
+                    p_calibrated=pd.read_csv(zfile.open(f)) 
+                return(p_calibrated)
+        
+        elif calibrated_predictions_found:
             util.vprint('Calibrated predictions found; loading')
             p_calibrated=pd.read_csv(calibFilename)
+            to_zip(calibFilename)
             return(p_calibrated)
         predictors=kwargs.get('predictors',config.PREDICTORREGEX)
         pastX=kwargs.get('pastX',None)
@@ -73,13 +96,10 @@ def calibrate(model_name,yr,**kwargs):
     
         #This reads the prediction files, or creates them if not present
         pastPred, _= predict(model_name,experiment_name,yr-1,
-                             filename=filename,
                              X=pastX, y=pastY, predictors=predictors)
         pred, _= predict(model_name,experiment_name,yr,
-                         filename=filename,
                          X=presentX, y=presentY, predictors=predictors)
-        print('----'*10)
-        print(len(pred))
+
         print('----'*10)
         pastPred.sort_values(by='PATIENT_ID',inplace=True)
         pastPred.reset_index(drop=True,inplace=True)
@@ -111,8 +131,8 @@ def calibrate(model_name,yr,**kwargs):
         assert len(pred.PREDCAL)==len(p_uncal)
         pred.to_csv(calibFilename,index=False)
         util.vprint('Saved ',calibFilename)
-        uncalFilenames=[generate_filename(filename,yr, calibrated=False),
-                       generate_filename(filename,yr-1, calibrated=False)]
+        uncalFilenames=[generate_filename(model_name,yr, calibrated=False),
+                       generate_filename(model_name,yr-1, calibrated=False)]
         for f in uncalFilenames:
             if Path(f).is_file():
                 Path(f).unlink()

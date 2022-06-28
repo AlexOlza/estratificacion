@@ -48,6 +48,7 @@ ALGORITHM='randomForest'
 CONFIGNAME='configRandomForest.py'
 PREDPATH=os.path.join(OUTPATH,EXPERIMENT)
 FIGUREPATH=os.path.join(ROOTPATH,'figures',EXPERIMENT)
+METRICSPATH=os.path.join(METRICSPATH,EXPERIMENT)
 
 TRACEBACK=False
 

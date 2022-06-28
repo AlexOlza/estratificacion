@@ -41,6 +41,8 @@ def configure(configname=None,**kwargs):
         conf=Struct(**configuration)
         conf.TRACEBACK=kwargs.get('TRACEBACK', conf.TRACEBACK)
         conf.VERBOSE=kwargs.get('VERBOSE',conf.VERBOSE)
+        if not hasattr(conf, 'METRICSPATH'):
+            conf.METRICSPATH=os.path.join(conf.ROOTPATH, 'metrics',conf.EXPERIMENT)
         if not config.configured:
             config.configure(conf) # configure() receives a python module
         if conf.TRACEBACK:

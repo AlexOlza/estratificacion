@@ -125,11 +125,12 @@ def compare(selected, X, y, year,
             metrics['Brier'][m] = brier_score_loss(obs, probs.PREDCAL)
             metrics['Brier Before'][m] = brier_score_loss(obs, probs.PRED)
             metrics['AP'][m] = average_precision_score(obs, probs.PREDCAL)
-            cohort_metrics_model=compare_cohorts(cohorts,m, X, y, probs, K)
-
-            for k,dic in cohort_metrics_model.items():
-                for key, value in dic.items():
-                    cohort_metrics[k][key]=value
+            if cohorts:
+                cohort_metrics_model=compare_cohorts(cohorts,m, X, y, probs, K)
+    
+                for k,dic in cohort_metrics_model.items():
+                    for key, value in dic.items():
+                        cohort_metrics[k][key]=value
         except Exception as exc:
             print('Something went wrong for model ', m)
             print(traceback.format_exc())
@@ -202,74 +203,6 @@ def parameter_distribution(models, **args):
         times_selected[parameter].plot(kind='bar', title=parameter, rot=0)
 
 
-def boxplots(df: object, year: object, K: object, parent_metrics: object = None, parentNeural: object = False, **kwargs: object) -> object:
-    path = kwargs.get('path', config.FIGUREPATH)
-    name = kwargs.get('name', '')
-    X = kwargs.get('X', None)
-    y = kwargs.get('y', None)
-    if not parent_metrics:  # we have to compute them
-        parent_models = [i for i in
-                         detect_models(re.sub('hyperparameter_variability_|fixsample_', '', config.MODELPATH)) if
-                         'logistic' in i]
-        logistic_model = [i for i in detect_latest(parent_models) if 'logistic2022' in i][0]
-        # logistic_predfile=re.sub('hyperparameter_variability_|fixsample_','',generate_filename(logistic_model,year, calibrated=True))
-        # logistic_predictions=pd.read_csv(logistic_predfile)
-        logistic_predictions = calibrate(logistic_model, year,
-                                         experiment_name=re.sub('hyperparameter_variability_|fixsample_', '',
-                                                                config.EXPERIMENT), presentX=X, presentY=y)
-        auc = roc_auc_score(np.where(logistic_predictions.OBS >= 1, 1, 0), logistic_predictions.PRED)
-        brier = brier_score_loss(np.where(logistic_predictions.OBS >= 1, 1, 0), logistic_predictions.PREDCAL)
-        brierBefore = brier_score_loss(np.where(logistic_predictions.OBS >= 1, 1, 0), logistic_predictions.PRED)
-        ap = average_precision_score(np.where(logistic_predictions.OBS >= 1, 1, 0), logistic_predictions.PREDCAL)
-        recall, ppv, _, _ = performance(logistic_predictions.OBS, logistic_predictions.PRED, K)
-        parent_metrics = {'Model': [logistic_model],
-                          'Score': [auc],
-                          f'Recall_{K}': [recall],
-                          f'PPV_{K}': [ppv],
-                          'AP': [ap],
-                          'Brier': [brier],
-                          'Brier Before': [brierBefore]}
-    parent_df = pd.DataFrame.from_dict(parent_metrics)
-    parent_metrics[f'F1_{K}'] = 2 * parent_df[f'Recall_{K}'] * parent_df[f'PPV_{K}'] / (
-                parent_df[f'Recall_{K}'] + parent_df[f'PPV_{K}'])
-    df[f'F1_{K}'] = 2 * df[f'Recall_{K}'] * df[f'PPV_{K}'] / (df[f'Recall_{K}'] + df[f'PPV_{K}'])
-
-    for column in ['Score', f'Recall_{K}', f'PPV_{K}', 'Brier', f'F1_{K}', 'AP', 'Brier Before']:
-        print(column)
-        fig, ax = plt.subplots(figsize=(10, 12))
-        plt.suptitle('')
-
-        df.boxplot(column=column, by='Algorithm', ax=ax)
-        for model, value in zip(parent_metrics['Model'], parent_metrics[column]):
-            if parentNeural:
-                if any(['logistic' in model, 'neural' in model]):  # exclude other algorithms
-                    plt.axhline(y=value, linestyle='-', label=model, color=next(ax._get_lines.prop_cycler)['color'])
-            else:
-                if any(['logistic' in model]):  # exclude other algorithms
-                    plt.axhline(y=value, linestyle='-', label=model, color='r')
-        plt.legend()
-        plt.savefig(os.path.join(path, f'hyperparameter_variability_{column}.png'))
-        plt.show()
-
-
-def roc_pr_curves(modelDict, yr, parent_model, **kwargs):
-    models, roc, pr = {}, {}, {}
-    # load models predictions
-    for label, model in modelDict.items():
-        print(label, model)
-        models[label] = calibrate(model, yr)
-        obs = np.where(models[label].OBS >= 1, 1, 0)
-        fpr, tpr, _ = roc_curve(obs, models[label].PREDCAL)
-        prec, rec, _ = precision_recall_curve(obs, models[label].PREDCAL)
-        roc_auc = auc(fpr, tpr)
-        avg_prec = average_precision_score(obs, models[label].PREDCAL)
-        pr[label] = PrecisionRecallDisplay(prec, rec,
-                                           estimator_name=label,
-                                           average_precision=avg_prec)
-        roc[label] = RocCurveDisplay(fpr=fpr, tpr=tpr, roc_auc=roc_auc,
-                                     estimator_name=label)
-    return (roc, pr)
-
 
 def model_percentiles(df, metric, plot, *args, **kwargs):
     def q1(x):
@@ -317,7 +250,7 @@ if __name__ == '__main__':
     else:
         selected = detect_latest(available_models)
 
-    if Path(config.PREDPATH +  f'/metrics{year}.csv').is_file():
+    if Path(config.METRICSPATH +  f'/metrics{year}.csv').is_file():
         available_metrics = pd.read_csv(config.PREDPATH + f'/metrics{year}.csv')
     else:
         available_metrics = pd.DataFrame.from_dict({'Model': []})
@@ -326,8 +259,7 @@ if __name__ == '__main__':
         print(available_metrics)
         available_metrics['Algorithm'] = [re.sub('_|[0-9]', '', model) for model in available_metrics['Model'].values]
         print(available_metrics.groupby('Algorithm').describe().transpose())
-        # parent_metrics=pd.read_csv(re.sub('hyperparameter_variability_|fixsample_','',config.PREDPATH+'/metrics.csv')).to_dict('list')
-        boxplots(available_metrics, year, K=20000)
+
         df = available_metrics
     else:
         selected = [s for s in selected if not (s in available_metrics.Model.values)]
@@ -354,9 +286,10 @@ if __name__ == '__main__':
             print(df.to_markdown(index=False, ))
 
         df = pd.concat([df, available_metrics], ignore_index=True, axis=0)
+
         df['Algorithm'] = [re.sub('_|[0-9]', '', model) for model in df['Model'].values]
 
-        df.to_csv(config.PREDPATH +  f'/metrics{cohort_variable}{year}.csv', index=False)
+        df.to_csv(config.METRICSPATH +  f'/metrics{cohort_variable}{year}.csv', index=False)
 
                 
 
