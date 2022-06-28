@@ -47,7 +47,7 @@ def sample(data,uncal):
     idx.append(np.argmax(uncal))
     return(idx,unique)
 
-def calibrate(model_name,yr, compressed=True,**kwargs):
+def calibrate(model_name,yr, **kwargs):
     import zipfile
     try:
         # filename=kwargs.get('filename',None)
@@ -58,7 +58,7 @@ def calibrate(model_name,yr, compressed=True,**kwargs):
         # else:
         calibFilename=generate_filename(model_name,yr, calibrated=True)
         uncalFilename=generate_filename(model_name,yr, calibrated=False)
-        print(model_name, calibFilename)
+
         #Conditions
         calibrated_predictions_found= Path(calibFilename).is_file()
         uncalibrated_predictions_found= Path(uncalFilename).is_file()
@@ -79,16 +79,7 @@ def calibrate(model_name,yr, compressed=True,**kwargs):
                     p_calibrated=pd.read_csv(zfile.open(f)) 
                 return(p_calibrated)
         
-        # if zipfile_found and compressed:            
-        #     util.vprint('Calibrated predictions found; loading')
-        #     zipf=zipfile.ZipFile(str(Path(calibFilename).parent)+'.zip')
-        #     try:
-        #         p_calibrated=pd.read_csv(zipf.open(calibFilename.split('/')[-1])) 
-        #     except KeyError:
-        #         f=os.path.join(calibFilename.split('/')[-2]+'/'+calibFilename.split('/')[-1])
-        #         p_calibrated=pd.read_csv(zipf.open(f)) 
-        #     return(p_calibrated)
-        elif Path(calibFilename).is_file():
+        elif calibrated_predictions_found:
             util.vprint('Calibrated predictions found; loading')
             p_calibrated=pd.read_csv(calibFilename)
             to_zip(calibFilename)
@@ -108,8 +99,7 @@ def calibrate(model_name,yr, compressed=True,**kwargs):
                              X=pastX, y=pastY, predictors=predictors)
         pred, _= predict(model_name,experiment_name,yr,
                          X=presentX, y=presentY, predictors=predictors)
-        print('----'*10)
-        print(len(pred))
+
         print('----'*10)
         pastPred.sort_values(by='PATIENT_ID',inplace=True)
         pastPred.reset_index(drop=True,inplace=True)

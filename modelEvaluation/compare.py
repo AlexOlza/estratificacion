@@ -125,11 +125,12 @@ def compare(selected, X, y, year,
             metrics['Brier'][m] = brier_score_loss(obs, probs.PREDCAL)
             metrics['Brier Before'][m] = brier_score_loss(obs, probs.PRED)
             metrics['AP'][m] = average_precision_score(obs, probs.PREDCAL)
-            cohort_metrics_model=compare_cohorts(cohorts,m, X, y, probs, K)
-
-            for k,dic in cohort_metrics_model.items():
-                for key, value in dic.items():
-                    cohort_metrics[k][key]=value
+            if cohorts:
+                cohort_metrics_model=compare_cohorts(cohorts,m, X, y, probs, K)
+    
+                for k,dic in cohort_metrics_model.items():
+                    for key, value in dic.items():
+                        cohort_metrics[k][key]=value
         except Exception as exc:
             print('Something went wrong for model ', m)
             print(traceback.format_exc())
@@ -285,6 +286,7 @@ if __name__ == '__main__':
             print(df.to_markdown(index=False, ))
 
         df = pd.concat([df, available_metrics], ignore_index=True, axis=0)
+
         df['Algorithm'] = [re.sub('_|[0-9]', '', model) for model in df['Model'].values]
 
         df.to_csv(config.METRICSPATH +  f'/metrics{cohort_variable}{year}.csv', index=False)

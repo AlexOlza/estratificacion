@@ -67,7 +67,7 @@ def predict_save(yr,model,model_name,X,y,**kwargs):
     i=0
     n=len(X)/CHUNK_SIZE
     filename=generate_filename(filename,yr,calibrated=False) if not filename else filename
-    print('predfilename ',filename)
+
     if 'neural' in model_name:
         pred=model.predict
     else:
@@ -93,7 +93,6 @@ def predict_save(yr,model,model_name,X,y,**kwargs):
                 del element
 
     print('saved',filename) 
-    to_zip(filename)
 def to_zip(filename):
     zipfilename = '/'.join(filename.split('/')[:-1])+'.zip'
     mode='a' if zipfile.is_zipfile(zipfilename) else 'w'
@@ -124,17 +123,16 @@ def predict(model_name,experiment_name,year,**kwargs):
     Yy=kwargs.get('y',None)
     if (not isinstance(Xx,pd.DataFrame)) or (not isinstance(Yy,pd.DataFrame)):
         Xx,Yy=getData(year-1,predictors=predictors)
-    print(model_name)
+
     predFilename=generate_filename(model_name,year)
     calibFilename=generate_filename(model_name,year, calibrated=True)
-    print(predFilename)
     zipfilename = '/'.join(predFilename.split('/')[:-1])+'.zip'
     #Conditions
     calibrated_predictions_found= Path(calibFilename).is_file()
     uncalibrated_predictions_found= Path(predFilename).is_file()
     no_predictions_found=(not uncalibrated_predictions_found) and (not calibrated_predictions_found)
     zipfile_found=zipfile.is_zipfile(zipfilename)
-    print(calibrated_predictions_found,uncalibrated_predictions_found,no_predictions_found,zipfile_found)
+    
     if zipfile_found:
         zfile=zipfile.ZipFile(zipfilename,'r')
         zipfile_contains_calibrated=os.path.basename(calibFilename) in zfile.namelist()
@@ -176,7 +174,6 @@ def predict(model_name,experiment_name,year,**kwargs):
     elif uncalibrated_predictions_found: 
         print('Uncalibrated predictions found; loading')
         probs=pd.read_csv(predFilename) 
-        to_zip(predFilename)
     if 'COSTE_TOTAL_ANO2' in config.COLUMNS:
         score=r2_score(probs.OBS, probs.PRED)
     else:
