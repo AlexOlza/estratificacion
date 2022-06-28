@@ -57,7 +57,7 @@ def predict_save(yr,model,model_name,X,y,**kwargs):
     columns=kwargs.get('columns',config.COLUMNS[0])
     verbose=kwargs.get('verbose',config.VERBOSE)
     predictors=kwargs.get('predictors',config.PREDICTORREGEX)
-    filename=kwargs.get('filename',model_name)
+    filename=kwargs.get('filename',None)
     # X=X.filter(regex=predictors)
     # print(predictors, len(X.filter(regex=predictors).columns))
     from more_itertools import sliced
@@ -66,7 +66,7 @@ def predict_save(yr,model,model_name,X,y,**kwargs):
     index_slices = sliced(range(len(X)), CHUNK_SIZE)
     i=0
     n=len(X)/CHUNK_SIZE
-    filename=generate_filename(filename,yr)
+    filename=generate_filename(filename,yr,calibrated=False) if not filename else filename
     print('predfilename ',filename)
     if 'neural' in model_name:
         pred=model.predict
@@ -104,7 +104,7 @@ def to_zip(filename):
 import re
 def predict(model_name,experiment_name,year,**kwargs):
     predictors=kwargs.get('predictors',config.PREDICTORREGEX)
-    filename=kwargs.get('filename',model_name)
+    # filename=kwargs.get('filename',model_name)
     modelfilename=os.path.join(re.sub(config.EXPERIMENT,experiment_name,config.MODELPATH),model_name)
     if 'neural' in model_name:
         load=keras.models.load_model
@@ -124,8 +124,10 @@ def predict(model_name,experiment_name,year,**kwargs):
     Yy=kwargs.get('y',None)
     if (not isinstance(Xx,pd.DataFrame)) or (not isinstance(Yy,pd.DataFrame)):
         Xx,Yy=getData(year-1,predictors=predictors)
-    predFilename=generate_filename(filename,year)
-    calibFilename=generate_filename(filename,year, calibrated=True)
+    print(model_name)
+    predFilename=generate_filename(model_name,year)
+    calibFilename=generate_filename(model_name,year, calibrated=True)
+    print(predFilename)
     zipfilename = '/'.join(predFilename.split('/')[:-1])+'.zip'
     #Conditions
     calibrated_predictions_found= Path(calibFilename).is_file()
@@ -163,7 +165,7 @@ def predict(model_name,experiment_name,year,**kwargs):
     if  no_predictions_found:
         print('No predictions found')
         predict_save(year, model,model_name, Xx, Yy, 
-                     filename=filename,
+                     filename=predFilename,
                      predictors=predictors, verbose=False)
         uncalibrated_predictions_found=True
     if calibrated_predictions_found:
