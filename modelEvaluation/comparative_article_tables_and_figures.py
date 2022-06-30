@@ -136,10 +136,12 @@ def use_f_3(x):
 def use_E(x):
     return "%.2e" % x
 # Option 2: Subtables with descriptive
-for metric in [ 'Score', 'Recall_20000', 'PPV_20000', 'Brier','AP']:
-    table2=metrics.groupby(['Algorithm'])[metric].describe()[['25%','50%', '75%','std']].sort_values('50%', ascending=[not higher_better[metric]])
-    print(table2.to_latex(formatters=[ use_f_3, use_f_3, use_f_3, use_E]))
-    print('\n'*2)
+table2=pd.DataFrame()
+for metric in [ 'Score','AP', 'Recall_20000', 'PPV_20000', 'Brier']:
+    table=metrics.groupby(['Algorithm'])[metric].describe()[['25%','50%', '75%','std']].sort_values('50%', ascending=[not higher_better[metric]])
+    table2=pd.concat([table2,table])
+print(table2.to_latex(formatters=[ use_f_3, use_f_3, use_f_3, use_E]))
+print('\n'*2)
 
 def median(x):
     return x.quantile(0.5,interpolation='nearest')
