@@ -104,12 +104,12 @@ print('Prevalence of admission in 2018:',sum(np.where(y.urgcms>=1,1,0))/len(X))
 #%%
 """ MATERIALS AND METHODS: Comments on variability assessment"""
 K=20000
-metrics=pd.read_csv(re.sub(config.EXPERIMENT, 'hyperparameter_variability_urgcms_excl_nbinj',config.PREDPATH)+'/metrics2018.csv')
+metrics=pd.read_csv(re.sub(config.EXPERIMENT, 'hyperparameter_variability_urgcms_excl_nbinj',config.METRICSPATH)+'/metrics2018.csv')
 print('Number of models per algorithm:')
 print( metrics.groupby(['Algorithm'])['Algorithm'].count() )
 
 """ RESULTS. TABLE 2 """
-logisticMetrics=pd.read_csv(config.PREDPATH+'/metrics2018.csv')
+logisticMetrics=pd.read_csv(config.METRICSPATH+'/metrics2018.csv')
 logisticMetrics=logisticMetrics.loc[logisticMetrics.Model.str.startswith('logistic2022')]
 logisticMetrics[f'F1_{K}']=2*logisticMetrics[f'Recall_{K}']*logisticMetrics[f'PPV_{K}']/(logisticMetrics[f'Recall_{K}']+logisticMetrics[f'PPV_{K}'])
 logisticMetrics['Algorithm']=['logistic']
@@ -138,7 +138,7 @@ def use_E(x):
 # Option 2: Subtables with descriptive
 for metric in [ 'Score', 'Recall_20000', 'PPV_20000', 'Brier','AP']:
     table2=metrics.groupby(['Algorithm'])[metric].describe()[['25%','50%', '75%','std']].sort_values('50%', ascending=[not higher_better[metric]])
-    print(table2.style.to_latex(formatters=[ use_f_3, use_f_3, use_f_3, use_E]))
+    print(table2.to_latex(formatters=[ use_f_3, use_f_3, use_f_3, use_E]))
     print('\n'*2)
 
 def median(x):
