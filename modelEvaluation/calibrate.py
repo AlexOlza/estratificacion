@@ -97,9 +97,11 @@ def calibrate(model_name,yr, **kwargs):
     
         #This reads the prediction files, or creates them if not present
         pastPred, _= predict(model_name,experiment_name,yr-1,
-                             X=pastX, y=pastY, predictors=predictors)
+                             X=pastX, y=pastY, predictors=predictors,
+                             filename=filename)
         pred, _= predict(model_name,experiment_name,yr,
-                         X=presentX, y=presentY, predictors=predictors)
+                         X=presentX, y=presentY, predictors=predictors,
+                         filename=filename)
 
         print('----'*10)
         pastPred.sort_values(by='PATIENT_ID',inplace=True)
