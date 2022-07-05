@@ -50,15 +50,16 @@ def sample(data,uncal):
 def calibrate(model_name,yr, **kwargs):
     import zipfile
     try:
-        # filename=kwargs.get('filename',None)
+        filename=kwargs.get('filename',None)
         experiment_name=kwargs.get('experiment_name',config.EXPERIMENT)
-        # if filename:
-        #     calibFilename=generate_filename(filename,yr, calibrated=True)
-        #     uncalFilename=generate_filename(filename,yr, calibrated=False)
-        # else:
-        calibFilename=generate_filename(model_name,yr, calibrated=True)
-        uncalFilename=generate_filename(model_name,yr, calibrated=False)
-
+        if filename:
+            calibFilename=generate_filename(filename,yr, calibrated=True)
+            uncalFilename=generate_filename(filename,yr, calibrated=False)
+        else:
+            calibFilename=generate_filename(model_name,yr, calibrated=True)
+            uncalFilename=generate_filename(model_name,yr, calibrated=False)
+        print('CALIBFILENAME ',calibFilename)
+        
         #Conditions
         calibrated_predictions_found= Path(calibFilename).is_file()
         uncalibrated_predictions_found= Path(uncalFilename).is_file()

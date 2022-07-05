@@ -130,8 +130,8 @@ for i, group, groupname in zip([1,0],[female,male],sex):
     joint_preds=joint_cal[groupname].PRED
     separate_preds=separate_cal[groupname].PRED
 
-    assert all(inter_cal[groupname].OBS==joint_cal[groupname].OBS)
-    assert all(separate_cal[groupname].OBS==joint_cal[groupname].OBS)
+    # assert all(inter_cal[groupname].OBS==joint_cal[groupname].OBS)
+    # assert all(separate_cal[groupname].OBS==joint_cal[groupname].OBS)
     
     obs=np.where(inter_cal[groupname].OBS>=1,1,0)
     axhist.hist(separate_preds,bins=1000,label=groupname)
