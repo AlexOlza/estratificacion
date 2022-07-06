@@ -71,7 +71,7 @@ male=X['FEMALE']==0
 sex=['Mujeres', 'Hombres']
 #%%
 import joblib as job
-separate_cal,joint_cal,inter_cal={},{},{}
+separate_cal,joint_cal,balanced_cal={},{},{}
 roc,roc_joint,roc_inter={k:{} for k in sex},{k:{} for k in sex},{k:{} for k in sex}
 pr, pr_joint, pr_inter={k:{} for k in sex}, {k:{} for k in sex}, {k:{} for k in sex} #precision-recall curves
 PRECISION, RECALL, THRESHOLDS={k:{} for k in sex}, {k:{} for k in sex}, {k:{} for k in sex}
@@ -84,13 +84,13 @@ fighist, (axhist,axhist2) = plt.subplots(1,2)
 
 for i, group, groupname in zip([1,0],[female,male],sex):
     recall,ppv,spec, score, ap={},{},{},{},{}
-    selected=[l for l in available_models if ((groupname in l ) or (bool(re.match('logistic\d+|logisticSexInteraction',l))))]
+    selected=[l for l in available_models if ((groupname in l ) or (bool(re.match('logistic\d+|logistic_gender_balanced',l))))]
     print('Selected models: ',selected)
     # LOAD MODELS
-    globalmodelname=list(set(selected)-set([f'logistic{groupname}'])-set(['logisticSexInteraction']))[0]
+    globalmodelname=list(set(selected)-set([f'logistic{groupname}'])-set(['logistic_gender_balanced']))[0]
     separatemodelname=f'logistic{groupname}.joblib'
     globalmodel=job.load(config.MODELPATH+globalmodelname+'.joblib')
-    interactionmodel=job.load(config.MODELPATH+'logisticSexInteraction.joblib')
+    interactionmodel=job.load(config.MODELPATH+'logistic_gender_balanced.joblib')
     separatemodel=job.load(config.MODELPATH+separatemodelname)
     
     # SUBSET DATA
@@ -109,6 +109,7 @@ for i, group, groupname in zip([1,0],[female,male],sex):
 
     # PREDICT
     separate_cal[groupname]=cal.calibrate(f'logistic{groupname}',year,
+                              filename=f'logistic{groupname}',
                               predictors=[p for p in predictors if not p=='FEMALE'],
                               presentX=Xgroup[predictors].drop('FEMALE', axis=1),
                               presentY=ygroup,
@@ -120,25 +121,27 @@ for i, group, groupname in zip([1,0],[female,male],sex):
                               predictors=predictors,
                               presentX=Xgroup[predictors], presentY=ygroup,
                               pastX=pastXgroup[predictors], pastY=pastygroup)
-    inter_cal[groupname]=cal.calibrate('logisticSexInteraction',year,
-                              filename=f'logisticSexInteraction_{groupname}',
-                              presentX=Xgroup, presentY=ygroup,
-                              pastX=pastXgroup[pastXgroup.columns],
+    balanced_cal[groupname]=cal.calibrate('logistic_gender_balanced',year,
+                              filename=f'logistic_gender_balanced_{groupname}',
+                              presentX=Xgroup[predictors], presentY=ygroup,
+                              pastX=pastXgroup[predictors],
                               pastY=pastygroup,
-                              predictors=config.PREDICTORREGEX+'|INTsex')
-    inter_preds=inter_cal[groupname].PRED
+                              )
+    balanced_preds=balanced_cal[groupname].PRED
     joint_preds=joint_cal[groupname].PRED
     separate_preds=separate_cal[groupname].PRED
-
-    assert all(inter_cal[groupname].OBS==joint_cal[groupname].OBS)
+    
+    obs=np.where(balanced_cal[groupname].OBS>=1,1,0)
+    
+    assert all(balanced_cal[groupname].OBS==joint_cal[groupname].OBS)
     assert all(separate_cal[groupname].OBS==joint_cal[groupname].OBS)
     
-    obs=np.where(inter_cal[groupname].OBS>=1,1,0)
+    
     axhist.hist(separate_preds,bins=1000,label=groupname)
     axhist2.hist(joint_preds,bins=1000,label=groupname)
     
     # METRICS
-    for model, preds in zip(models,[joint_preds, separate_preds, inter_preds]):
+    for model, preds in zip(models,[joint_preds, separate_preds, balanced_preds]):
         prec, rec, thre = precision_recall_curve(obs, preds)
         fpr, tpr, rocthresholds = roc_curve(obs, preds)
         FPR[groupname][model]=fpr
@@ -151,7 +154,7 @@ for i, group, groupname in zip([1,0],[female,male],sex):
         roc[groupname][model]=plot_roc(fpr, tpr, groupname)
         pr[groupname][model]=plot_pr(prec,rec, groupname, obs, preds)
 
-        recallK,ppvK, specK, _=performance(preds, obs, K)
+        recallK,ppvK, specK, _=performance(obs, preds, K)
         rocauc=roc_auc_score(obs, preds)
         avg_prec = average_precision_score(obs, preds)
         recall[model]=recallK
@@ -204,7 +207,7 @@ for i,model in enumerate(models):
     print('ANd for men: ',table.PPV_20000.iloc[i])
     
 # %% CALIBRATION CURVES
-for title, preds in zip(['Global', 'Separado', 'Interaccion'], [joint_cal, separate_cal, inter_cal]):
+for title, preds in zip(['Global', 'Separado', 'Interaccion'], [joint_cal, separate_cal, balanced_cal]):
     cal.plot(preds,filename=title)
 
 #%% 

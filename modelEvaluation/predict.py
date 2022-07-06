@@ -103,7 +103,7 @@ def to_zip(filename):
 import re
 def predict(model_name,experiment_name,year,**kwargs):
     predictors=kwargs.get('predictors',config.PREDICTORREGEX)
-    # filename=kwargs.get('filename',model_name)
+    filename=kwargs.get('filename',model_name)
     modelfilename=os.path.join(re.sub(config.EXPERIMENT,experiment_name,config.MODELPATH),model_name)
     if 'neural' in model_name:
         load=keras.models.load_model
@@ -124,8 +124,8 @@ def predict(model_name,experiment_name,year,**kwargs):
     if (not isinstance(Xx,pd.DataFrame)) or (not isinstance(Yy,pd.DataFrame)):
         Xx,Yy=getData(year-1,predictors=predictors)
 
-    predFilename=generate_filename(model_name,year)
-    calibFilename=generate_filename(model_name,year, calibrated=True)
+    predFilename=generate_filename(filename,year)
+    calibFilename=generate_filename(filename,year, calibrated=True)
     zipfilename = '/'.join(predFilename.split('/')[:-1])+'.zip'
     #Conditions
     calibrated_predictions_found= Path(calibFilename).is_file()
