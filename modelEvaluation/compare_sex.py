@@ -71,7 +71,7 @@ male=X['FEMALE']==0
 sex=['Mujeres', 'Hombres']
 #%%
 import joblib as job
-separate_cal,joint_cal,inter_cal={},{},{}
+separate_cal,joint_cal,balanced_cal={},{},{}
 roc,roc_joint,roc_inter={k:{} for k in sex},{k:{} for k in sex},{k:{} for k in sex}
 pr, pr_joint, pr_inter={k:{} for k in sex}, {k:{} for k in sex}, {k:{} for k in sex} #precision-recall curves
 PRECISION, RECALL, THRESHOLDS={k:{} for k in sex}, {k:{} for k in sex}, {k:{} for k in sex}
@@ -121,21 +121,19 @@ for i, group, groupname in zip([1,0],[female,male],sex):
                               predictors=predictors,
                               presentX=Xgroup[predictors], presentY=ygroup,
                               pastX=pastXgroup[predictors], pastY=pastygroup)
-    inter_cal[groupname]=cal.calibrate('logistic_gender_balanced',year,
+    balanced_cal[groupname]=cal.calibrate('logistic_gender_balanced',year,
                               filename=f'logistic_gender_balanced_{groupname}',
                               presentX=Xgroup[predictors], presentY=ygroup,
                               pastX=pastXgroup[predictors],
                               pastY=pastygroup,
                               )
-    inter_preds=inter_cal[groupname].PRED
+    balanced_preds=balanced_cal[groupname].PRED
     joint_preds=joint_cal[groupname].PRED
     separate_preds=separate_cal[groupname].PRED
     
-    inter_obs=np.where(inter_cal[groupname].OBS>=1,1,0)
-    joint_obs=np.where(joint_cal[groupname].OBS>=1,1,0)
-    separate_obs=np.where(separate_cal[groupname].OBS>=1,1,0)
-
-    assert all(inter_cal[groupname].OBS==joint_cal[groupname].OBS)
+    obs=np.where(balanced_cal[groupname].OBS>=1,1,0)
+    
+    assert all(balanced_cal[groupname].OBS==joint_cal[groupname].OBS)
     assert all(separate_cal[groupname].OBS==joint_cal[groupname].OBS)
     
     
@@ -143,8 +141,7 @@ for i, group, groupname in zip([1,0],[female,male],sex):
     axhist2.hist(joint_preds,bins=1000,label=groupname)
     
     # METRICS
-    for model, preds, obs in zip(models,[joint_preds, separate_preds, inter_preds],
-                            [joint_obs, separate_obs, inter_obs]):
+    for model, preds in zip(models,[joint_preds, separate_preds, balanced_preds]):
         prec, rec, thre = precision_recall_curve(obs, preds)
         fpr, tpr, rocthresholds = roc_curve(obs, preds)
         FPR[groupname][model]=fpr
@@ -210,7 +207,7 @@ for i,model in enumerate(models):
     print('ANd for men: ',table.PPV_20000.iloc[i])
     
 # %% CALIBRATION CURVES
-for title, preds in zip(['Global', 'Separado', 'Interaccion'], [joint_cal, separate_cal, inter_cal]):
+for title, preds in zip(['Global', 'Separado', 'Interaccion'], [joint_cal, separate_cal, balanced_cal]):
     cal.plot(preds,filename=title)
 
 #%% 
