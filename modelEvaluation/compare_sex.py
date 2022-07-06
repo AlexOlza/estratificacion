@@ -109,6 +109,7 @@ for i, group, groupname in zip([1,0],[female,male],sex):
 
     # PREDICT
     separate_cal[groupname]=cal.calibrate(f'logistic{groupname}',year,
+                              filename=f'logistic{groupname}',
                               predictors=[p for p in predictors if not p=='FEMALE'],
                               presentX=Xgroup[predictors].drop('FEMALE', axis=1),
                               presentY=ygroup,
@@ -129,16 +130,21 @@ for i, group, groupname in zip([1,0],[female,male],sex):
     inter_preds=inter_cal[groupname].PRED
     joint_preds=joint_cal[groupname].PRED
     separate_preds=separate_cal[groupname].PRED
-
-    assert all(inter_cal[groupname].OBS==joint_cal[groupname].OBS)
-    assert all(separate_cal[groupname].OBS==joint_cal[groupname].OBS)
     
-    obs=np.where(inter_cal[groupname].OBS>=1,1,0)
+    inter_obs=np.where(inter_cal[groupname].OBS>=1,1,0)
+    joint_obs=np.where(joint_cal[groupname].OBS>=1,1,0)
+    separate_obs=np.where(separate_cal[groupname].OBS>=1,1,0)
+
+    # assert all(inter_cal[groupname].OBS==joint_cal[groupname].OBS)
+    # assert all(separate_cal[groupname].OBS==joint_cal[groupname].OBS)
+    
+    
     axhist.hist(separate_preds,bins=1000,label=groupname)
     axhist2.hist(joint_preds,bins=1000,label=groupname)
     
     # METRICS
-    for model, preds in zip(models,[joint_preds, separate_preds, inter_preds]):
+    for model, preds, obs in zip(models,[joint_preds, separate_preds, inter_preds],
+                            [joint_obs, separate_obs, inter_obs]):
         prec, rec, thre = precision_recall_curve(obs, preds)
         fpr, tpr, rocthresholds = roc_curve(obs, preds)
         FPR[groupname][model]=fpr
@@ -151,7 +157,7 @@ for i, group, groupname in zip([1,0],[female,male],sex):
         roc[groupname][model]=plot_roc(fpr, tpr, groupname)
         pr[groupname][model]=plot_pr(prec,rec, groupname, obs, preds)
 
-        recallK,ppvK, specK, _=performance(preds, obs, K)
+        recallK,ppvK, specK, _=performance(obs, preds, K)
         rocauc=roc_auc_score(obs, preds)
         avg_prec = average_precision_score(obs, preds)
         recall[model]=recallK
