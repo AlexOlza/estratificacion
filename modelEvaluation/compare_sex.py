@@ -84,13 +84,13 @@ fighist, (axhist,axhist2) = plt.subplots(1,2)
 
 for i, group, groupname in zip([1,0],[female,male],sex):
     recall,ppv,spec, score, ap={},{},{},{},{}
-    selected=[l for l in available_models if ((groupname in l ) or (bool(re.match('logistic\d+|logisticSexInteraction',l))))]
+    selected=[l for l in available_models if ((groupname in l ) or (bool(re.match('logistic\d+|logistic_gender_balanced',l))))]
     print('Selected models: ',selected)
     # LOAD MODELS
-    globalmodelname=list(set(selected)-set([f'logistic{groupname}'])-set(['logisticSexInteraction']))[0]
+    globalmodelname=list(set(selected)-set([f'logistic{groupname}'])-set(['logistic_gender_balanced']))[0]
     separatemodelname=f'logistic{groupname}.joblib'
     globalmodel=job.load(config.MODELPATH+globalmodelname+'.joblib')
-    interactionmodel=job.load(config.MODELPATH+'logisticSexInteraction.joblib')
+    interactionmodel=job.load(config.MODELPATH+'logistic_gender_balanced.joblib')
     separatemodel=job.load(config.MODELPATH+separatemodelname)
     
     # SUBSET DATA
@@ -121,12 +121,12 @@ for i, group, groupname in zip([1,0],[female,male],sex):
                               predictors=predictors,
                               presentX=Xgroup[predictors], presentY=ygroup,
                               pastX=pastXgroup[predictors], pastY=pastygroup)
-    inter_cal[groupname]=cal.calibrate('logisticSexInteraction',year,
-                              filename=f'logisticSexInteraction_{groupname}',
-                              presentX=Xgroup, presentY=ygroup,
-                              pastX=pastXgroup[pastXgroup.columns],
+    inter_cal[groupname]=cal.calibrate('logistic_gender_balanced',year,
+                              filename=f'logistic_gender_balanced_{groupname}',
+                              presentX=Xgroup[predictors], presentY=ygroup,
+                              pastX=pastXgroup[predictors],
                               pastY=pastygroup,
-                              predictors=config.PREDICTORREGEX+'|INTsex')
+                              )
     inter_preds=inter_cal[groupname].PRED
     joint_preds=joint_cal[groupname].PRED
     separate_preds=separate_cal[groupname].PRED
@@ -135,8 +135,8 @@ for i, group, groupname in zip([1,0],[female,male],sex):
     joint_obs=np.where(joint_cal[groupname].OBS>=1,1,0)
     separate_obs=np.where(separate_cal[groupname].OBS>=1,1,0)
 
-    # assert all(inter_cal[groupname].OBS==joint_cal[groupname].OBS)
-    # assert all(separate_cal[groupname].OBS==joint_cal[groupname].OBS)
+    assert all(inter_cal[groupname].OBS==joint_cal[groupname].OBS)
+    assert all(separate_cal[groupname].OBS==joint_cal[groupname].OBS)
     
     
     axhist.hist(separate_preds,bins=1000,label=groupname)
