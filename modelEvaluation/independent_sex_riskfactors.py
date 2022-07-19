@@ -37,7 +37,7 @@ def translateVariables(df,**kwargs):
             dictionary=dictionary.append(pd.DataFrame([[column,dictionary.loc[dictionary.codigo==re.sub('INTsex','',column)].descripcion.values[0]]],
                                            columns=['codigo','descripcion']),
                                             ignore_index=True)
-     df=pd.merge(df, dictionary, on='codigo')
+     df=pd.merge(df, dictionary, on=['codigo'])
      return df
  
 def beta_std_error(logModel, X, eps=1e-20):
@@ -158,10 +158,10 @@ if __name__=="__main__":
         print('  ')
     print('-----'*N)
     print('  ')
-    
+    oddsContrib.to_csv(config.PREDPATH+'/sexSpecificOddsContributions.csv')
     #%%
-    oddsContrib.to_csv(config.MODELPATH+'sexSpecificOddsContributions.csv')
-    oddsContrib=pd.read_csv(config.MODELPATH+'sexSpecificOddsContributions.csv')
+    
+    oddsContrib=pd.read_csv(config.PREDPATH+'/sexSpecificOddsContributions.csv')
     print('FACTORES DE RIESGO SIGNIFICATIVOS EN MUJERES: ')
     riskFactors=oddsContrib.loc[(oddsContrib['LowM']>=1) & (oddsContrib.Mujeres>=1)]
     print(riskFactors.sort_values(by='Mujeres', ascending=False)[['codigo','Mujeres', 'NMuj','descripcion']])

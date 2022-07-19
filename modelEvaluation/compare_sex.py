@@ -208,7 +208,7 @@ for i,model in enumerate(models):
     
 # %% CALIBRATION CURVES
 for title, preds in zip(['Global', 'Separado', 'Interaccion'], [joint_cal, separate_cal, balanced_cal]):
-    cal.plot(preds,filename=title)
+    cal.plot(preds,filename=title,consistency_bars=False)
 
 #%% 
 """
