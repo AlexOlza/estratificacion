@@ -69,7 +69,7 @@ model=keras.models.load_model(config.MODELPATH+available_models[i])
 #launching 100 jobs, each with 1% of len Xx as bigsize, and appropriate smallsize
 bigsize, smallsize = len(Xx), 20 #17 days
 bigsize, smallsize = int(len(Xx)/1000), 100 # 2 hours
-bigsize, smallsize = int(len(Xx)/10000), 10 # 2 hours
+bigsize, smallsize = int(len(Xx)/10000), 10 # 2 minutes
 sample=shap.sample(Xx, bigsize) #should be modified to keep track of PATIENT_IDs
 smallsample=shap.sample(sample, smallsize)
 explainer = shap.KernelExplainer(data=smallsample,model=model, 
@@ -77,6 +77,8 @@ explainer = shap.KernelExplainer(data=smallsample,model=model,
                                  max_evals=600)
 print('Computing shap values')
 shap_values = explainer.shap_values(sample)
+sum_shap=[sum(s) for s in shap_values[0]]
+
 import joblib as job
 job.dump(shap_values,f'shap_{available_models[i]}_{smallsize}_{bigsize}.joblib')
 explanation=shap.Explanation(shap_values[0],feature_names=list(Xx.columns))
@@ -86,6 +88,8 @@ shap.summary_plot(shap_values, Xx)
 shap.plots.beeswarm(explanation)
 shap.plots.beeswarm(explanation,order=explanation.abs.max(0))
 shap.plots.bar(explanation,max_display=30)
+shap.plots.bar(explanation[np.argmax(sum_shap)],max_display=30)
+shap.plots.bar(explanation[np.argmin(sum_shap)],max_display=30)
 #%%
 explanation.data=sample
 sex = ["Women" if explanation[i,"FEMALE"].data == 1 else "Men" for i in range(explanation.shape[0])]
@@ -93,12 +97,11 @@ shap.plots.bar(explanation.cohorts(sex).abs.mean(0))
 #%%
 shap.plots.bar(explanation.cohorts(sex).abs.max(0))
 #%%
-# shap.plots.beeswarm(explainer.expected_value)
-sum_shap=[sum(s) for s in shap_values[0]]
+shap.plots.beeswarm(explanation)
 
 forcemax=shap.plots.force(explainer.expected_value[0], shap_values[0][np.argmax(sum_shap)],ordering_keys='reverse',feature_names=list(Xx.columns),out_names=['neg','pos'],matplotlib=True)
 forcemin=shap.plots.force(explainer.expected_value[0], shap_values[0][np.argmin(sum_shap)],ordering_keys='reverse',feature_names=list(Xx.columns),out_names=['neg','pos'],matplotlib=True)
-
+allforce=shap.plots.force(explainer.expected_value[0], shap_values[0],sample, link='logit')
 #%%
 waterfallmax=shap.plots.waterfall(explanation[np.argmax(sum_shap)])
 waterfallmin=shap.plots.waterfall(explanation[np.argmin(sum_shap)])
