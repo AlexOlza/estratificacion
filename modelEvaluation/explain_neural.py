@@ -20,7 +20,7 @@ import importlib
 from python_settings import settings as config
 from pathlib import Path
 import pkg_resources
-pkg_resources.require("Shap==0.40")
+pkg_resources.require("Shap==0.41")
 import shap
 import joblib as job
 
@@ -69,6 +69,7 @@ model=keras.models.load_model(config.MODELPATH+available_models[i])
 #launching 100 jobs, each with 1% of len Xx as bigsize, and appropriate smallsize
 bigsize, smallsize = len(Xx), 20 #17 days
 bigsize, smallsize = int(len(Xx)/1000), 100 # 2 hours
+bigsize, smallsize = int(len(Xx)/10000), 10 # 2 hours
 sample=shap.sample(Xx, bigsize) #should be modified to keep track of PATIENT_IDs
 smallsample=shap.sample(sample, smallsize)
 explainer = shap.KernelExplainer(data=smallsample,model=model, 
