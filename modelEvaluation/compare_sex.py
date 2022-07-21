@@ -208,8 +208,15 @@ for i,model in enumerate(models):
     
 # %% CALIBRATION CURVES
 for title, preds in zip(['Global', 'Separado', 'Interaccion'], [joint_cal, separate_cal, balanced_cal]):
-    cal.plot(preds,filename=title)
+    cal.plot(preds,filename=title,consistency_bars=False)
+# %% CALIBRATION CURVES (ALL MODELS TOGETHER)
 
+all_preds={'Global- Hombres': joint_cal['Hombres'],
+           'Global- Mujeres': joint_cal['Mujeres'],
+           'Separado- Mujeres': separate_cal['Mujeres'],
+           'Separado- Hombres': separate_cal['Hombres']}
+fname='GlobalSeparado_'
+cal.plot(all_preds,filename=fname,consistency_bars=False)
 #%% 
 """
 Si empleamos el modelo global y seleccionamos a los 20000 de mayor riesgo
@@ -219,9 +226,9 @@ Si empleamos el modelo global y seleccionamos a los 20000 de mayor riesgo
 """
 del pastX, pasty, pastXgroup, pastygroup
 probs=globalmodel.predict_proba(X[features])[:,-1]
-recallK,ppvK, specK, indices=performance(probs, np.where(y[config.COLUMNS]>=1,1,0), K)
-selectedPatients=X.loc[indices]
-selectedResponse=y.loc[indices]
+recallK,ppvK, specK, indices=performance(pred=probs, obs=np.where(y[config.COLUMNS]>=1,1,0), K=K)
+selectedPatients=X.loc[indices.ravel()]
+selectedResponse=y.loc[indices.ravel()]
 
 print(f'Número de mujeres entre los {K} de mayor riesgo: ',sum(selectedPatients.FEMALE))
 

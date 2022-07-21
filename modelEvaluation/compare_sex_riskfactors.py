@@ -43,6 +43,7 @@ from dataManipulation.dataPreparation import getData
 from modelEvaluation.predict import generate_filename
 from modelEvaluation.independent_sex_riskfactors import beta_std_error, confidence_interval_odds_ratio
 
+
 #%%
 """
     WHICH VARIABLES DIFFER THE MOST WHEN PRESENT IN MEN VS WOMEN?
@@ -115,7 +116,7 @@ significantRiskWomen=interactions.loc[(interactions.Low>=1) & (interactions.Odds
 significantRiskMen=interactions.loc[(interactions.High<=1) & (interactions.Odds<=1)]
 print(f'TOP {N} variables cuya presencia acrecienta el riesgo para las mujeres más que para los hombres: ')
 #mayores interacciones positivas
-print(significantRiskWomen.sort_values(by='Odds', ascending=False)[[ 'codigo','Odds','descripcion']])
+print(significantRiskWomen.sort_values(by='Odds', ascending=False)[[ 'codigo','Odds','descripcion','NMuj', 'NHom']])
 print('  ')
 
 significantRiskWomen.sort_values(by='Odds', ascending=False)[[ 'codigo', 'Low','Odds', 'High','descripcion', 'NMuj', 'NHom']].to_csv(os.path.join(config.PREDPATH,'masRiesgoMujeres.csv'), index=False)
