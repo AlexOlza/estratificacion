@@ -28,6 +28,7 @@ import pandas as pd
 import numpy as np
 import re
 from modelEvaluation.comparative_article_plotting_functions import *
+config.METRICSPATH=config.ROOTPATH+'metrics/'+config.EXPERIMENT
 #%%
 
 #%%
@@ -110,21 +111,21 @@ print(table.style.to_latex())
 """ MATERIALS AND METHODS: Comments on variability assessment"""
 K=20000
 
-test_metrics=pd.read_csv(re.sub(config.EXPERIMENT, 'hyperparameter_variability_urgcms_excl_nbinj',config.PREDPATH)+'/metrics2018.csv')
+test_metrics=pd.read_csv(re.sub(config.EXPERIMENT, 'hyperparameter_variability_urgcms_excl_nbinj',config.METRICSPATH)+'/metrics2018.csv')
 test_metrics=test_metrics.loc[test_metrics.Algorithm.isin(('logistic','hgb','randomForest','neuralNetworkRandom'))]
-test_logisticMetrics=pd.read_csv(config.PREDPATH+'/metrics2018.csv')
+test_logisticMetrics=pd.read_csv(config.METRICSPATH+'/metrics2018.csv')
 test_logisticMetrics=test_logisticMetrics.loc[test_logisticMetrics.Algorithm=='logistic']
 # test_logisticMetrics.Algorithm=['logistic 2018']
 test_metrics=pd.concat([test_metrics,test_logisticMetrics])
 test_metrics['Year']=2018
 # test_logisticMetrics.Algorithm=test_logisticMetrics.Algorithm+' Test'
 
-metrics=pd.read_csv(re.sub(config.EXPERIMENT, 'hyperparameter_variability_urgcms_excl_nbinj',config.PREDPATH)+'/metrics2017.csv')
+metrics=pd.read_csv(re.sub(config.EXPERIMENT, 'hyperparameter_variability_urgcms_excl_nbinj',config.METRICSPATH)+'/metrics2017.csv')
 print('Number of models per algorithm:')
 print( metrics.groupby(['Algorithm'])['Algorithm'].count() )
 
 """ RESULTS. TABLE 2 """
-logisticMetrics=pd.read_csv(config.PREDPATH+'/metrics2017.csv')
+logisticMetrics=pd.read_csv(config.METRICSPATH+'/metrics2017.csv')
 logisticMetrics=logisticMetrics.loc[logisticMetrics.Model.str.startswith('logistic2022')]
 logisticMetrics[f'F1_{K}']=2*logisticMetrics[f'Recall_{K}']*logisticMetrics[f'PPV_{K}']/(logisticMetrics[f'Recall_{K}']+logisticMetrics[f'PPV_{K}'])
 logisticMetrics['Algorithm']=['logistic']
