@@ -28,33 +28,104 @@ import pandas as pd
 import numpy as np
 import re
 from modelEvaluation.comparative_article_plotting_functions import *
+config.METRICSPATH=config.ROOTPATH+'metrics/'+config.EXPERIMENT
 #%%
 
 #%%
 yr=2018
 X,y=getData(2017)
-# X16,y17=getData(2016)
+X16,y17=getData(2016)
+#%%
+#%%
+table=pd.DataFrame()
+columns=['Development (2016-2017)', 'Validation (2017-2018)']
+for chosen_model in columns:
+    Xx=X if 'Development' in chosen_model else X16
+    Yy=y if 'Development' in chosen_model else y17
+    
+    comorbidities={'COPD': ['EDC_RES04'],
+                    'Chronic Renal Failure': ['EDC_REN01', 'EDC_REN06'],
+                    'Heart Failure': ['EDC_CAR05'],
+                    'Depression': ['EDC_PSY09', 'EDC_PSY20'],
+                    'Diabetes Mellitus': ['EDC_END06','EDC_END07','EDC_END08', 'EDC_END09'],
+                    # 'Dis. of Lipid Metabolism': ['EDC_CAR11'],
+                    'Hypertension': ['EDC_CAR14','EDC_CAR15'],
+                    'Ischemic Heart Disease': ['EDC_CAR03'],
+                    'Low back pain': ['EDC_MUS14'],
+                    'Osteoporosis': ['EDC_END02'],
+                    "Parkinson's disease":['EDC_NUR06'],
+                    'Persistent asthma':['EDC_ALL05', 'EDC_ALL04'],
+                    'Rheumatoid arthritis':['EDC_RHU05'],
+                    'Schizophrenia & affective dis.': ['EDC_PSY07'],
+                    'Seizure disorders': ['EDC_NUR07']
+                    }
+    
+    table1= pd.DataFrame(index=[ 'Hospitalized in Year 2', 
+                                '% of women',
+                                'Aged 0-17',
+                                'Aged 18-64',
+                                'Aged 65-69',
+                                'Aged 70-79',
+                                'Aged 80-84',
+                                'Aged 85+']+list(comorbidities.keys()))
+    comorb={}
+    
+    
+    comorb=[]
+    for disease, EDClist in comorbidities.items():
+        s=[Xx[EDC].sum() for EDC in EDClist]
+        comorb.append(f'{sum(s)} ({sum(s)*100/len(Xx):2.2f} %)')
+        print(disease, 'total (M+W): ',sum([Xx[EDC].sum() for EDC in EDClist]))
+    # Yy18=y.loc[group18]
+    a1=sum(Xx.AGE_0004)+sum(Xx.AGE_0511)+sum(Xx.AGE_0511)
+    a2=sum(Xx.AGE_1834)+sum(Xx.AGE_3544)+sum(Xx.AGE_4554)+sum(Xx.AGE_5564)
+    a3=sum(Xx.AGE_6569)
+    a4=sum(Xx.AGE_7074)+sum(Xx.AGE_7579)
+    a5=sum(Xx.AGE_8084)
+    a85plus=len(Xx)-(a1+a2+a3+a4+a5)
+    truepositives=sum(np.where(Yy.urgcms>=1,1,0))
+    allpositives=sum(np.where(y.urgcms>=1,1,0))
+    falsepositives=sum(np.where(Yy.urgcms>=1,0,1)) #(y.PATIENT_ID.isin(Yy.PATIENT_ID)) & (y)
+    # assert False
+    table1[chosen_model]=[
+                        f'{truepositives} ({truepositives*100/len(Xx):2.2f} %)',
+                        f'{100*Xx.FEMALE.sum()/len(Xx):2.2f} %',
+                        f'{a1} ({a1*100/len(Xx):2.2f} %) ',
+                        f'{a2} ({a2*100/len(Xx):2.2f} %) ',
+                        f'{a3} ({a3*100/len(Xx):2.2f} %) ',
+                        f'{a4} ({a4*100/len(Xx):2.2f} %) ',
+                        f'{a5} ({a5*100/len(Xx):2.2f} %) ',
+                        f'{a85plus} ({a85plus*100/len(Xx):2.2f} %) ']+comorb
+    
+    
+    # table1=pd.DataFrame({chosen_model:table1})
+    if 'Development' in chosen_model:
+        table=table1
+    else:
+        table=table.join(table1,lsuffix=' - MLP', rsuffix=' - LR')
+print(table.style.to_latex())
+    
 #%%
 
 #%%
 """ MATERIALS AND METHODS: Comments on variability assessment"""
 K=20000
 
-test_metrics=pd.read_csv(re.sub(config.EXPERIMENT, 'hyperparameter_variability_urgcms_excl_nbinj',config.PREDPATH)+'/metrics2018.csv')
+test_metrics=pd.read_csv(re.sub(config.EXPERIMENT, 'hyperparameter_variability_urgcms_excl_nbinj',config.METRICSPATH)+'/metrics2018.csv')
 test_metrics=test_metrics.loc[test_metrics.Algorithm.isin(('logistic','hgb','randomForest','neuralNetworkRandom'))]
-test_logisticMetrics=pd.read_csv(config.PREDPATH+'/metrics2018.csv')
+test_logisticMetrics=pd.read_csv(config.METRICSPATH+'/metrics2018.csv')
 test_logisticMetrics=test_logisticMetrics.loc[test_logisticMetrics.Algorithm=='logistic']
 # test_logisticMetrics.Algorithm=['logistic 2018']
 test_metrics=pd.concat([test_metrics,test_logisticMetrics])
 test_metrics['Year']=2018
 # test_logisticMetrics.Algorithm=test_logisticMetrics.Algorithm+' Test'
 
-metrics=pd.read_csv(re.sub(config.EXPERIMENT, 'hyperparameter_variability_urgcms_excl_nbinj',config.PREDPATH)+'/metrics2017.csv')
+metrics=pd.read_csv(re.sub(config.EXPERIMENT, 'hyperparameter_variability_urgcms_excl_nbinj',config.METRICSPATH)+'/metrics2017.csv')
 print('Number of models per algorithm:')
 print( metrics.groupby(['Algorithm'])['Algorithm'].count() )
 
 """ RESULTS. TABLE 2 """
-logisticMetrics=pd.read_csv(config.PREDPATH+'/metrics2017.csv')
+logisticMetrics=pd.read_csv(config.METRICSPATH+'/metrics2017.csv')
 logisticMetrics=logisticMetrics.loc[logisticMetrics.Model.str.startswith('logistic2022')]
 logisticMetrics[f'F1_{K}']=2*logisticMetrics[f'Recall_{K}']*logisticMetrics[f'PPV_{K}']/(logisticMetrics[f'Recall_{K}']+logisticMetrics[f'PPV_{K}'])
 logisticMetrics['Algorithm']=['logistic']

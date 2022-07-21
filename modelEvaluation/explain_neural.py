@@ -77,6 +77,7 @@ explainer = shap.KernelExplainer(data=smallsample,model=model,
 print('Computing shap values')
 shap_values = explainer.shap_values(sample)
 import joblib as job
+#this line should include the reference to wich part of Xx we are saving
 job.dump(shap_values,f'shap_{available_models[i]}_{smallsize}_{bigsize}.joblib')
 explanation=shap.Explanation(shap_values[0],feature_names=list(Xx.columns))
 #%%
