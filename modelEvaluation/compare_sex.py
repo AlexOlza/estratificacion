@@ -135,14 +135,17 @@ for i, group, groupname in zip([1,0],[female,male],sex):
     
     assert all(balanced_cal[groupname].OBS==joint_cal[groupname].OBS)
     assert all(separate_cal[groupname].OBS==joint_cal[groupname].OBS)
-    
+    import seaborn as sns
+    # plt.xlim(0, 0.2)
     axhist.set_xlim(xmin=0, xmax=0.2)
     axhist2.set_xlim(xmin=0, xmax=0.2)
-    axhist.hist(separate_preds,bins=1000,label=groupname)
-    axhist2.hist(joint_preds,bins=1000,label=groupname)
+    sns.kdeplot(separate_preds,shade=True, ax=axhist, label=groupname,bw=0.5)
+    sns.kdeplot(joint_preds,shade=True,ax=axhist2, label=groupname,bw=0.5)
+    
     axhist.set_title('Separados')
     axhist2.set_title('Modelo Global')
     plt.legend()
+    plt.tight_layout()
     
     # METRICS
     for model, preds in zip(models,[joint_preds, separate_preds, balanced_preds]):
