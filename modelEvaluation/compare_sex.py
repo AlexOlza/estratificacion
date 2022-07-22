@@ -136,9 +136,13 @@ for i, group, groupname in zip([1,0],[female,male],sex):
     assert all(balanced_cal[groupname].OBS==joint_cal[groupname].OBS)
     assert all(separate_cal[groupname].OBS==joint_cal[groupname].OBS)
     
-    
+    axhist.set_xlim(xmin=0, xmax=0.2)
+    axhist2.set_xlim(xmin=0, xmax=0.2)
     axhist.hist(separate_preds,bins=1000,label=groupname)
     axhist2.hist(joint_preds,bins=1000,label=groupname)
+    axhist.set_title('Separados')
+    axhist2.set_title('Modelo Global')
+    plt.legend()
     
     # METRICS
     for model, preds in zip(models,[joint_preds, separate_preds, balanced_preds]):
@@ -224,7 +228,7 @@ Si empleamos el modelo global y seleccionamos a los 20000 de mayor riesgo
 ¿Cual sería el número de hombres y mujeres seleccionados? 
 ¿Cual sería, para ese número, la Se y PPV en hombres y mujeres?
 """
-del pastX, pasty, pastXgroup, pastygroup
+# del pastX, pasty, pastXgroup, pastygroup
 probs=globalmodel.predict_proba(X[features])[:,-1]
 recallK,ppvK, specK, indices=performance(pred=probs, obs=np.where(y[config.COLUMNS]>=1,1,0), K=K)
 selectedPatients=X.loc[indices.ravel()]
