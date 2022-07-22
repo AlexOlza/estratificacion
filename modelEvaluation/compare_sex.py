@@ -137,13 +137,13 @@ for i, group, groupname in zip([1,0],[female,male],sex):
     assert all(separate_cal[groupname].OBS==joint_cal[groupname].OBS)
     import seaborn as sns
     # plt.xlim(0, 0.2)
-    axhist.set_xlim(xmin=0, xmax=0.2)
-    axhist2.set_xlim(xmin=0, xmax=0.2)
-    sns.kdeplot(separate_preds,shade=True, ax=axhist, label=groupname,bw=0.5)
-    sns.kdeplot(joint_preds,shade=True,ax=axhist2, label=groupname,bw=0.5)
+    axhist.set_xlim(xmin=0, xmax=0.23)
+    axhist2.set_xlim(xmin=0, xmax=0.23)
+    sns.kdeplot(separate_preds,shade=True, ax=axhist, clip=(0,1), label=groupname,bw=0.3)
+    sns.kdeplot(joint_preds,shade=True,ax=axhist2, clip=(0,1), label=groupname,bw=0.3)
     
-    axhist.set_title('Separados')
-    axhist2.set_title('Modelo Global')
+    axhist.set_title('Modelos separados')
+    axhist2.set_title('Modelo global')
     plt.legend()
     plt.tight_layout()
     
