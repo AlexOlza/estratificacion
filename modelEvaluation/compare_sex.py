@@ -91,7 +91,9 @@ FPR, TPR, ROCTHRESHOLDS = {k: {} for k in sex}, {k: {}
 table = pd.DataFrame()
 K = 20000
 models = ['Global', 'Separado', 'Misma Prevalencia']
-fighist, (axhist, axhist2, axhist3, axhist4) = plt.subplots(2, 2)
+fighist, axs = plt.subplots(2, 2)
+
+axhist, axhist2, axhist3, axhist4= axs[0,0], axs[0,1], axs[1,0], axs[1,1]
 # fighist2, (axhist3, axhist4) = plt.subplots(1, 2)
 
 for i, group, groupname in zip([1, 0], [female, male], sex):
@@ -176,8 +178,7 @@ for i, group, groupname in zip([1, 0], [female, male], sex):
     sns.kdeplot(joint_preds, shade=True, ax=ax,
                 clip=(0, 1), label='Global', bw=0.3)
     ax.set_title(groupname)
-    plt.legend()
-    plt.tight_layout()
+    
 
     # METRICS
     for model, preds in zip(models, [joint_preds, separate_preds, balanced_preds]):
@@ -211,6 +212,11 @@ for i, group, groupname in zip([1, 0], [female, male], sex):
                       columns=['Model', 'AUC', 'AP', f'Recall_{K}', f'Specificity_{K}', f'PPV_{K}'])
     table = pd.concat([df, table])
 
+axhist2.legend()
+axhist4.legend()
+axhist3.legend()
+axhist.legend()
+plt.tight_layout()
 # %%
 fig1, (ax_sep1, ax_joint1, ax_sameprev1) = plt.subplots(1, 3, figsize=(16, 8))
 fig2, (ax_sep2, ax_joint2, ax_sameprev2) = plt.subplots(1, 3, figsize=(16, 8))
