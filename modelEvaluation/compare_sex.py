@@ -72,14 +72,14 @@ sex=['Mujeres', 'Hombres']
 #%%
 import joblib as job
 separate_cal,joint_cal,balanced_cal={},{},{}
-roc,roc_joint,roc_inter={k:{} for k in sex},{k:{} for k in sex},{k:{} for k in sex}
-pr, pr_joint, pr_inter={k:{} for k in sex}, {k:{} for k in sex}, {k:{} for k in sex} #precision-recall curves
+roc,roc_joint,roc_sameprev={k:{} for k in sex},{k:{} for k in sex},{k:{} for k in sex}
+pr, pr_joint, pr_sameprev={k:{} for k in sex}, {k:{} for k in sex}, {k:{} for k in sex} #precision-recall curves
 PRECISION, RECALL, THRESHOLDS={k:{} for k in sex}, {k:{} for k in sex}, {k:{} for k in sex}
 FPR,TPR, ROCTHRESHOLDS={k:{} for k in sex}, {k:{} for k in sex}, {k:{} for k in sex}
 
 table=pd.DataFrame()
 K=20000
-models=['Global', 'Separado', 'Interaccion']
+models=['Global', 'Separado', 'Misma Prevalencia']
 fighist, (axhist,axhist2) = plt.subplots(1,2)
 
 for i, group, groupname in zip([1,0],[female,male],sex):
@@ -90,7 +90,7 @@ for i, group, groupname in zip([1,0],[female,male],sex):
     globalmodelname=list(set(selected)-set([f'logistic{groupname}'])-set(['logistic_gender_balanced']))[0]
     separatemodelname=f'logistic{groupname}.joblib'
     globalmodel=job.load(config.MODELPATH+globalmodelname+'.joblib')
-    interactionmodel=job.load(config.MODELPATH+'logistic_gender_balanced.joblib')
+    sameprevmodel=job.load(config.MODELPATH+'logistic_gender_balanced.joblib')
     separatemodel=job.load(config.MODELPATH+separatemodelname)
     
     # SUBSET DATA
@@ -173,13 +173,13 @@ for i, group, groupname in zip([1,0],[female,male],sex):
     table=pd.concat([df, table])
 
 #%%
-fig1, (ax_sep1,ax_joint1, ax_inter1) = plt.subplots(1,3,figsize=(16,8))
-fig2, (ax_sep2,ax_joint2, ax_inter2) = plt.subplots(1,3,figsize=(16,8))
+fig1, (ax_sep1,ax_joint1, ax_sameprev1) = plt.subplots(1,3,figsize=(16,8))
+fig2, (ax_sep2,ax_joint2, ax_sameprev2) = plt.subplots(1,3,figsize=(16,8))
 for groupname in sex:
-    for ax, model in zip((ax_sep1,ax_joint1, ax_inter1), models):
+    for ax, model in zip((ax_sep1,ax_joint1, ax_sameprev1), models):
         roc[groupname][model].plot(ax)
         ax.set_title(model)
-    for ax, model in zip((ax_sep2,ax_joint2, ax_inter2), models):
+    for ax, model in zip((ax_sep2,ax_joint2, ax_sameprev2), models):
         pr[groupname][model].plot(ax)
         ax.set_title(model)
 fig1.savefig(os.path.join(config.FIGUREPATH,'rocCurve.png'))
@@ -207,7 +207,7 @@ for i,model in enumerate(models):
     print('ANd for men: ',table.PPV_20000.iloc[i])
     
 # %% CALIBRATION CURVES
-for title, preds in zip(['Global', 'Separado', 'Interaccion'], [joint_cal, separate_cal, balanced_cal]):
+for title, preds in zip(['Global', 'Separado', 'Misma Prevalencia'], [joint_cal, separate_cal, balanced_cal]):
     cal.plot(preds,filename=title,consistency_bars=False)
 # %% CALIBRATION CURVES (ALL MODELS TOGETHER)
 
