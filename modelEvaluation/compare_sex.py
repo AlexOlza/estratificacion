@@ -8,10 +8,6 @@ Created on Fri Mar 18 13:13:37 2022
 @author: aolza
 """
 import joblib as job
-from dataManipulation.dataPreparation import getData
-import modelEvaluation.calibrate as cal
-from modelEvaluation.compare import detect_models, compare, detect_latest, performance
-import configurations.utility as util
 from python_settings import settings as config
 import pandas as pd
 import re
@@ -22,11 +18,15 @@ from sklearn.metrics import average_precision_score, roc_auc_score, RocCurveDisp
 import sys
 sys.path.append('/home/aolza/Desktop/estratificacion/')
 # %%
+import configurations.utility as util
 if not config.configured:
     experiment = input('Experiment: ')
     config_used = os.path.join(
         os.environ['USEDCONFIG_PATH'], f'{experiment}/logisticMujeres.json')
     configuration = util.configure(config_used)
+from dataManipulation.dataPreparation import getData
+import modelEvaluation.calibrate as cal
+from modelEvaluation.compare import detect_models, compare, detect_latest, performance
 
 # %%
 
@@ -98,8 +98,7 @@ axhist, axhist2, axhist3, axhist4= axs[0,0], axs[0,1], axs[1,0], axs[1,1]
 
 for i, group, groupname in zip([1, 0], [female, male], sex):
     recall, ppv, spec, score, ap = {}, {}, {}, {}, {}
-    selected = [l for l in available_models if ((groupname in l) or (
-        bool(re.match('logistic\d+|logistic_gender_balanced', l))))]
+    selected = [l for l in available_models if ((groupname in l) or (bool(re.match('logistic\d+|logistic_gender_balanced', l))))]
     print('Selected models: ', selected)
     # LOAD MODELS
     globalmodelname = list(
@@ -149,9 +148,9 @@ for i, group, groupname in zip([1, 0], [female, male], sex):
                                             pastX=pastXgroup[predictors],
                                             pastY=pastygroup,
                                             )
-    balanced_preds = balanced_cal[groupname].PRED
-    joint_preds = joint_cal[groupname].PRED
-    separate_preds = separate_cal[groupname].PRED
+    balanced_preds = balanced_cal[groupname].PREDCAL
+    joint_preds = joint_cal[groupname].PREDCAL
+    separate_preds = separate_cal[groupname].PREDCAL
 
     obs = np.where(balanced_cal[groupname].OBS >= 1, 1, 0)
 
@@ -179,7 +178,7 @@ for i, group, groupname in zip([1, 0], [female, male], sex):
                 clip=(0, 1), label='Global', bw=0.3)
     ax.set_title(groupname)
     
-
+    
     # METRICS
     for model, preds in zip(models, [joint_preds, separate_preds, balanced_preds]):
         prec, rec, thre = precision_recall_curve(obs, preds)
@@ -217,6 +216,20 @@ axhist4.legend()
 axhist3.legend()
 axhist.legend()
 plt.tight_layout()
+plt.savefig(os.path.join(config.FIGUREPATH,'densities.png'))
+
+
+#%%
+fig2, axs_ = plt.subplots(2,1)
+ax_H, ax_M = axs_[0],axs_[1]
+for groupname in 'Hombres','Mujeres':
+    ax_=ax_H if groupname=='Hombres' else ax_M
+    p1 = sns.scatterplot(separate_cal[groupname].PREDCAL,joint_cal[groupname].PREDCAL, ax=ax_,)
+    p2 = sns.lineplot( x=[0,1], y=[0,1], color='r', ax=ax_)
+    ax_.set(xlabel='Separados', ylabel='Global', title=groupname)
+    fig2.savefig(os.path.join(config.FIGUREPATH,f'scatter{groupname}.png'))
+    
+    
 # %%
 fig1, (ax_sep1, ax_joint1, ax_sameprev1) = plt.subplots(1, 3, figsize=(16, 8))
 fig2, (ax_sep2, ax_joint2, ax_sameprev2) = plt.subplots(1, 3, figsize=(16, 8))
