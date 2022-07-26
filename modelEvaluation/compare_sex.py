@@ -88,135 +88,138 @@ PRECISION, RECALL, THRESHOLDS = {k: {} for k in sex}, {
 FPR, TPR, ROCTHRESHOLDS = {k: {} for k in sex}, {k: {}
                                                  for k in sex}, {k: {} for k in sex}
 
-table = pd.DataFrame()
+table, bigtable = pd.DataFrame(),pd.DataFrame()
 K = 20000
 models = ['Global', 'Separado', 'Misma Prevalencia']
 fighist, axs = plt.subplots(2, 2)
 
 axhist, axhist2, axhist3, axhist4= axs[0,0], axs[0,1], axs[1,0], axs[1,1]
 # fighist2, (axhist3, axhist4) = plt.subplots(1, 2)
-
-for i, group, groupname in zip([1, 0], [female, male], sex):
-    recall, ppv, spec, score, ap = {}, {}, {}, {}, {}
-    selected = [l for l in available_models if ((groupname in l) or (bool(re.match('logistic\d+|logistic_gender_balanced', l))))]
-    print('Selected models: ', selected)
-    # LOAD MODELS
-    globalmodelname = list(
-        set(selected)-set([f'logistic{groupname}'])-set(['logistic_gender_balanced']))[0]
-    separatemodelname = f'logistic{groupname}.joblib'
-    globalmodel = job.load(config.MODELPATH+globalmodelname+'.joblib')
-    sameprevmodel = job.load(
-        config.MODELPATH+'logistic_gender_balanced.joblib')
-    separatemodel = job.load(config.MODELPATH+separatemodelname)
-
-    # SUBSET DATA
-    Xgroup = X.loc[group]
-    ygroup = y.loc[group]
-
-    pastXgroup = pastX.loc[pastX['FEMALE'] == i]
-    pastygroup = pasty.loc[pastX['FEMALE'] == i]
-
-    assert (all(Xgroup['FEMALE'] == 1) or all(Xgroup['FEMALE'] == 0))
-
-    pos = sum(np.where(ygroup[config.COLUMNS] >= 1, 1, 0))
-    pastpos = sum(np.where(pastygroup[config.COLUMNS] >= 1, 1, 0))
-    print('Sample size 2017', len(Xgroup), 'positive: ',
-          pastpos, 'prevalence=', pastpos/len(pastXgroup))
-    print('Sample size 2018', len(pastXgroup),
-          'positive: ', pos, 'prevalence=', pos/len(Xgroup))
-
-    # PREDICT
-    separate_cal[groupname] = cal.calibrate(f'logistic{groupname}', year,
-                                            filename=f'logistic{groupname}',
-                                            predictors=[
-                                                p for p in predictors if not p == 'FEMALE'],
-                                            presentX=Xgroup[predictors].drop(
-                                                'FEMALE', axis=1),
-                                            presentY=ygroup,
-                                            pastX=pastXgroup[predictors].drop(
-                                                'FEMALE', axis=1),
-                                            pastY=pastygroup)
-
-    joint_cal[groupname] = cal.calibrate(globalmodelname, year,
-                                         filename=f'{globalmodelname}_{groupname}',
-                                         predictors=predictors,
-                                         presentX=Xgroup[predictors], presentY=ygroup,
-                                         pastX=pastXgroup[predictors], pastY=pastygroup)
-    balanced_cal[groupname] = cal.calibrate('logistic_gender_balanced', year,
-                                            filename=f'logistic_gender_balanced_{groupname}',
-                                            presentX=Xgroup[predictors], presentY=ygroup,
-                                            pastX=pastXgroup[predictors],
-                                            pastY=pastygroup,
-                                            )
-    balanced_preds = balanced_cal[groupname].PREDCAL
-    joint_preds = joint_cal[groupname].PREDCAL
-    separate_preds = separate_cal[groupname].PREDCAL
-
-    obs = np.where(balanced_cal[groupname].OBS >= 1, 1, 0)
-
-    assert all(balanced_cal[groupname].OBS == joint_cal[groupname].OBS)
-    assert all(separate_cal[groupname].OBS == joint_cal[groupname].OBS)
-    import seaborn as sns
-    # plt.xlim(0, 0.2)
-    axhist.set_xlim(xmin=-0.02, xmax=0.23)
-    axhist2.set_xlim(xmin=-0.02, xmax=0.23)
-    sns.kdeplot(separate_preds, shade=True, ax=axhist,
-                clip=(0, 1), label=groupname, bw=0.3)
-    sns.kdeplot(joint_preds, shade=True, ax=axhist2,
-                clip=(0, 1), label=groupname, bw=0.3)
-
-    axhist.set_title('Modelos separados')
-    axhist2.set_title('Modelo global')
-    # plt.legend()
-    # plt.tight_layout()
-
-    ax = axhist3 if groupname == 'Mujeres' else axhist4
-    ax.set_xlim(xmin=-0.02, xmax=0.23)
-    sns.kdeplot(separate_preds, shade=True, ax=ax,
-                clip=(0, 1), label='Separados', bw=0.3)
-    sns.kdeplot(joint_preds, shade=True, ax=ax,
-                clip=(0, 1), label='Global', bw=0.3)
-    ax.set_title(groupname)
+for col in ['PRED','PREDCAL']:
+    for i, group, groupname in zip([1, 0], [female, male], sex):
+        recall, ppv, spec, score, ap = {}, {}, {}, {}, {}
+        selected = [l for l in available_models if ((groupname in l) or (bool(re.match('logistic\d+|logistic_gender_balanced', l))))]
+        print('Selected models: ', selected)
+        # LOAD MODELS
+        globalmodelname = list(
+            set(selected)-set([f'logistic{groupname}'])-set(['logistic_gender_balanced']))[0]
+        separatemodelname = f'logistic{groupname}.joblib'
+        globalmodel = job.load(config.MODELPATH+globalmodelname+'.joblib')
+        sameprevmodel = job.load(
+            config.MODELPATH+'logistic_gender_balanced.joblib')
+        separatemodel = job.load(config.MODELPATH+separatemodelname)
     
+        # SUBSET DATA
+        Xgroup = X.loc[group]
+        ygroup = y.loc[group]
     
-    # METRICS
-    for model, preds in zip(models, [joint_preds, separate_preds, balanced_preds]):
-        prec, rec, thre = precision_recall_curve(obs, preds)
-        fpr, tpr, rocthresholds = roc_curve(obs, preds)
-        FPR[groupname][model] = fpr
-        TPR[groupname][model] = tpr
-        PRECISION[groupname][model] = prec
-        RECALL[groupname][model] = rec
-        THRESHOLDS[groupname][model] = thre
-        ROCTHRESHOLDS[groupname][model] = rocthresholds
-        # CURVES - PLOTS
-        roc[groupname][model] = plot_roc(fpr, tpr, groupname)
-        pr[groupname][model] = plot_pr(prec, rec, groupname, obs, preds)
-
-        recallK, ppvK, specK, _ = performance(obs, preds, K)
-        rocauc = roc_auc_score(obs, preds)
-        avg_prec = average_precision_score(obs, preds)
-        recall[model] = recallK
-        spec[model] = specK
-        score[model] = rocauc
-        ppv[model] = ppvK
-        ap[model] = avg_prec
-
-    df = pd.DataFrame(list(zip([f'{model}- {groupname}' for model in models],
-                               [score[model] for model in models],
-                               [ap[model] for model in models],
-                               [recall[model] for model in models],
-                               [spec[model] for model in models],
-                               [ppv[model] for model in models])),
-                      columns=['Model', 'AUC', 'AP', f'Recall_{K}', f'Specificity_{K}', f'PPV_{K}'])
-    table = pd.concat([df, table])
-
-axhist2.legend()
-axhist4.legend()
-axhist3.legend()
-axhist.legend()
+        pastXgroup = pastX.loc[pastX['FEMALE'] == i]
+        pastygroup = pasty.loc[pastX['FEMALE'] == i]
+    
+        assert (all(Xgroup['FEMALE'] == 1) or all(Xgroup['FEMALE'] == 0))
+    
+        pos = sum(np.where(ygroup[config.COLUMNS] >= 1, 1, 0))
+        pastpos = sum(np.where(pastygroup[config.COLUMNS] >= 1, 1, 0))
+        print('Sample size 2017', len(Xgroup), 'positive: ',
+              pastpos, 'prevalence=', pastpos/len(pastXgroup))
+        print('Sample size 2018', len(pastXgroup),
+              'positive: ', pos, 'prevalence=', pos/len(Xgroup))
+    
+        # PREDICT
+        separate_cal[groupname] = cal.calibrate(f'logistic{groupname}', year,
+                                                filename=f'logistic{groupname}',
+                                                predictors=[
+                                                    p for p in predictors if not p == 'FEMALE'],
+                                                presentX=Xgroup[predictors].drop(
+                                                    'FEMALE', axis=1),
+                                                presentY=ygroup,
+                                                pastX=pastXgroup[predictors].drop(
+                                                    'FEMALE', axis=1),
+                                                pastY=pastygroup)
+    
+        joint_cal[groupname] = cal.calibrate(globalmodelname, year,
+                                             filename=f'{globalmodelname}_{groupname}',
+                                             predictors=predictors,
+                                             presentX=Xgroup[predictors], presentY=ygroup,
+                                             pastX=pastXgroup[predictors], pastY=pastygroup)
+        balanced_cal[groupname] = cal.calibrate('logistic_gender_balanced', year,
+                                                filename=f'logistic_gender_balanced_{groupname}',
+                                                presentX=Xgroup[predictors], presentY=ygroup,
+                                                pastX=pastXgroup[predictors],
+                                                pastY=pastygroup,
+                                                )
+        balanced_preds = balanced_cal[groupname][col]
+        joint_preds = joint_cal[groupname][col]
+        separate_preds = separate_cal[groupname][col]
+    
+        obs = np.where(balanced_cal[groupname].OBS >= 1, 1, 0)
+    
+        assert all(balanced_cal[groupname].OBS == joint_cal[groupname].OBS)
+        assert all(separate_cal[groupname].OBS == joint_cal[groupname].OBS)
+        import seaborn as sns
+        # plt.xlim(0, 0.2)
+        axhist.set_xlim(xmin=-0.02, xmax=0.23)
+        axhist2.set_xlim(xmin=-0.02, xmax=0.23)
+        sns.kdeplot(separate_preds, shade=True, ax=axhist,
+                    clip=(0, 1), label=f'{groupname} {col}', bw=0.3)
+        sns.kdeplot(joint_preds, shade=True, ax=axhist2,
+                    clip=(0, 1), label=f'{groupname} {col}', bw=0.3)
+    
+        axhist.set_title('Modelos separados')
+        axhist2.set_title('Modelo global')
+        # plt.legend()
+        # plt.tight_layout()
+    
+        ax = axhist3 if groupname == 'Mujeres' else axhist4
+        ax.set_xlim(xmin=-0.02, xmax=0.23)
+        sns.kdeplot(separate_preds, shade=True, ax=ax,
+                    clip=(0, 1), label=f'Separados {col}', bw=0.3)
+        sns.kdeplot(joint_preds, shade=True, ax=ax,
+                    clip=(0, 1), label=f'Global {col}', bw=0.3)
+        ax.set_title(groupname)
+        
+        
+        # METRICS
+        for model, preds in zip(models, [joint_preds, separate_preds, balanced_preds]):
+            prec, rec, thre = precision_recall_curve(obs, preds)
+            fpr, tpr, rocthresholds = roc_curve(obs, preds)
+            FPR[groupname][model] = fpr
+            TPR[groupname][model] = tpr
+            PRECISION[groupname][model] = prec
+            RECALL[groupname][model] = rec
+            THRESHOLDS[groupname][model] = thre
+            ROCTHRESHOLDS[groupname][model] = rocthresholds
+            # CURVES - PLOTS
+            roc[groupname][model] = plot_roc(fpr, tpr, groupname)
+            pr[groupname][model] = plot_pr(prec, rec, groupname, obs, preds)
+    
+            recallK, ppvK, specK, _ = performance(obs, preds, K)
+            rocauc = roc_auc_score(obs, preds)
+            avg_prec = average_precision_score(obs, preds)
+            recall[model] = recallK
+            spec[model] = specK
+            score[model] = rocauc
+            ppv[model] = ppvK
+            ap[model] = avg_prec
+    
+        df = pd.DataFrame(list(zip([f'{model}- {groupname}' for model in models],
+                                   [score[model] for model in models],
+                                   [ap[model] for model in models],
+                                   [recall[model] for model in models],
+                                   [spec[model] for model in models],
+                                   [ppv[model] for model in models])),
+                          columns=['Model', 'AUC', 'AP', f'Recall_{K}', f'Specificity_{K}', f'PPV_{K}'])
+        table = pd.concat([df, table])
+        print(col)
+        print(table)
+        bigtable=pd.concat([bigtable,table])
+# axhist2.legend()
+axhist2.legend(loc='lower center', bbox_to_anchor=(1.05, 0.0))
+axhist4.legend(loc='lower center', bbox_to_anchor=(1.05, 0.0))
+# axhist3.legend()
+# axhist.legend()
 plt.tight_layout()
-plt.savefig(os.path.join(config.FIGUREPATH,'densities.png'))
+plt.savefig(os.path.join(config.FIGUREPATH,f'densities.png'))
 
 
 #%%
@@ -224,11 +227,19 @@ fig2, axs_ = plt.subplots(2,1)
 ax_H, ax_M = axs_[0],axs_[1]
 for groupname in 'Hombres','Mujeres':
     ax_=ax_H if groupname=='Hombres' else ax_M
+    p1 = sns.scatterplot(separate_cal[groupname].PRED,joint_cal[groupname].PRED, ax=ax_,)
+    p2 = sns.lineplot( x=[0,1], y=[0,1], color='r', ax=ax_)
+    ax_.set(xlabel='Separados', ylabel='Global', title=groupname)
+fig2.savefig(os.path.join(config.FIGUREPATH,'scatterUncal.png'))
+
+fig2, axs_ = plt.subplots(2,1)
+ax_H, ax_M = axs_[0],axs_[1]
+for groupname in 'Hombres','Mujeres':
+    ax_=ax_H if groupname=='Hombres' else ax_M
     p1 = sns.scatterplot(separate_cal[groupname].PREDCAL,joint_cal[groupname].PREDCAL, ax=ax_,)
     p2 = sns.lineplot( x=[0,1], y=[0,1], color='r', ax=ax_)
     ax_.set(xlabel='Separados', ylabel='Global', title=groupname)
-    fig2.savefig(os.path.join(config.FIGUREPATH,f'scatter{groupname}.png'))
-    
+fig2.savefig(os.path.join(config.FIGUREPATH,'scatterCal.png'))
     
 # %%
 fig1, (ax_sep1, ax_joint1, ax_sameprev1) = plt.subplots(1, 3, figsize=(16, 8))
