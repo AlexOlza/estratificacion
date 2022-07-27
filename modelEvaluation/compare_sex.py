@@ -62,14 +62,9 @@ year = int(input('YEAR TO PREDICT: '))
 X, y = getData(year-1)
 pastX, pasty = getData(year-2)
 # %%
-# X.drop('PATIENT_ID', axis=1, inplace=True)
 predictors = X.columns
 features = X.drop('PATIENT_ID', axis=1).columns
 
-for column in features:
-    if column != 'FEMALE':
-        X[f'{column}INTsex'] = X[column]*X['FEMALE']
-        pastX[f'{column}INTsex'] = pastX[column]*pastX['FEMALE']
 # %%
 available_models = detect_models()
 # latest=detect_latest(available_models)
@@ -256,6 +251,27 @@ fig2.savefig(os.path.join(config.FIGUREPATH, 'prCurve.png'))
 plt.show()
 print(table.to_markdown(index=False,))
 # %%
+# %%
+for i, model in enumerate(models):
+    print(' ')
+    print(model)
+    print('what should the probability threshold be to get the same PPV for women as for men? ')
+    print('PPV for men (global model): ', table.PPV_20000.iloc[i])
+    idx = [n for n, i in enumerate(
+        PRECISION['Mujeres'][model]) if i >= table.PPV_20000.iloc[0]][0]
+    t = THRESHOLDS['Mujeres'][model][idx]
+    idx2 = [n for n, i in enumerate(
+        ROCTHRESHOLDS['Mujeres'][model]) if i <= t][0]
+    print('Threshold: ', t)
+    print('PPV: ', PRECISION['Mujeres'][model][idx])
+    print('Number of selected women: ', sum(joint_preds >= t))
+
+    print('Specificity for these women is: ', 1-FPR['Mujeres'][model][idx2])
+
+    print('And for men: ', table.Specificity_20000.iloc[i])
+    print('Recall for these women is: ', RECALL['Mujeres'][model][idx])
+    print('ANd for men: ', table.Recall_20000.iloc[i])
+
 # %%
 for i, model in enumerate(models):
     print(' ')
