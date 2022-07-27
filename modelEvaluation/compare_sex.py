@@ -251,6 +251,18 @@ fig2.savefig(os.path.join(config.FIGUREPATH, 'prCurve.png'))
 plt.show()
 print(table.to_markdown(index=False,))
 # %%
+""" THRESHOLDS FOR THE RISK GROUPS """
+print('Global model, 20000th probability is:', pd.concat([joint_cal['Mujeres'],joint_cal['Hombres']]).nlargest(20000,'PRED').min().PRED)
+print('Women model, 20000th probability is:', separate_cal['Mujeres'].nlargest(20000,'PRED').min().PRED)
+print('Men model, 20000th probability is:',   separate_cal['Hombres'].nlargest(20000,'PRED').min().PRED)
+print('Separate models, 20000th probability is:', pd.concat([separate_cal['Mujeres'],separate_cal['Hombres']]).nlargest(20000,'PRED').min().PRED)
+
+#%%
+""" FIX THRESHOLD FOR SEPARATE MODELS """
+t=0.4
+for groupname in sex:
+    recallT, ppvT, specT, _ = performance(separate_cal[groupname].OBS,separate_cal[groupname].PRED, K, t=t)
+    print(recallT, ppvT)
 # %%
 for i, model in enumerate(models):
     print(' ')

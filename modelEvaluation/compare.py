@@ -147,10 +147,14 @@ import numpy as np
 from sklearn.metrics import confusion_matrix
 
 
-def performance(obs, pred, K, computemetrics=True):
-    orderedPred = sorted(pred, reverse=True)
-    orderedObs = sorted(obs, reverse=True)
-    cutoff = orderedPred[K - 1]
+def performance(obs, pred, K, computemetrics=True, **kwargs):
+    threshold=kwargs.get('t',None)
+    if not threshold:
+        orderedPred = sorted(pred, reverse=True)
+        orderedObs = sorted(obs, reverse=True)
+        cutoff = orderedPred[K - 1]
+    else:
+        cutoff=threshold
     # print(f'Cutoff value ({K} values): {cutoff}')
     # print(f'Observed cutoff value ({K} values): {orderedObs[K-1]}')
     newpred = pred >= cutoff
