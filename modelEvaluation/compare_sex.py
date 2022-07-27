@@ -156,9 +156,9 @@ for col in ['PRED','PREDCAL']:
         axhist.set_xlim(xmin=-0.02, xmax=0.23)
         axhist2.set_xlim(xmin=-0.02, xmax=0.23)
         sns.kdeplot(separate_preds, shade=True, ax=axhist,
-                    clip=(0, 1), label=f'{groupname} {col}', bw=0.3)
+                    clip=(0, 1), label=f'{groupname} {col}', bw_method=0.3)
         sns.kdeplot(joint_preds, shade=True, ax=axhist2,
-                    clip=(0, 1), label=f'{groupname} {col}', bw=0.3)
+                    clip=(0, 1), label=f'{groupname} {col}', bw_method=0.3)
     
         axhist.set_title('Modelos separados')
         axhist2.set_title('Modelo global')
@@ -168,9 +168,9 @@ for col in ['PRED','PREDCAL']:
         ax = axhist3 if groupname == 'Mujeres' else axhist4
         ax.set_xlim(xmin=-0.02, xmax=0.23)
         sns.kdeplot(separate_preds, shade=True, ax=ax,
-                    clip=(0, 1), label=f'Separados {col}', bw=0.3)
+                    clip=(0, 1), label=f'Separados {col}', bw_method=0.3)
         sns.kdeplot(joint_preds, shade=True, ax=ax,
-                    clip=(0, 1), label=f'Global {col}', bw=0.3)
+                    clip=(0, 1), label=f'Global {col}', bw_method=0.3)
         ax.set_title(groupname)
         
         
