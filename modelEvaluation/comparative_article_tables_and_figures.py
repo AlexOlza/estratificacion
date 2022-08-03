@@ -168,12 +168,12 @@ for metric in ['Recall_20000', 'PPV_20000']:
     correct[metric]={}     
     incorrect[metric]={}
     for model in median_models[metric]+[logistic_model]:
-        if model==logistic_model:
-            preds= cal.calibrate(model, yr)
-        else:
-            predpath=re.sub(config.EXPERIMENT,'hyperparameter_variability_'+config.EXPERIMENT,config.PREDPATH)
-            preds= cal.calibrate(model, yr,  experiment_name='hyperparameter_variability_urgcms_excl_nbinj',
-                                                           filename=os.path.join(predpath,f'{model}_calibrated_{yr}.csv'))
+        # if model==logistic_model:
+        #     preds= cal.calibrate(model, yr)
+        # else:
+        predpath=re.sub(config.EXPERIMENT,'hyperparameter_variability_'+config.EXPERIMENT,config.PREDPATH)
+        preds= cal.calibrate(model, yr,  experiment_name='hyperparameter_variability_urgcms_excl_nbinj',
+                                                       filename=os.path.join(predpath,f'{model}__{yr}.csv'))
         tn, fp, fn, tp=performance(preds.OBS,preds.PREDCAL,K,computemetrics=False)
         correct[metric][model]=tn+tp
         incorrect[metric][model]=fn+fp
@@ -205,12 +205,11 @@ ROC_PR_comparison(median_models['AP'], 2018, logistic_model, mode='PR')
 ROC_PR_comparison(median_models['Score'], 2018, logistic_model, mode='ROC')
 
 """ BOXPLOTS """
-for violin in (True, False):
-    for together in (True, False):
-        boxplots(metrics, violin, together)
+
+boxplots(metrics)
 """ BRIER BOXPLOTS """
 brier_boxplot_zoom(metrics) #violins
-brier_boxplot_zoom(metrics, False) #boxplots
+
 #%%
 """ CALIBRATION: RELIABILITY DIAGRAMS """
 
@@ -218,8 +217,8 @@ median_models={}
 for metric in ['Brier', 'Brier Before']:
     mediandf=metrics.groupby(['Algorithm'])[metric].agg([ median]).stack(level=0)
     for alg in metrics.Algorithm.unique():
-        if alg=='logistic':
-            continue
+        # if alg=='logistic':
+        #     continue
         df_alg=metrics.loc[metrics.Algorithm==alg].to_dict(orient='list')
         perc50=mediandf.loc[alg]['median']
         chosen_model=list(df_alg['Model'])[list(df_alg[metric]).index(perc50)]
@@ -235,8 +234,8 @@ for metric in ['Brier', 'Brier Before']:
                                                            filename=os.path.join(predpath,f'{chosen_model}_calibrated_{yr}.csv'))}
 
 
-median_models['Brier']['LR']= cal.calibrate(logistic_model,yr)
-median_models['Brier Before']['LR']= cal.calibrate(logistic_model,yr)
+# median_models['Brier']['LR']= cal.calibrate(logistic_model,yr)
+# median_models['Brier Before']['LR']= cal.calibrate(logistic_model,yr)
 
 cal.plot(median_models['Brier'],consistency_bars=False)
 cal.plot(median_models['Brier Before'],consistency_bars=False)

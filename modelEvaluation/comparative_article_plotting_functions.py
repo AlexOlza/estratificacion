@@ -32,6 +32,19 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from mpl_toolkits.axes_grid1.inset_locator import mark_inset
 
+SMALL_SIZE = 12
+MEDIUM_SIZE = 16
+BIGGER_SIZE = 18
+
+plt.rc('font', size=SMALL_SIZE)          # controls default text sizes
+plt.rc('axes', titlesize=MEDIUM_SIZE)     # fontsize of the axes title
+plt.rc('axes', labelsize=MEDIUM_SIZE)    # fontsize of the x and y labels
+plt.rc('xtick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
+plt.rc('ytick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
+plt.rc('legend', fontsize=MEDIUM_SIZE)    # legend fontsize
+plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
+
+
 def model_labels(models):
     labels=[]
     #The abbreviations that should appear in tables and figures:
@@ -44,20 +57,23 @@ def model_labels(models):
 
 def ROC_PR_comparison(models, yr, logistic_model, mode='ROC', **kwargs):
     # load logistic predictions
-    parent=calibrate(logistic_model, yr)
+    # parent=calibrate(logistic_model, yr)
+    predpath=re.sub(config.EXPERIMENT,'hyperparameter_variability_'+config.EXPERIMENT,config.PREDPATH)
+    parent=calibrate(logistic_model, yr, experiment_name='hyperparameter_variability_'+config.EXPERIMENT,
+                    filename=os.path.join(predpath,f'{logistic_model}_calibrated_{yr}.csv'))
     display={}
     # load models predictions
     models.append(logistic_model)
     labels=model_labels(models)
     for m, label in zip(models, labels): 
         print(m, label)
-        if m==logistic_model:
-            model=calibrate(m, yr,experiment_name=config.EXPERIMENT,
-                            )
-        else:
-            predpath=re.sub(config.EXPERIMENT,'hyperparameter_variability_'+config.EXPERIMENT,config.PREDPATH)
-            model=calibrate(m, yr, experiment_name='hyperparameter_variability_'+config.EXPERIMENT,
-                            filename=os.path.join(predpath,f'{m}_calibrated_{yr}.csv'))
+        # if m==logistic_model:
+        #     model=calibrate(m, yr,experiment_name=config.EXPERIMENT,
+        #                     )
+        # else:
+        predpath=re.sub(config.EXPERIMENT,'hyperparameter_variability_'+config.EXPERIMENT,config.PREDPATH)
+        model=calibrate(m, yr, experiment_name='hyperparameter_variability_'+config.EXPERIMENT,
+                        filename=os.path.join(predpath,f'{m}_calibrated_{yr}.csv'))
         obs=np.where(model.OBS>=1,1,0)
         fpr, tpr, _ = roc_curve(obs, model.PREDCAL)
         prec, rec, _ = precision_recall_curve(obs, model.PREDCAL)

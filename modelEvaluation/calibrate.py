@@ -68,15 +68,18 @@ def calibrate(model_name,yr, **kwargs):
         zipfile_found=zipfile.is_zipfile(zipfilename)
         
         if zipfile_found:
+            print('zipfile found')
             zfile=zipfile.ZipFile(zipfilename,'r')
-            zipfile_contains_calibrated=os.path.basename(calibFilename) in zfile.namelist()
-            zipfile_contains_uncalibrated=os.path.basename(uncalFilename) in zfile.namelist()
+            zipfile_contains_calibrated='hyperparameter_variability_urgcms_excl_nbinj/'+os.path.basename(calibFilename) in zfile.namelist()
+            zipfile_contains_uncalibrated='hyperparameter_variability_urgcms_excl_nbinj/'+os.path.basename(uncalFilename) in zfile.namelist()
             if zipfile_contains_calibrated:
                 print('Calibrated predictions found; loading from zip')           
                 try:
+                    print('Reading ',calibFilename.split('/')[-1])
                     p_calibrated=pd.read_csv(zfile.open(calibFilename.split('/')[-1])) 
                 except KeyError:
                     f=os.path.join(calibFilename.split('/')[-2]+'/'+calibFilename.split('/')[-1])
+                    print('Reading ',f)
                     p_calibrated=pd.read_csv(zfile.open(f)) 
                 return(p_calibrated)
         
