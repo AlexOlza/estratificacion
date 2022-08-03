@@ -153,8 +153,14 @@ for col in ['PRED','PREDCAL']:
         assert all(separate_cal[groupname].OBS == joint_cal[groupname].OBS)
         import seaborn as sns
         # plt.xlim(0, 0.2)
-        axhist.set_xlim(xmin=-0.02, xmax=0.23)
-        axhist2.set_xlim(xmin=-0.02, xmax=0.23)
+        axhist.set_xlim(xmin=0.5, xmax=1)
+        axhist2.set_xlim(xmin=0.5, xmax=1)
+        axhist3.set_xlim(xmin=0.5, xmax=1)
+        axhist4.set_xlim(xmin=0.5, xmax=1)
+        axhist.set_ylim(0,0.1)
+        axhist2.set_ylim(0,0.1)
+        axhist.set_ylim(0,0.1)
+        axhist.set_ylim(0,0.1)
         sns.kdeplot(separate_preds, shade=True, ax=axhist,
                     clip=(0, 1), label=f'{groupname} {col}', bw_method=0.3)
         sns.kdeplot(joint_preds, shade=True, ax=axhist2,
@@ -166,7 +172,8 @@ for col in ['PRED','PREDCAL']:
         # plt.tight_layout()
     
         ax = axhist3 if groupname == 'Mujeres' else axhist4
-        ax.set_xlim(xmin=-0.02, xmax=0.23)
+        ax.set_ylim(0,0.1)
+        ax.set_ylim(0,0.1)
         sns.kdeplot(separate_preds, shade=True, ax=ax,
                     clip=(0, 1), label=f'Separados {col}', bw_method=0.3)
         sns.kdeplot(joint_preds, shade=True, ax=ax,
@@ -214,7 +221,7 @@ axhist4.legend(loc='lower center', bbox_to_anchor=(1.05, 0.0))
 # axhist3.legend()
 # axhist.legend()
 plt.tight_layout()
-plt.savefig(os.path.join(config.FIGUREPATH,f'densities.png'))
+plt.savefig(os.path.join(config.FIGUREPATH,f'densitiesTail.png'))
 
 
 #%%
@@ -261,8 +268,9 @@ print('Separate models, 20000th probability is:', pd.concat([separate_cal['Mujer
 """ FIX THRESHOLD FOR SEPARATE MODELS """
 t=0.4
 for groupname in sex:
-    recallT, ppvT, specT, _ = performance(separate_cal[groupname].OBS,separate_cal[groupname].PRED, K, t=t)
-    print(recallT, ppvT)
+    print(groupname)
+    recallT, ppvT, specT, newpred = performance(separate_cal[groupname].OBS,separate_cal[groupname].PRED, K, t=t)
+    print(recallT, ppvT, 'N=',sum(newpred))
 # %%
 for i, model in enumerate(models):
     print(' ')
