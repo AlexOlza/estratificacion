@@ -6,6 +6,20 @@ import traceback
 from pathlib import Path
 import numpy as np
 import matplotlib.pyplot as plt
+
+SMALL_SIZE = 16
+MEDIUM_SIZE = 20
+BIGGER_SIZE = 24
+
+plt.rc('font', size=SMALL_SIZE)          # controls default text sizes
+plt.rc('axes', titlesize=MEDIUM_SIZE)     # fontsize of the axes title
+plt.rc('axes', labelsize=MEDIUM_SIZE)    # fontsize of the x and y labels
+plt.rc('xtick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
+plt.rc('ytick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
+plt.rc('legend', fontsize=MEDIUM_SIZE)    # legend fontsize
+plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
+
+
 import pandas as pd
 from sklearn.calibration import calibration_curve
 from sklearn.isotonic import IsotonicRegression
@@ -71,8 +85,9 @@ def calibrate(model_name,yr, **kwargs):
             print('zipfile found')
             zfile=zipfile.ZipFile(zipfilename,'r')
             zipfile_contains_calibrated=os.path.basename(calibFilename) in zfile.namelist()
+            zipfile_contains_calibrated_insidedir=os.path.join(calibFilename.split('/')[-2]+'/'+calibFilename.split('/')[-1]) in zfile.namelist()
             zipfile_contains_uncalibrated=os.path.basename(uncalFilename) in zfile.namelist()
-            if zipfile_contains_calibrated:
+            if zipfile_contains_calibrated or zipfile_contains_calibrated_insidedir:
                 print('Calibrated predictions found; loading from zip')           
                 try:
                     print('Reading ',calibFilename.split('/')[-1])
@@ -166,8 +181,9 @@ def plot(p, consistency_bars=True, **kwargs):
     ax1.plot([0, 1], [0, 1], "k:", label=0)
     ax2.plot([0, 1], [0, 1], "k:", label=0)
     colors=['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728','#9467bd']#, '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
-    large=27
-    medium=18
+    large=30
+    medium=26
+    small=22
     for model_name, preds, col in zip(p.keys(),p.values(),colors):
         obs=np.where(preds.OBS>=1,1,0).ravel()
         for probs,name in zip([preds.PRED,preds.PREDCAL],[model_name,model_name+' Calibrated']):
@@ -192,7 +208,7 @@ def plot(p, consistency_bars=True, **kwargs):
                   label="%s" % (label, ))
             for i, txt in zip(range(len(mean_pastPredicted_value)),bintot):
                     if i>len(mean_pastPredicted_value)-3 and txt!=0:
-                        axTop.annotate(txt, (mean_pastPredicted_value[i], fraction_of_positives[i]),fontsize=medium)
+                        axTop.annotate(txt, (mean_pastPredicted_value[i], fraction_of_positives[i]),fontsize=small)
                         print(i,txt)
             df=pd.DataFrame()
             df['Fracción positivos']=fraction_of_positives
@@ -209,7 +225,7 @@ def plot(p, consistency_bars=True, **kwargs):
             axTop.set_ylabel("Fraction of positives",fontsize=medium)
             axTop.set_xlabel("Mean predicted value",fontsize=medium)
             axTop.set_ylim([-0.05, 1.10])
-            axTop.legend(loc="upper center", ncol=2,fontsize=medium,title='Brier score')
+            axTop.legend(loc="upper left", ncol=2,fontsize=medium,title='Brier score')
             axTop.get_legend().get_title().set_fontsize(medium)
             axHist.set_ylabel("Count",fontsize=medium)
             axHist.set_xlabel("Predicted probability",fontsize=medium)
