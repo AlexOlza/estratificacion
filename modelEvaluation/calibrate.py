@@ -53,8 +53,8 @@ def calibrate(model_name,yr, **kwargs):
         filename=kwargs.get('filename',None)
         experiment_name=kwargs.get('experiment_name',config.EXPERIMENT)
         if filename:
-            calibFilename=generate_filename(filename,yr, calibrated=True)
-            uncalFilename=generate_filename(filename,yr, calibrated=False)
+            calibFilename=re.sub(f'__{yr}.csv',f'_calibrated_{yr}.csv',filename)
+            uncalFilename=filename
         else:
             calibFilename=generate_filename(model_name,yr, calibrated=True)
             uncalFilename=generate_filename(model_name,yr, calibrated=False)
