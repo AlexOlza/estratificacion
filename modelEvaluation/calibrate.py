@@ -70,8 +70,8 @@ def calibrate(model_name,yr, **kwargs):
         if zipfile_found:
             print('zipfile found')
             zfile=zipfile.ZipFile(zipfilename,'r')
-            zipfile_contains_calibrated='hyperparameter_variability_urgcms_excl_nbinj/'+os.path.basename(calibFilename) in zfile.namelist()
-            zipfile_contains_uncalibrated='hyperparameter_variability_urgcms_excl_nbinj/'+os.path.basename(uncalFilename) in zfile.namelist()
+            zipfile_contains_calibrated=os.path.basename(calibFilename) in zfile.namelist()
+            zipfile_contains_uncalibrated=os.path.basename(uncalFilename) in zfile.namelist()
             if zipfile_contains_calibrated:
                 print('Calibrated predictions found; loading from zip')           
                 try:
