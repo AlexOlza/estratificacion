@@ -266,6 +266,19 @@ for metric in ['PPV_20000']:
         
 
 risk_groups['General Population']=X.PATIENT_ID.values
+
+#%%
+""" AGE DISTRIBUTION PLOT OF THE RISK GROUP VS. GENERAL POPULATION"""
+columns=['neuralNetworkRandom_43', logistic_model,'General Population']
+for chosen_model in columns:
+    Xx=X.loc[X.PATIENT_ID.isin(risk_groups[chosen_model])]
+    Yy=y.loc[y.PATIENT_ID.isin(risk_groups[chosen_model])]
+    
+    agesRisk=Xx.filter(regex=("AGE*")).idxmax(1)
+    agesGP=X.filter(regex=("AGE*")).idxmax(1)
+    
+    agesRisk.hist()
+    agesGP.hist()
 #%%
 table=pd.DataFrame()
 columns=['neuralNetworkRandom_43', logistic_model,'General Population']
