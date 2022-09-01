@@ -189,7 +189,7 @@ for metric in ['Recall_20000', 'PPV_20000']:
         else:
             predpath=re.sub(config.EXPERIMENT,'hyperparameter_variability_'+config.EXPERIMENT,config.PREDPATH)
             preds= cal.calibrate(model, yr,  experiment_name='hyperparameter_variability_urgcms_excl_nbinj',
-                                                           filename=os.path.join(predpath,f'{model}_calibrated_{yr}.csv'))
+                                                           filename=os.path.join(predpath,f'{model}'))
         tn, fp, fn, tp=performance(preds.OBS,preds.PREDCAL,K,computemetrics=False)
         correct[metric][model]=tn+tp
         incorrect[metric][model]=fn+fp
@@ -228,8 +228,8 @@ boxplots(allmetrics, violin=True, together=False, hue='Year',supplementary=True)
 
 #%% 
 """ CHARACTERISTICS OF THE RISK GROUP """
-metrics=pd.read_csv(re.sub(config.EXPERIMENT, 'hyperparameter_variability_urgcms_excl_nbinj',config.PREDPATH)+'/metrics2018.csv')
-logisticMetrics=pd.read_csv(config.PREDPATH+'/metrics2018.csv')
+metrics=pd.read_csv(re.sub(config.EXPERIMENT, 'hyperparameter_variability_urgcms_excl_nbinj',config.METRICSPATH)+'/metrics2018.csv')
+logisticMetrics=pd.read_csv(config.METRICSPATH+'/metrics2018.csv')
 logisticMetrics=logisticMetrics.loc[logisticMetrics.Model.str.startswith('logistic2022')]
 logisticMetrics['Algorithm']=['logistic']
 
@@ -259,7 +259,8 @@ for metric in ['PPV_20000']:
         else:
             predpath=re.sub(config.EXPERIMENT,'hyperparameter_variability_'+config.EXPERIMENT,config.PREDPATH)
             preds[model]= cal.calibrate(model, 2018,  experiment_name='hyperparameter_variability_urgcms_excl_nbinj',
-                                                           filename=os.path.join(predpath,f'{model}_calibrated_2018.csv'))
+                                                           filename=os.path.join(predpath,f'{model}')
+                                                           )
         risk_group=preds[model].nlargest(20000, 'PREDCAL')
         print(risk_group.head())
         risk_groups[model]=risk_group.PATIENT_ID.values

@@ -57,7 +57,7 @@ def ROC_PR_comparison(models, yr, logistic_model, mode='ROC', **kwargs):
         else:
             predpath=re.sub(config.EXPERIMENT,'hyperparameter_variability_'+config.EXPERIMENT,config.PREDPATH)
             model=calibrate(m, yr, experiment_name='hyperparameter_variability_'+config.EXPERIMENT,
-                            filename=os.path.join(predpath,f'{m}_calibrated_{yr}.csv'))
+                            filename=os.path.join(predpath,f'{m}'))
         obs=np.where(model.OBS>=1,1,0)
         fpr, tpr, _ = roc_curve(obs, model.PREDCAL)
         prec, rec, _ = precision_recall_curve(obs, model.PREDCAL)
