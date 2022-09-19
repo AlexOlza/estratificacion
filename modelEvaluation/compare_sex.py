@@ -106,8 +106,11 @@ for i, group, groupname in zip([1, 0], [female, male], sex):
         set(selected)-set([f'logistic{groupname}'])-set(['logistic_gender_balanced']))[0]
     separatemodelname = f'logistic{groupname}.joblib'
     globalmodel = job.load(config.MODELPATH+globalmodelname+'.joblib')
-    sameprevmodel = job.load(
-        config.MODELPATH+'logistic_gender_balanced.joblib')
+    try:
+        sameprevmodel = job.load(
+            config.MODELPATH+'logistic_gender_balanced.joblib')
+    except FileNotFoundError:
+        print('Same prevalence model not found')
     separatemodel = job.load(config.MODELPATH+separatemodelname)
 
     # SUBSET DATA
