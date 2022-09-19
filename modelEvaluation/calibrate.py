@@ -67,13 +67,13 @@ def calibrate(model_name,yr, **kwargs):
         filename=kwargs.get('filename',None)
         experiment_name=kwargs.get('experiment_name',config.EXPERIMENT)
         if filename:
-            calibFilename=re.sub(f'__{yr}.csv',f'_calibrated_{yr}.csv',filename)
-            uncalFilename=filename
+            calibFilename=os.path.join(config.PREDPATH,filename+f'_calibrated_{yr}.csv')
+            uncalFilename=os.path.join(config.PREDPATH,filename+f'__{yr}.csv')
         else:
             calibFilename=generate_filename(model_name,yr, calibrated=True)
             uncalFilename=generate_filename(model_name,yr, calibrated=False)
         print('CALIBFILENAME ',calibFilename)
-        
+        print('UNCALFILENAME ',uncalFilename)
         #Conditions
         calibrated_predictions_found= Path(calibFilename).is_file()
         uncalibrated_predictions_found= Path(uncalFilename).is_file()
