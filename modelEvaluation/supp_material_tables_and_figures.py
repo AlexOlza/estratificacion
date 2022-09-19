@@ -270,16 +270,46 @@ risk_groups['General Population']=X.PATIENT_ID.values
 
 #%%
 """ AGE DISTRIBUTION PLOT OF THE RISK GROUP VS. GENERAL POPULATION"""
-columns=['neuralNetworkRandom_43', logistic_model,'General Population']
+columns=['neuralNetworkRandom_43', logistic_model]
+
+if not 'AGE_85+' in X:
+    X['AGE_85+']=np.where(X.filter(regex=("AGE*")).sum(axis=1)==0,1,0)
+
 for chosen_model in columns:
+    
     Xx=X.loc[X.PATIENT_ID.isin(risk_groups[chosen_model])]
     Yy=y.loc[y.PATIENT_ID.isin(risk_groups[chosen_model])]
+    a1=sum(Xx.AGE_0004)+sum(Xx.AGE_0511)+sum(Xx.AGE_0511)
+    a2=sum(Xx.AGE_1834)+sum(Xx.AGE_3544)+sum(Xx.AGE_4554)+sum(Xx.AGE_5564)
+    a3=sum(Xx.AGE_6569)
+    a4=sum(Xx.AGE_7074)+sum(Xx.AGE_7579)
+    a5=sum(Xx.AGE_8084)
+    a85plus=(len(Xx)-(a1+a2+a3+a4+a5))/len(Xx)*100
     
-    agesRisk=Xx.filter(regex=("AGE*")).idxmax(1)
-    agesGP=X.filter(regex=("AGE*")).idxmax(1)
+    # Xx['AGE_85+']=np.where(Xx.filter(regex=("AGE*")).sum(axis=1)==0,1,0)
     
-    agesRisk.hist()
-    agesGP.hist()
+    
+    agesRisk=pd.DataFrame(Xx.filter(regex=("AGE*")).idxmax(1).value_counts(normalize=True)*100)
+    agesGP=pd.DataFrame(X.filter(regex=("AGE*")).idxmax(1).value_counts(normalize=True)*100)
+    
+    import seaborn as sns
+    fig, ax=plt.subplots(figsize=(8,10))
+
+
+    agesRisk['Age group']=agesRisk.index
+    agesRisk['Percent']=agesRisk[0]
+    agesRisk=agesRisk[['Age group', 'Percent']]
+    # agesRisk.loc[len(agesRisk.index)]=['AGE_85+',a85plus]
+    agesGP['Age group']=agesGP.index
+    agesGP['Percent']=agesGP[0]
+    agesGP=agesGP[['Age group', 'Percent']]
+    # agesGP.loc[len(agesGP.index)]=['AGE_85+',a85plus]
+    
+    sns.barplot( y='Age group',x='Percent',ax=ax,data=agesRisk,
+                order=sorted(agesRisk['Age group'].values),color='r', alpha=0.5,label='Risk group')
+    sns.barplot( y='Age group',x='Percent',ax=ax,data=agesGP,
+                order=sorted(agesRisk['Age group'].values),color='b', alpha=0.5, label='General Population')
+    ax.legend()
 #%%
 table=pd.DataFrame()
 columns=['neuralNetworkRandom_43', logistic_model,'General Population']
