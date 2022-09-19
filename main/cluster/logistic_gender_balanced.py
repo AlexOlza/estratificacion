@@ -69,7 +69,7 @@ def gender_balanced_undersampling(X,y):
     
     return(XFemaleBalanced,yFemaleBalanced,XMaleBalanced,yMaleBalanced,prevalence_Females)
 
-Xf,yf,Xm,ym=gender_balanced_undersampling(X,y)
+Xf,yf,Xm,ym,prev_f=gender_balanced_undersampling(X,y)
 
 X=pd.concat([Xf,Xm])
 y=pd.concat([yf,ym])
@@ -83,11 +83,6 @@ except:
 
 print('first IDs (y)')
 print(y.head().PATIENT_ID)
-y=np.where(y[config.COLUMNS]>=1,1,0)
-y=y.ravel()
-print('Sample size ',len(X))
-#%%
-
 y=np.where(y[config.COLUMNS]>=1,1,0)
 y=y.ravel()
 print('Sample size ',len(X), 'positive: ',sum(y))
