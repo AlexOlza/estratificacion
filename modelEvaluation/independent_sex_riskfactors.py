@@ -28,17 +28,23 @@ if not config.configured:
 from dataManipulation.dataPreparation import getData
 from modelEvaluation.predict import generate_filename
 #%%
-def translateVariables(df,**kwargs):
-     dictionaryFile=kwargs.get('file',os.path.join(config.INDISPENSABLEDATAPATH+'diccionarioACG.csv'))
-     dictionary=pd.read_csv(dictionaryFile)
+def translateVariables(df, data='CCS',**kwargs):
+    if data=='ACG':
+        dictionaryFile=kwargs.get('file',os.path.join(config.INDISPENSABLEDATAPATH+'diccionarioACG.csv'))
+    else: #data==CCS 
+        dictionaryFile=kwargs.get('file',os.path.join(config.INDISPENSABLEDATAPATH,'ccs','diccionarioCCS.csv'))   
+    dictionary=pd.read_csv(dictionaryFile)
      #Add interaction column codes if present:
-     for column in df.codigo.values:
-        if column.endswith('INTsex'):
-            dictionary=dictionary.append(pd.DataFrame([[column,dictionary.loc[dictionary.codigo==re.sub('INTsex','',column)].descripcion.values[0]]],
-                                           columns=['codigo','descripcion']),
-                                            ignore_index=True)
-     df=pd.merge(df, dictionary, on=['codigo'])
-     return df
+    for column in df.codigo.values:
+        if column.endswith('INTsex') and not (column in dictionary.codigo):
+            col=re.sub('INTsex','',column)
+            descr=dictionary.loc[dictionary.codigo==col].descripcion.values
+            # print(p)
+            dictionary=dictionary.append(pd.DataFrame([[column,descr]],
+                                         columns=['codigo','descripcion']),
+                                         ignore_index=True)
+    df=pd.merge(df, dictionary, on=['codigo'])
+    return df
  
 def beta_std_error(logModel, X, eps=1e-20):
     """ Source:
@@ -52,7 +58,7 @@ def beta_std_error(logModel, X, eps=1e-20):
     X_design = np.hstack([np.ones((X.shape[0], 1)), X])
 
     # Diagonal matrix with each predicted observation's p(1-p)
-    V = np.product(predProbs, axis=1) #avoids memory issues using shape (n,) instead of (n,n)
+    V = np.product(predProbs*(1-predProbs), axis=1) #avoids memory issues using shape (n,) instead of (n,n)
     
     # Covariance matrix
     # * does ordinary multiplication. We can use it because V is diagonal :)
