@@ -21,7 +21,7 @@ module load SciPy-bundle/2020.11-foss-2020b-skrebate #INCLUDES scikit-learn 0.24
 
 echo $YEAR 
 echo $CONFIG
-srun python compare_sex_riskfactors.py
+srun python compare_sex_riskfactors.py $CONFIG $EXPERIMENT
 
 
 sleep 1

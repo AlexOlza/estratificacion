@@ -31,7 +31,10 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import average_precision_score, roc_auc_score, RocCurveDisplay,roc_curve, auc,precision_recall_curve, PrecisionRecallDisplay
 
 #%% CONFIGURE 
-experiment=input('Experiment: ')
+
+chosen_config='configurations.cluster.'+sys.argv[1]
+experiment='configurations.'+sys.argv[2]
+# experiment=input('Experiment: ')
 config_used=os.path.join(os.environ['USEDCONFIG_PATH'],f'{experiment}/logisticSexInteraction.json')
 
 from python_settings import settings as config
