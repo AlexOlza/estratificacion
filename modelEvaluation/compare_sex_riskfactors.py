@@ -39,7 +39,7 @@ try:
 except:
     usedconfigpath=sys.argv[3]
 # experiment=input('Experiment: ')
-config_used=os.path.join(usedconfigpath,f'{experiment}/logisticSexInteraction.json')
+config_used=os.path.join(usedconfigpath,f'{sys.argv[2]}/logisticSexInteraction.json')
 
 from python_settings import settings as config
 import configurations.utility as util
