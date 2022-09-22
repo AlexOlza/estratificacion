@@ -129,13 +129,16 @@ significantRiskWomen=interactions.loc[(interactions.Low>=1) & (interactions.Odds
 significantRiskMen=interactions.loc[(interactions.High<=1) & (interactions.Odds<=1)]
 print(f'TOP {N} variables cuya presencia acrecienta el riesgo para las mujeres más que para los hombres: ')
 #mayores interacciones positivas
-print(significantRiskWomen.sort_values(by='Odds', ascending=False)[[ 'codigo','Odds','descripcion','NMuj', 'NHom']])
+print(significantRiskWomen.sort_values(by='Odds', ascending=False)[['Odds','descripcion']])
 print('  ')
+significantRiskWomen.sort_values(by='Odds', ascending=False)[[ 'codigo', 'Low','Odds', 'High','descripcion', 'NMuj', 'NHom']].to_csv(os.path.join(config.PREDPATH, f'{config.ALGORITHM}_moreRiskWomen.csv'),
+                                                                                                                                     index=False,
+                                                                                                                                     sep='\t')
 
-significantRiskWomen.sort_values(by='Odds', ascending=False)[[ 'codigo', 'Low','Odds', 'High','descripcion', 'NMuj', 'NHom']].to_csv(os.path.join(config.PREDPATH,'masRiesgoMujeres.csv'), index=False)
 print(f'TOP {N} variables cuya presencia acrecienta el riesgo para los hombres más que para las mujeres: ')
 significantRiskMen['invOdds']=1/significantRiskMen.Odds
 print(significantRiskMen.sort_values(by='invOdds', ascending=False)[[ 'invOdds', 'descripcion', 'NMuj', 'NHom']])
 print('  ')
 
-significantRiskMen.sort_values(by='invOdds', ascending=False)[[ 'codigo', 'Low','Odds', 'invOdds', 'High','descripcion', 'NMuj', 'NHom']].to_csv(os.path.join(config.PREDPATH,'masRiesgoHombres.csv'), index=False)
+significantRiskMen.sort_values(by='invOdds', ascending=False)[[ 'codigo', 'Low','Odds', 'invOdds', 'High','descripcion', 'NMuj', 'NHom']].to_csv(os.path.join(config.PREDPATH, f'{config.ALGORITHM}_moreRiskMen.csv'),
+                                                                                                                                                 index=False, sep='\t')

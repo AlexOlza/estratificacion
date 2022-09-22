@@ -19,17 +19,24 @@ import sys
 sys.path.append('/home/aolza/Desktop/estratificacion/')
 import pandas as pd
 #%%
+chosen_config='configurations.cluster.'+sys.argv[1]
+experiment='configurations.'+sys.argv[2]
+try:
+    usedconfigpath=os.environ['USEDCONFIG_PATH']
+except:
+    usedconfigpath=sys.argv[3]
+# experiment=input('Experiment: ')
+config_used=os.path.join(usedconfigpath,f'{sys.argv[2]}/logisticMujeres.json')
+
 from python_settings import settings as config
 import configurations.utility as util
 if not config.configured: 
-    experiment=input('Experiment: ')
-    config_used=os.path.join(os.environ['USEDCONFIG_PATH'],f'{experiment}/logisticMujeres.json')
     configuration=util.configure(config_used)
 from dataManipulation.dataPreparation import getData
 from modelEvaluation.predict import generate_filename
 #%%
-def translateVariables(df, data='CCS',**kwargs):
-    if data=='ACG':
+def translateVariables(df,**kwargs):
+    if not 'CCS' in config.EXPERIMENT:
         dictionaryFile=kwargs.get('file',os.path.join(config.INDISPENSABLEDATAPATH+'diccionarioACG.csv'))
     else: #data==CCS 
         dictionaryFile=kwargs.get('file',os.path.join(config.INDISPENSABLEDATAPATH,'ccs','diccionarioCCS.csv'))   
@@ -90,7 +97,7 @@ def confidence_interval_odds_ratio(betas, stderr, waldT):
     return(low,high)
 
 if __name__=="__main__":
-    year=int(input('YEAR TO PREDICT: ')) 
+    year=2018#int(input('YEAR TO PREDICT: ')) 
     X,y=getData(year-1)
     #%%
     female=X['FEMALE']==1
@@ -173,5 +180,5 @@ if __name__=="__main__":
     print(riskFactors.sort_values(by='Mujeres', ascending=False)[['codigo','Mujeres', 'NMuj','descripcion']])
     
     print('FACTORES DE RIESGO SIGNIFICATIVOS EN HOMBRES: ')
-    riskFactors=oddsContrib.loc[(oddsContrib['LowH']>=1) & (oddsContrib.Mujeres>=1)]
+    riskFactors=oddsContrib.loc[(oddsContrib['LowH']>=1) & (oddsContrib.Hombres>=1)]
     print(riskFactors.sort_values(by='Hombres', ascending=False)[['codigo','Hombres', 'NHom','descripcion']])
