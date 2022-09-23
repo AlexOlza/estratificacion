@@ -6,8 +6,8 @@ Created on Mon May  9 15:55:10 2022
 @author: aolza
 """
 
-EXPERIMENT='urgcmsCCS'
-CONFIGNAME='urgcmsCCS.py'
+EXPERIMENT='urgcmsCCS_noext'
+CONFIGNAME='urgcmsCCS_noext.py'
 COLUMNS=['urgcms']
 TRACEBACK=True
 

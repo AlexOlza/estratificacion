@@ -100,7 +100,7 @@ def getData(yr,columns=config.COLUMNS,
                     predictors=predictors)
     elif CCS:
         Xprovisional=load(filename=config.ACGFILES[yr],predictors=predictors)
-        full16=generateCCSData(yr,  Xprovisional)
+        full16=generateCCSData(yr,  Xprovisional, predictors=predictors)
     else:
         full16=load(filename=config.ACGFILES[yr],predictors=predictors)
    
