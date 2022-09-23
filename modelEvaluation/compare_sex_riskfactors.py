@@ -107,7 +107,8 @@ else:
     
     oddsContrib=pd.read_csv(filename,sep=',')
     from modelEvaluation.independent_sex_riskfactors import translateVariables
-    oddsContrib=translateVariables(oddsContrib)
+    if not 'descripcion' in oddsContrib.columns:
+        oddsContrib=translateVariables(oddsContrib) 
     N=5
     year=2018
     X,y=getData(year-1)
@@ -123,7 +124,8 @@ else:
     
     oddsContrib['NMuj']=[Xmuj[re.sub('INTsex','',name)].sum() for name in oddsContrib.codigo]
     oddsContrib['NHom']=[Xhom[re.sub('INTsex','',name)].sum() for name in oddsContrib.codigo]
-    oddsContrib.to_csv(filename, index=False)
+    oddsContrib[['Low', 'Odds', 'High', 'Beta', 'StdErr(beta)', 'codigo', 'NMuj', 'NHom', 'descripcion']].to_csv(filename, index=False)
+    
 interactions=oddsContrib.loc[oddsContrib.codigo.str.endswith('INTsex')]
 significantRiskWomen=interactions.loc[(interactions.Low>=1) & (interactions.Odds>=1)]
 significantRiskMen=interactions.loc[(interactions.High<=1) & (interactions.Odds<=1)]
