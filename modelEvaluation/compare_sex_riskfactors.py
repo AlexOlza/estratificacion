@@ -31,8 +31,15 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import average_precision_score, roc_auc_score, RocCurveDisplay,roc_curve, auc,precision_recall_curve, PrecisionRecallDisplay
 
 #%% CONFIGURE 
-experiment=input('Experiment: ')
-config_used=os.path.join(os.environ['USEDCONFIG_PATH'],f'{experiment}/logisticSexInteraction.json')
+
+chosen_config='configurations.cluster.'+sys.argv[1]
+experiment='configurations.'+sys.argv[2]
+try:
+    usedconfigpath=os.environ['USEDCONFIG_PATH']
+except:
+    usedconfigpath=sys.argv[3]
+# experiment=input('Experiment: ')
+config_used=os.path.join(usedconfigpath,f'{sys.argv[2]}/logisticSexInteraction.json')
 
 from python_settings import settings as config
 import configurations.utility as util
@@ -59,9 +66,15 @@ if not os.path.exists(filename):
     sex=['Mujeres', 'Hombres']
     
     X.drop('PATIENT_ID', axis=1, inplace=True)
+    
+    # cols = {c:X[c]*X['FEMALE'] for c in X.drop('FEMALE',axis=1).columns}
+    
+    
+    # out = pd.concat([ df.astype(np.int8).add_suffix(f'{k}INTsex') for k,df in cols.items()], axis=1)
+    # assert False
     for column in X:
         if column!='FEMALE':
-            X[f'{column}INTsex']=X[column]*X['FEMALE']
+            X[f'{column}INTsex']=(X[column]*X['FEMALE']).astype(np.int8)
     features=X.columns
     stderrInt, zInt, pInt=beta_std_error(model, X)
     print('Intercept: ',list(model.intercept_))
@@ -94,7 +107,8 @@ else:
     
     oddsContrib=pd.read_csv(filename,sep=',')
     from modelEvaluation.independent_sex_riskfactors import translateVariables
-    oddsContrib=translateVariables(oddsContrib)
+    if not 'descripcion' in oddsContrib.columns:
+        oddsContrib=translateVariables(oddsContrib) 
     N=5
     year=2018
     X,y=getData(year-1)
@@ -110,19 +124,23 @@ else:
     
     oddsContrib['NMuj']=[Xmuj[re.sub('INTsex','',name)].sum() for name in oddsContrib.codigo]
     oddsContrib['NHom']=[Xhom[re.sub('INTsex','',name)].sum() for name in oddsContrib.codigo]
-    oddsContrib.to_csv(filename, index=False)
+    oddsContrib[['Low', 'Odds', 'High', 'Beta', 'StdErr(beta)', 'codigo', 'NMuj', 'NHom', 'descripcion']].to_csv(filename, index=False)
+    
 interactions=oddsContrib.loc[oddsContrib.codigo.str.endswith('INTsex')]
 significantRiskWomen=interactions.loc[(interactions.Low>=1) & (interactions.Odds>=1)]
 significantRiskMen=interactions.loc[(interactions.High<=1) & (interactions.Odds<=1)]
 print(f'TOP {N} variables cuya presencia acrecienta el riesgo para las mujeres más que para los hombres: ')
 #mayores interacciones positivas
-print(significantRiskWomen.sort_values(by='Odds', ascending=False)[[ 'codigo','Odds','descripcion','NMuj', 'NHom']])
+print(significantRiskWomen.sort_values(by='Odds', ascending=False)[['Odds','descripcion']])
 print('  ')
+significantRiskWomen.sort_values(by='Odds', ascending=False)[[ 'codigo', 'Low','Odds', 'High','descripcion', 'NMuj', 'NHom']].to_csv(os.path.join(config.PREDPATH, f'{config.ALGORITHM}_moreRiskWomen.csv'),
+                                                                                                                                     index=False,
+                                                                                                                                     sep='\t')
 
-significantRiskWomen.sort_values(by='Odds', ascending=False)[[ 'codigo', 'Low','Odds', 'High','descripcion', 'NMuj', 'NHom']].to_csv(os.path.join(config.PREDPATH,'masRiesgoMujeres.csv'), index=False)
 print(f'TOP {N} variables cuya presencia acrecienta el riesgo para los hombres más que para las mujeres: ')
 significantRiskMen['invOdds']=1/significantRiskMen.Odds
 print(significantRiskMen.sort_values(by='invOdds', ascending=False)[[ 'invOdds', 'descripcion', 'NMuj', 'NHom']])
 print('  ')
 
-significantRiskMen.sort_values(by='invOdds', ascending=False)[[ 'codigo', 'Low','Odds', 'invOdds', 'High','descripcion', 'NMuj', 'NHom']].to_csv(os.path.join(config.PREDPATH,'masRiesgoHombres.csv'), index=False)
+significantRiskMen.sort_values(by='invOdds', ascending=False)[[ 'codigo', 'Low','Odds', 'invOdds', 'High','descripcion', 'NMuj', 'NHom']].to_csv(os.path.join(config.PREDPATH, f'{config.ALGORITHM}_moreRiskMen.csv'),
+                                                                                                                                                 index=False, sep='\t')

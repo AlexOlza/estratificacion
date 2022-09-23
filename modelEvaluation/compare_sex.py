@@ -7,26 +7,30 @@ Created on Fri Mar 18 13:13:37 2022
 
 @author: aolza
 """
+import os
+import configurations.utility as util
+from python_settings import settings as config
+if not config.configured:
+    experiment = input('Experiment: ')
+    config_used = os.path.join(
+        os.environ['USEDCONFIG_PATH'], f'{experiment}/logisticMujeres.json')
+    configuration = util.configure(config_used)
 import joblib as job
 from dataManipulation.dataPreparation import getData
 import modelEvaluation.calibrate as cal
 from modelEvaluation.compare import detect_models, compare, detect_latest, performance
-import configurations.utility as util
-from python_settings import settings as config
+
+
 import pandas as pd
 import re
-import os
+
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.metrics import average_precision_score, roc_auc_score, RocCurveDisplay, roc_curve, auc, precision_recall_curve, PrecisionRecallDisplay
 import sys
 sys.path.append('/home/aolza/Desktop/estratificacion/')
 # %%
-if not config.configured:
-    experiment = input('Experiment: ')
-    config_used = os.path.join(
-        os.environ['USEDCONFIG_PATH'], f'{experiment}/logisticMujeres.json')
-    configuration = util.configure(config_used)
+
 
 # %%
 
@@ -66,10 +70,10 @@ pastX, pasty = getData(year-2)
 predictors = X.columns
 features = X.drop('PATIENT_ID', axis=1).columns
 
-for column in features:
-    if column != 'FEMALE':
-        X[f'{column}INTsex'] = X[column]*X['FEMALE']
-        pastX[f'{column}INTsex'] = pastX[column]*pastX['FEMALE']
+# for column in features:
+#     if column != 'FEMALE':
+#         X[f'{column}INTsex'] = X[column]*X['FEMALE']
+#         pastX[f'{column}INTsex'] = pastX[column]*pastX['FEMALE']
 # %%
 available_models = detect_models()
 # latest=detect_latest(available_models)
@@ -78,6 +82,11 @@ female = X['FEMALE'] == 1
 male = X['FEMALE'] == 0
 sex = ['Mujeres', 'Hombres']
 # %%
+tail=True
+if tail:
+    xmin, xmax= 0.5, 1
+else:
+    xmin, xmax= -0.02, 0.23
 separate_cal, joint_cal, balanced_cal = {}, {}, {}
 roc, roc_joint, roc_sameprev = {k: {} for k in sex}, {
     k: {} for k in sex}, {k: {} for k in sex}
@@ -91,7 +100,7 @@ FPR, TPR, ROCTHRESHOLDS = {k: {} for k in sex}, {k: {}
 table = pd.DataFrame()
 K = 20000
 models = ['Global', 'Separado', 'Misma Prevalencia']
-fighist, axs = plt.subplots(2, 2)
+fighist, axs = plt.subplots(2, 2, figsize=(25, 20))
 
 axhist, axhist2, axhist3, axhist4= axs[0,0], axs[0,1], axs[1,0], axs[1,1]
 # fighist2, (axhist3, axhist4) = plt.subplots(1, 2)
@@ -106,8 +115,11 @@ for i, group, groupname in zip([1, 0], [female, male], sex):
         set(selected)-set([f'logistic{groupname}'])-set(['logistic_gender_balanced']))[0]
     separatemodelname = f'logistic{groupname}.joblib'
     globalmodel = job.load(config.MODELPATH+globalmodelname+'.joblib')
-    sameprevmodel = job.load(
-        config.MODELPATH+'logistic_gender_balanced.joblib')
+    try:
+        sameprevmodel = job.load(
+            config.MODELPATH+'logistic_gender_balanced.joblib')
+    except FileNotFoundError:
+        print('Same prevalence model not found')
     separatemodel = job.load(config.MODELPATH+separatemodelname)
 
     # SUBSET DATA
@@ -159,12 +171,15 @@ for i, group, groupname in zip([1, 0], [female, male], sex):
     assert all(separate_cal[groupname].OBS == joint_cal[groupname].OBS)
     import seaborn as sns
     # plt.xlim(0, 0.2)
-    axhist.set_xlim(xmin=-0.02, xmax=0.23)
-    axhist2.set_xlim(xmin=-0.02, xmax=0.23)
+    axhist.set_xlim(xmin,xmax)
+    axhist2.set_xlim(xmin,xmax)
+    if tail:
+        axhist.set_ylim(0,0.1)
+        axhist2.set_ylim(0,0.1)
     sns.kdeplot(separate_preds, shade=True, ax=axhist,
-                clip=(0, 1), label=groupname, bw=0.3)
+                clip=(0, 1), label=groupname, bw_method=0.3)
     sns.kdeplot(joint_preds, shade=True, ax=axhist2,
-                clip=(0, 1), label=groupname, bw=0.3)
+                clip=(0, 1), label=groupname, bw_method=0.3)
 
     axhist.set_title('Modelos separados')
     axhist2.set_title('Modelo global')
@@ -172,11 +187,13 @@ for i, group, groupname in zip([1, 0], [female, male], sex):
     # plt.tight_layout()
 
     ax = axhist3 if groupname == 'Mujeres' else axhist4
-    ax.set_xlim(xmin=-0.02, xmax=0.23)
+    ax.set_xlim(xmin,xmax)
+    if tail:
+        ax.set_ylim(0,0.1)
     sns.kdeplot(separate_preds, shade=True, ax=ax,
-                clip=(0, 1), label='Separados', bw=0.3)
+                clip=(0, 1), label='Separados', bw_method=0.3)
     sns.kdeplot(joint_preds, shade=True, ax=ax,
-                clip=(0, 1), label='Global', bw=0.3)
+                clip=(0, 1), label='Global', bw_method=0.3)
     ax.set_title(groupname)
     
 

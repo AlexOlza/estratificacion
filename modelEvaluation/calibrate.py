@@ -67,13 +67,13 @@ def calibrate(model_name,yr, **kwargs):
         filename=kwargs.get('filename',None)
         experiment_name=kwargs.get('experiment_name',config.EXPERIMENT)
         if filename:
-            calibFilename=re.sub(f'__{yr}.csv',f'_calibrated_{yr}.csv',filename)
-            uncalFilename=filename
+            calibFilename=os.path.join(config.PREDPATH,filename+f'_calibrated_{yr}.csv')
+            uncalFilename=os.path.join(config.PREDPATH,filename+f'__{yr}.csv')
         else:
             calibFilename=generate_filename(model_name,yr, calibrated=True)
             uncalFilename=generate_filename(model_name,yr, calibrated=False)
         print('CALIBFILENAME ',calibFilename)
-        
+        print('UNCALFILENAME ',uncalFilename)
         #Conditions
         calibrated_predictions_found= Path(calibFilename).is_file()
         uncalibrated_predictions_found= Path(uncalFilename).is_file()
@@ -84,7 +84,6 @@ def calibrate(model_name,yr, **kwargs):
         if zipfile_found:
             print('zipfile found')
             zfile=zipfile.ZipFile(zipfilename,'r')
-<<<<<<< HEAD
             if experiment_name=='hyperparameter_variability_urgcms_excl_nbinj':
                 zipfile_contains_calibrated=experiment_name+'/'+os.path.basename(calibFilename) in zfile.namelist()
                 zipfile_contains_uncalibrated=experiment_name+'/'+os.path.basename(uncalFilename) in zfile.namelist()
@@ -92,16 +91,6 @@ def calibrate(model_name,yr, **kwargs):
                 zipfile_contains_calibrated=os.path.basename(calibFilename) in zfile.namelist()
                 zipfile_contains_uncalibrated=os.path.basename(uncalFilename) in zfile.namelist()
             if zipfile_contains_calibrated:
-||||||| merged common ancestors
-            zipfile_contains_calibrated=os.path.basename(calibFilename) in zfile.namelist()
-            zipfile_contains_uncalibrated=os.path.basename(uncalFilename) in zfile.namelist()
-            if zipfile_contains_calibrated:
-=======
-            zipfile_contains_calibrated=os.path.basename(calibFilename) in zfile.namelist()
-            zipfile_contains_calibrated_insidedir=os.path.join(calibFilename.split('/')[-2]+'/'+calibFilename.split('/')[-1]) in zfile.namelist()
-            zipfile_contains_uncalibrated=os.path.basename(uncalFilename) in zfile.namelist()
-            if zipfile_contains_calibrated or zipfile_contains_calibrated_insidedir:
->>>>>>> 0012c547275f95df9be8136bcf170a0f44945128
                 print('Calibrated predictions found; loading from zip')           
                 try:
                     print('Reading ',calibFilename.split('/')[-1])
