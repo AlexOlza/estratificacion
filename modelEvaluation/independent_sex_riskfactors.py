@@ -177,8 +177,8 @@ if __name__=="__main__":
     oddsContrib=pd.read_csv(config.PREDPATH+'/sexSpecificOddsContributions.csv')
     print('FACTORES DE RIESGO SIGNIFICATIVOS EN MUJERES: ')
     riskFactors=oddsContrib.loc[(oddsContrib['LowM']>=1) & (oddsContrib.Mujeres>=1)]
-    print(riskFactors.sort_values(by='Mujeres', ascending=False)[['codigo','Mujeres', 'NMuj','descripcion']])
+    print(riskFactors.sort_values(by='Mujeres', ascending=False)[['codigo','Mujeres', 'NMuj','descripcion']].to_markdown(index=False))
     
     print('FACTORES DE RIESGO SIGNIFICATIVOS EN HOMBRES: ')
     riskFactors=oddsContrib.loc[(oddsContrib['LowH']>=1) & (oddsContrib.Hombres>=1)]
-    print(riskFactors.sort_values(by='Hombres', ascending=False)[['codigo','Hombres', 'NHom','descripcion']])
+    print(riskFactors.sort_values(by='Hombres', ascending=False)[['codigo','Hombres', 'NHom','descripcion']].to_markdown(index=False))
