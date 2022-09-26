@@ -10,12 +10,10 @@ EXPERIMENT='costCCS_noext'
 CONFIGNAME='costCCS_noext.py'
 COLUMNS=['COSTE_TOTAL_ANO2']
 TRACEBACK=True
-
+EXCLUDE=[]
 """PREDICTORS"""
 PREDICTORREGEX=r'PATIENT_ID|AGE|FEMALE|CCS(?!2601|2602|2603|2604|2605|2606|2607|2608|2609|2610|2611|2612|2613|2614|2615|2618|2619|2620|2621)[0-9]+|ONCOLO'
 INDICEPRIVACION=False
-COLUMNS=['urgcms']#variable respuesta
-EXCLUDE=['nbinj']
 #Exclude patients from Tolosaldea and Errioxa because they receive
 #most of their care outside of Osakidetza.
 EXCLUDEOSI=['OS16','OS22'] 
