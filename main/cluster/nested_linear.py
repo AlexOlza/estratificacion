@@ -34,7 +34,7 @@ np.random.seed(config.SEED)
 X,y=getData(2016,columns='COSTE_TOTAL_ANO2')#new data 
 y=y.COSTE_TOTAL_ANO2
 #%%
-linear=LinearRegression()
+linear=LinearRegression(njobs=-1)
 
 to_drop=['PATIENT_ID','ingresoUrg']
 for c in to_drop:
