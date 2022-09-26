@@ -30,8 +30,8 @@ np.random.seed(config.SEED)
 X,y=getData(2016)
 #%%
 
-y=y[config.COLUMNS].ravel()
-print('Sample size ',len(X), 'positive: ',sum(y))
+y=y[config.COLUMNS]
+print('Sample size ',len(X))
 
 #%%
 linear=LinearRegression(n_jobs=-1)
