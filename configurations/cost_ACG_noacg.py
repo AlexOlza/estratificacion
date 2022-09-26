@@ -8,7 +8,7 @@ Created on Fri Sep 23 11:22:05 2022
 EXPERIMENT='cost_ACG_noacg'
 
 """PREDICTORS: They will be different for each script."""
-PREDICTORREGEX=r'PATIENT_ID|FEMALE|AGE_[0-9]+$|EDC_|FRAILTY|RXMG_'
+PREDICTORREGEX=r'PATIENT_ID|FEMALE|AGE_[0-9]+$|EDC_'
 INDICEPRIVACION=False
 COLUMNS=['COSTE_TOTAL_ANO2']#variable respuesta
 EXCLUDE=[]

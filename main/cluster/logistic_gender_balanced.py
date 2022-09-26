@@ -34,29 +34,34 @@ X,y=getData(2016)
 def gender_balanced_undersampling(X,y):
     import itertools
     XFemale=X.loc[X.FEMALE==1]
-    yFemale=y.loc[XFemale.index]
+    yFemale=y.loc[y.PATIENT_ID.isin(XFemale.PATIENT_ID)]
     XMale=X.loc[X.FEMALE==0]
-    yMale=y.loc[XMale.index]
-    
-    idx=np.array(list(itertools.chain.from_iterable((yFemale[config.COLUMNS] >= 1).values)))
-    ing_indices = yFemale.loc[idx].index
-    noing_indices = yFemale.loc[(~idx)].index
-    half_sample_size = len(ing_indices)  # Equivalent to len(data[data.Healthy == 0])
-    random_indices = np.random.choice(noing_indices, half_sample_size, 
-                                  replace=False)
+    yMale=y.loc[y.PATIENT_ID.isin(XMale.PATIENT_ID)]
 
-    XFemaleBalanced=pd.concat([XFemale.loc[random_indices],XFemale.loc[ing_indices]])
-    yFemaleBalanced=pd.concat([yFemale.loc[random_indices],yFemale.loc[ing_indices]])
+    admittedFemale=yFemale.loc[(yFemale[config.COLUMNS]>=1).values.ravel()].PATIENT_ID
+    healthyFemale=yFemale.loc[(yFemale[config.COLUMNS]==0).values.ravel()].PATIENT_ID
+    half_sample_size = len(admittedFemale)
+    random_healthyFemale = np.random.choice(healthyFemale, half_sample_size, 
+                                  replace=False)
     
-    idx=np.array(list(itertools.chain.from_iterable((yMale[config.COLUMNS] >= 1).values)))
-    ing_indices = yMale.loc[idx].index
-    noing_indices = yMale.loc[(~idx)].index
-    random_indices = np.random.choice(noing_indices, half_sample_size, 
+      
+    XFemaleBalanced=pd.concat([XFemale.loc[XFemale.PATIENT_ID.isin(random_healthyFemale)],XFemale.loc[XFemale.PATIENT_ID.isin(admittedFemale)]])
+    yFemaleBalanced=pd.concat([yFemale.loc[yFemale.PATIENT_ID.isin(random_healthyFemale)],yFemale.loc[yFemale.PATIENT_ID.isin(admittedFemale)]])
+
+    
+    admittedMale=yMale.loc[(yMale[config.COLUMNS]>=1).values.ravel()].PATIENT_ID
+    healthyMale=yMale.loc[(yMale[config.COLUMNS]==0).values.ravel()].PATIENT_ID
+
+    random_healthyMale = np.random.choice(healthyMale, half_sample_size, 
                                   replace=False)
-    ing_indices = np.random.choice(ing_indices, half_sample_size, 
+    random_admittedMale = np.random.choice(admittedMale, half_sample_size, 
                                   replace=False)
-    XMaleBalanced=pd.concat([XMale.loc[random_indices],XMale.loc[ing_indices]])
-    yMaleBalanced=pd.concat([yMale.loc[random_indices],yMale.loc[ing_indices]])
+    
+      
+    XMaleBalanced=pd.concat([XMale.loc[XMale.PATIENT_ID.isin(random_healthyMale)],XMale.loc[XMale.PATIENT_ID.isin(random_admittedMale)]])
+    yMaleBalanced=pd.concat([yMale.loc[yMale.PATIENT_ID.isin(random_healthyMale)],yMale.loc[yMale.PATIENT_ID.isin(random_admittedMale)]])
+
+ 
     
     #this would be 0.5 always in the current implementation
     prevalence_Females=sum(np.where(yFemaleBalanced[config.COLUMNS]>=1,1,0))/len(yFemaleBalanced)

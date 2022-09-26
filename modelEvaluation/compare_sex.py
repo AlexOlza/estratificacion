@@ -124,10 +124,10 @@ for i, group, groupname in zip([1, 0], [female, male], sex):
 
     # SUBSET DATA
     Xgroup = X.loc[group]
-    ygroup = y.loc[group]
+    ygroup = y.loc[y.PATIENT_ID.isin(Xgroup.PATIENT_ID)]
 
     pastXgroup = pastX.loc[pastX['FEMALE'] == i]
-    pastygroup = pasty.loc[pastX['FEMALE'] == i]
+    pastygroup = pasty.loc[pasty.PATIENT_ID.isin(pastXgroup.PATIENT_ID)]
 
     assert (all(Xgroup['FEMALE'] == 1) or all(Xgroup['FEMALE'] == 0))
 

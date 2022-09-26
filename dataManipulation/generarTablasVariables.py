@@ -150,13 +150,15 @@ def load(filename,directory=config.DATAPATH,predictors=None):
         for chunk in pd.read_csv(path, chunksize=100000,usecols=predictors):
             d = dict.fromkeys(chunk.columns, np.int8)
             d['PATIENT_ID']=np.int64
-            d['COSTE_TOTAL_ANO2']=np.float64
-            ignore=[]
-            for k in d.keys():
-               if any(np.isnan(chunk[k].values)):
-                   ignore.append(k)
-            for k in ignore:
-                d.pop(k)
+            if 'COSTE_TOTAL_ANO2' in predictors:
+                d['COSTE_TOTAL_ANO2']=np.float64
+            # ignore=[]
+            # for k in d.keys():
+            #    if any(np.isnan(chunk[k].values)):
+            #        ignore.append(k)
+            # for k in ignore:
+            #     d.pop(k)
+            chunk= chunk.astype(d)
             acg = pd.concat([acg, chunk], ignore_index=True)
         break 
     util.vprint('Loaded in ',time.time()-t0,' seconds')
