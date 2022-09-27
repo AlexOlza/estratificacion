@@ -251,7 +251,8 @@ if __name__ == '__main__':
         selected = detect_latest(available_models)
 
     if Path(config.METRICSPATH +  f'/metrics{year}.csv').is_file():
-        available_metrics = pd.read_csv(config.PREDPATH + f'/metrics{year}.csv')
+        # available_metrics = pd.DataFrame.from_dict({'Model': []})
+        available_metrics = pd.read_csv(config.METRICSPATH + f'/metrics{year}.csv')
     else:
         available_metrics = pd.DataFrame.from_dict({'Model': []})
     if all([s in available_metrics.Model.values for s in selected]):

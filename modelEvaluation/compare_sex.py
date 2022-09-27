@@ -107,8 +107,7 @@ axhist, axhist2, axhist3, axhist4= axs[0,0], axs[0,1], axs[1,0], axs[1,1]
 
 for i, group, groupname in zip([1, 0], [female, male], sex):
     recall, ppv, spec, score, ap = {}, {}, {}, {}, {}
-    selected = [l for l in available_models if ((groupname in l) or (
-        bool(re.match('logistic\d+|logistic_gender_balanced', l))))]
+    selected = [l for l in available_models if (bool(re.match(f'logistic{groupname}|logistic\d+|logistic_gender_balanced', l)))]
     print('Selected models: ', selected)
     # LOAD MODELS
     globalmodelname = list(
@@ -168,7 +167,7 @@ for i, group, groupname in zip([1, 0], [female, male], sex):
     obs = np.where(balanced_cal[groupname].OBS >= 1, 1, 0)
 
     assert all(balanced_cal[groupname].OBS == joint_cal[groupname].OBS)
-    assert all(separate_cal[groupname].OBS == joint_cal[groupname].OBS)
+    
     import seaborn as sns
     # plt.xlim(0, 0.2)
     axhist.set_xlim(xmin,xmax)
