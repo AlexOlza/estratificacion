@@ -107,16 +107,28 @@ def getData(yr,columns=config.COLUMNS,
    
     assert 'PATIENT_ID' in full16.columns
     pred16=pd.merge(full16,ingT[yr]['PATIENT_ID'],on='PATIENT_ID',how='left')
+    
+           
+    y17=pd.merge(ingT[yr+1],full16['PATIENT_ID'],on='PATIENT_ID',how='outer').fillna(0)
+    print('number of patients y17: ', sum(np.where(y17[config.COLUMNS]>=1,1,0)))
+    data=pd.merge(pred16,y17,on='PATIENT_ID')
+    print('number of patients in data: ', sum(np.where(data[config.COLUMNS]>=1,1,0)))
+    print('getData time: ',time.time()-t0)
+    finalcols=listIntersection(data.columns,pred16.columns)
+    X,y=data[finalcols].reindex(sorted(data[finalcols].columns), axis=1),data[cols]
+       
+    return(X[finalcols].reindex(sorted(data[finalcols].columns), axis=1),y[cols])
+    # pred16=pd.merge(full16,ingT[yr]['PATIENT_ID'],on='PATIENT_ID',how='left')
 
             
-    y17=pd.merge(ingT[yr+1],full16['PATIENT_ID'],on='PATIENT_ID',how='outer').fillna(0)
-    del ingT,full16
-    print('number of patients in data with positive response: ', sum(np.where(y17[config.COLUMNS]>=1,1,0)))
-    print('getData time: ',time.time()-t0)
-    # finalcols=listIntersection(data.columns,pred16.columns)
-    # X,y=pred16.reindex(sorted(pred16.columns), axis=1),y17[cols]
+    # y17=pd.merge(ingT[yr+1],full16['PATIENT_ID'],on='PATIENT_ID',how='outer').fillna(0)
+    # del ingT,full16
+    # print('number of patients in data with positive response: ', sum(np.where(y17[config.COLUMNS]>=1,1,0)))
+    # print('getData time: ',time.time()-t0)
+    # # finalcols=listIntersection(data.columns,pred16.columns)
+    # # X,y=pred16.reindex(sorted(pred16.columns), axis=1),y17[cols]
     
-    return(pred16.reindex(sorted(pred16.columns), axis=1),y17[cols])
+    # return(pred16.reindex(sorted(pred16.columns), axis=1),y17[cols])
 
 def generateCCSData(yr,  X,
             **kwargs):
