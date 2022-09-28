@@ -114,7 +114,7 @@ if __name__=="__main__":
         #%%
         K=20000
         #%%
-        separateFeatures=X.drop(['FEMALE', 'PATIENT_ID'], axis=1).columns
+        separateFeatures=X.columns
         
         modeloH=job.load(config.MODELPATH+'logisticHombres.joblib')
         modeloM=job.load(config.MODELPATH+'logisticMujeres.joblib')
