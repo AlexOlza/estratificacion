@@ -102,7 +102,7 @@ if __name__=="__main__":
     filename=config.PREDPATH+'/sexSpecificOddsContributions.csv'
     if not Path(filename).is_file():    
         X,y=getData(year-1)
-        #%%
+       
         female=X['FEMALE']==1
         male=X['FEMALE']==0
         sex=['Mujeres', 'Hombres']
@@ -111,9 +111,9 @@ if __name__=="__main__":
         ymuj=y.loc[y.PATIENT_ID.isin(Xmuj.PATIENT_ID)]
         yhom=y.loc[y.PATIENT_ID.isin(Xhom.PATIENT_ID)]
         X.drop(['FEMALE', 'PATIENT_ID'], axis=1, inplace=True)
-        #%%
+        
         K=20000
-        #%%
+       
         separateFeatures=X.columns
         
         modeloH=job.load(config.MODELPATH+'logisticHombres.joblib')
@@ -130,13 +130,13 @@ if __name__=="__main__":
         lowH, highH = confidence_interval_odds_ratio(betaH,stderrH, 0.95)
         lowM, highM = confidence_interval_odds_ratio(betaM,stderrM, 0.95)
         
-        oddsContribMujLow={name:value for name, value in zip(separateFeatures, lowM)}
+        oddsContribMujLow={name:value for name, value in zip(separateFeatures, lowM[1:])}
         oddsContribMuj={name:np.exp(value) for name, value in zip(separateFeatures, modeloM.coef_[0])}
-        oddsContribMujHigh={name:value for name, value in zip(separateFeatures, highM)}
+        oddsContribMujHigh={name:value for name, value in zip(separateFeatures, highM[1:])}
         
-        oddsContribHomLow={name:value for name, value in zip(separateFeatures, lowH)}
+        oddsContribHomLow={name:value for name, value in zip(separateFeatures, lowH[1:])}
         oddsContribHom={name:np.exp(value) for name, value in zip(separateFeatures, modeloH.coef_[0])}
-        oddsContribHomHigh={name:value for name, value in zip(separateFeatures, highH)}
+        oddsContribHomHigh={name:value for name, value in zip(separateFeatures, highH[1:])}
         
         oddsContrib={name:[lowm, muj, highm, lowh, hom, highh, stdM, stdH] for name, lowm, muj, highm, lowh, hom, highh, stdM, stdH in zip(separateFeatures, 
                                                                            oddsContribMujLow.values(),
@@ -150,6 +150,8 @@ if __name__=="__main__":
         oddsContrib=pd.DataFrame.from_dict(oddsContrib,orient='index',
                                            columns=['LowM','Mujeres','HighM','LowH', 'Hombres', 'HighH', 'stderrM', 'stderrH'])
         
+        assert all(oddsContrib.LowH<=oddsContrib.Hombres)
+        assert all(oddsContrib.HighH>=oddsContrib.Hombres)
         oddsContrib['codigo']=oddsContrib.index
         
         oddsContrib['LowratioH/M']=oddsContrib['LowH']/oddsContrib['LowM']
@@ -170,6 +172,9 @@ if __name__=="__main__":
         oddsContrib.to_csv(filename, index=False)
     else:
         oddsContrib=pd.read_csv(filename)
+        
+        
+    
     """ QUESTION 1:
         WHAT ARE THE STRONGEST RISK FACTORS FOR WOMEN AND MEN SEPARATELY?
     """
