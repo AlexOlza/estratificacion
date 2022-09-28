@@ -56,6 +56,7 @@ from modelEvaluation.independent_sex_riskfactors import beta_std_error, confiden
     WHICH VARIABLES DIFFER THE MOST WHEN PRESENT IN MEN VS WOMEN?
 """
 filename=os.path.join(config.PREDPATH, f'{config.ALGORITHM}_sexSpecificVariables.csv')
+N=5
 if not os.path.exists(filename):
     model=job.load(config.MODELPATH+'logisticSexInteraction.joblib')
     year=2018
@@ -109,7 +110,7 @@ else:
     from modelEvaluation.independent_sex_riskfactors import translateVariables
     if not 'descripcion' in oddsContrib.columns:
         oddsContrib=translateVariables(oddsContrib) 
-    N=5
+        
     year=2018
     X,y=getData(year-1)
     female=X['FEMALE']==1

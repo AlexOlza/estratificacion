@@ -106,8 +106,11 @@ if __name__=="__main__":
         female=X['FEMALE']==1
         male=X['FEMALE']==0
         sex=['Mujeres', 'Hombres']
-        
-        # X.drop(['FEMALE', 'PATIENT_ID'], axis=1, inplace=True)
+        Xhom=X.loc[male]
+        Xmuj=X.loc[female]
+        ymuj=y.loc[y.PATIENT_ID.isin(Xmuj.PATIENT_ID)]
+        yhom=y.loc[y.PATIENT_ID.isin(Xhom.PATIENT_ID)]
+        X.drop(['FEMALE', 'PATIENT_ID'], axis=1, inplace=True)
         #%%
         K=20000
         #%%
@@ -153,10 +156,7 @@ if __name__=="__main__":
         oddsContrib['LowratioM/H']=1/oddsContrib['LowratioH/M']
         oddsContrib['ratioM/H']=1/oddsContrib['ratioH/M']
         oddsContrib['HighratioM/H']=1/oddsContrib['HighratioH/M']
-        Xhom=X.loc[male]
-        Xmuj=X.loc[female]
-        ymuj=y.loc[y.PATIENT_ID.isin(Xmuj.PATIENT_ID)]
-        yhom=y.loc[y.PATIENT_ID.isin(Xhom.PATIENT_ID)]
+
         oddsContrib['NMuj']=[Xmuj[name].sum() for name in oddsContrib.index]
         oddsContrib['NHom']=[Xhom[name].sum() for name in oddsContrib.index]
         oddsContrib['NMuj_ingreso']=[len(ymuj.loc[y.PATIENT_ID.isin(Xmuj.loc[Xmuj[re.sub('INTsex','',name)]>0].PATIENT_ID)].urgcms.to_numpy().nonzero()[0]) for name in oddsContrib.codigo]
