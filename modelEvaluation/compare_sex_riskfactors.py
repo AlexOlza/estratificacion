@@ -81,7 +81,7 @@ if not os.path.exists(filename):
     print('Std. error for the intercept: ',stderrInt[0])
     
     beta=list(model.intercept_)+list(model.coef_[0])
-    low, high = confidence_interval_odds_ratio(beta,stderrInt, zInt)
+    low, high = confidence_interval_odds_ratio(beta,stderrInt, 0.95)
     
     #excluding the intercept from now on
     beta={name:value for name, value in zip(features, model.coef_[0])}
