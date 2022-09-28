@@ -135,10 +135,14 @@ else:
     oddsContrib['NHom_ingreso']=[len(yhom.loc[y.PATIENT_ID.isin(Xhom.loc[Xhom[re.sub('INTsex','',name)]>0].PATIENT_ID)].urgcms.to_numpy().nonzero()[0]) for name in oddsContrib.codigo]
     oddsContrib['NHom_ingreso']=oddsContrib['NHom_ingreso']/oddsContrib.NHom*100
     oddsContrib[['Low', 'Odds', 'High', 'Beta', 'StdErr(beta)', 'codigo', 'NMuj', 'NHom','NMuj_ingreso', 'NHom_ingreso', 'descripcion']].to_csv(filename, index=False)
+
     
+assert all(oddsContrib.Low<=oddsContrib.Odds)
+assert all(oddsContrib.High>=oddsContrib.Odds)
+
 interactions=oddsContrib.loc[oddsContrib.codigo.str.endswith('INTsex')]
-significantRiskWomen=interactions.loc[(interactions.Low>=1) & (interactions.Odds>=1)]
-significantRiskMen=interactions.loc[(interactions.High<=1) & (interactions.Odds<=1)]
+significantRiskWomen=interactions.loc[(interactions.Low>1)]
+significantRiskMen=interactions.loc[(interactions.High<1)]
 print(f'TOP {N} variables cuya presencia acrecienta el riesgo para las mujeres más que para los hombres: ')
 #mayores interacciones positivas
 print(significantRiskWomen.sort_values(by='Odds', ascending=False)[['Odds','descripcion','NMuj', 'NHom','NMuj_ingreso', 'NHom_ingreso']].head(N).to_markdown(index=False))

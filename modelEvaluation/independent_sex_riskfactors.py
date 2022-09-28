@@ -150,6 +150,8 @@ if __name__=="__main__":
         oddsContrib=pd.DataFrame.from_dict(oddsContrib,orient='index',
                                            columns=['LowM','Mujeres','HighM','LowH', 'Hombres', 'HighH', 'stderrM', 'stderrH'])
         
+        oddsContrib['codigo']=oddsContrib.index
+        
         oddsContrib['LowratioH/M']=oddsContrib['LowH']/oddsContrib['LowM']
         oddsContrib['ratioH/M']=oddsContrib['Hombres']/oddsContrib['Mujeres']
         oddsContrib['HighratioH/M']=oddsContrib['HighH']/oddsContrib['HighM']
@@ -163,7 +165,7 @@ if __name__=="__main__":
         oddsContrib['NMuj_ingreso']=oddsContrib['NMuj_ingreso']/oddsContrib.NMuj*100
         oddsContrib['NHom_ingreso']=[len(yhom.loc[y.PATIENT_ID.isin(Xhom.loc[Xhom[re.sub('INTsex','',name)]>0].PATIENT_ID)].urgcms.to_numpy().nonzero()[0]) for name in oddsContrib.codigo]
         oddsContrib['NHom_ingreso']=oddsContrib['NHom_ingreso']/oddsContrib.NHom*100
-        oddsContrib['codigo']=oddsContrib.index
+        
         oddsContrib=translateVariables(oddsContrib)
         oddsContrib.to_csv(filename, index=False)
     else:
