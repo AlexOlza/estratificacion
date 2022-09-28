@@ -124,8 +124,8 @@ if __name__=="__main__":
         
         betaH=list(modeloH.intercept_)+list(modeloH.coef_[0])
         betaM=list(modeloM.intercept_)+list(modeloM.coef_[0])
-        lowH, highH = confidence_interval_odds_ratio(betaH,stderrH, zH)
-        lowM, highM = confidence_interval_odds_ratio(betaM,stderrM, zM)
+        lowH, highH = confidence_interval_odds_ratio(betaH,stderrH, 0.95)
+        lowM, highM = confidence_interval_odds_ratio(betaM,stderrM, 0.95)
         
         oddsContribMujLow={name:value for name, value in zip(separateFeatures, lowM)}
         oddsContribMuj={name:np.exp(value) for name, value in zip(separateFeatures, modeloM.coef_[0])}
