@@ -107,11 +107,11 @@ if __name__=="__main__":
         male=X['FEMALE']==0
         sex=['Mujeres', 'Hombres']
         
-        X.drop(['FEMALE', 'PATIENT_ID'], axis=1, inplace=True)
+        # X.drop(['FEMALE', 'PATIENT_ID'], axis=1, inplace=True)
         #%%
         K=20000
         #%%
-        separateFeatures=X.columns
+        separateFeatures=X.drop(['FEMALE', 'PATIENT_ID'], axis=1).columns
         
         modeloH=job.load(config.MODELPATH+'logisticHombres.joblib')
         modeloM=job.load(config.MODELPATH+'logisticMujeres.joblib')
