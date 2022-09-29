@@ -46,7 +46,10 @@ def translateVariables(df,**kwargs):
     for column in df.codigo.values:
         if column.endswith('INTsex') and not (column in dictionary.codigo):
             col=re.sub('INTsex','',column)
-            descr=dictionary.loc[dictionary.codigo==col].descripcion.values
+            try:
+                descr=dictionary.loc[dictionary.codigo==col].descripcion.values[0]
+            except:
+                descr='nan'
             # print(p)
             dictionary=dictionary.append(pd.DataFrame([[column,descr]],
                                          columns=['codigo','descripcion']),
@@ -195,8 +198,20 @@ if __name__=="__main__":
     
     print('FACTORES DE RIESGO SIGNIFICATIVOS EN MUJERES: ')
     riskFactors=oddsContrib.loc[(oddsContrib['LowM']>=1) & (oddsContrib.Mujeres>=1)]
-    print(riskFactors.sort_values(by='Mujeres', ascending=False)[['codigo','LowM','Mujeres',  'NMuj', 'NMuj_ingreso','descripcion']].to_markdown(index=False))
+    df1=riskFactors.sort_values(by='Mujeres', ascending=False)
+    print(df1[['codigo','LowM','Mujeres',  'NMuj', 'NMuj_ingreso','descripcion']].head(10).to_markdown(index=False))
+    df1.to_csv(config.PREDPATH+'/significativos_Mujeres.csv', index=False)
     
     print('FACTORES DE RIESGO SIGNIFICATIVOS EN HOMBRES: ')
     riskFactors=oddsContrib.loc[(oddsContrib['LowH']>=1) & (oddsContrib.Hombres>=1)]
-    print(riskFactors.sort_values(by='Hombres', ascending=False)[['codigo','LowH','Hombres', 'NHom', 'NHom_ingreso','descripcion']].head(10).to_markdown(index=False))
+    df2=riskFactors.sort_values(by='Hombres', ascending=False)
+    print(df2[['codigo','LowH','Hombres', 'NHom', 'NHom_ingreso','descripcion']].head(10).to_markdown(index=False))
+    df2.to_csv(config.PREDPATH+'/significativos_Hombres.csv', index=False)
+    
+    #%%
+    print('FACTORES DE RIESGO PARA LAS MUJERES QUE NO LO SON PARA LOS HOMBRES:')
+    print(df1.loc[df1.descripcion.isin(set(df1.descripcion.values)-set(df2.descripcion.values))][['codigo','LowM','Mujeres',  'NMuj', 'NMuj_ingreso','descripcion']].to_markdown(index=False))
+    
+    #%%
+    print('FACTORES DE RIESGO PARA LOS HOMBRES QUE NO LO SON PARA LAS MUJERES:')
+    print(df2.loc[df2.descripcion.isin(set(df2.descripcion.values)-set(df1.descripcion.values))][['codigo','LowH','Hombres',  'NHom', 'NHom_ingreso','descripcion']].to_markdown(index=False))
