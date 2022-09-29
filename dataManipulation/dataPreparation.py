@@ -51,7 +51,6 @@ def getData(yr,columns=config.COLUMNS,
 
     if ('COSTE_TOTAL_ANO2' in columns) :
         coste=load(filename=config.ACGFILES[yr],predictors=r'PATIENT_ID|COSTE_TOTAL_ANO2')
-        predictors=predictors+'|COSTE_TOTAL_ANO2'
         response='COSTE_TOTAL_ANO2'
         if not CCS: 
             if fullEDCs:
@@ -118,17 +117,6 @@ def getData(yr,columns=config.COLUMNS,
     X,y=data[finalcols].reindex(sorted(data[finalcols].columns), axis=1),data[cols]
        
     return(X[finalcols].reindex(sorted(data[finalcols].columns), axis=1),y[cols])
-    # pred16=pd.merge(full16,ingT[yr]['PATIENT_ID'],on='PATIENT_ID',how='left')
-
-            
-    # y17=pd.merge(ingT[yr+1],full16['PATIENT_ID'],on='PATIENT_ID',how='outer').fillna(0)
-    # del ingT,full16
-    # print('number of patients in data with positive response: ', sum(np.where(y17[config.COLUMNS]>=1,1,0)))
-    # print('getData time: ',time.time()-t0)
-    # # finalcols=listIntersection(data.columns,pred16.columns)
-    # # X,y=pred16.reindex(sorted(pred16.columns), axis=1),y17[cols]
-    
-    # return(pred16.reindex(sorted(pred16.columns), axis=1),y17[cols])
 
 def generateCCSData(yr,  X,
             **kwargs):

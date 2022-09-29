@@ -73,8 +73,7 @@ def resourceUsageDataFrames(years=[2016,2017],exploratory=False):
                     dfs[key]=dfs[key].loc[:, (dfs[key] != dfs[key].iloc[0]).any()] 
                     if 'diurco' not in key: #ill use this as left for joining
                         dfs[key][key]=1
-                    # print(dfs[key].columns)
-                    # print('\n')
+
                 util.vprint('DataFrames: ')
                 for key,df in dfs.items():
                     print(key,list(df.columns),len(df))
@@ -152,12 +151,6 @@ def load(filename,directory=config.DATAPATH,predictors=None):
             d['PATIENT_ID']=np.int64
             if 'COSTE_TOTAL_ANO2' in predictors:
                 d['COSTE_TOTAL_ANO2']=np.float64
-            # ignore=[]
-            # for k in d.keys():
-            #    if any(np.isnan(chunk[k].values)):
-            #        ignore.append(k)
-            # for k in ignore:
-            #     d.pop(k)
             chunk= chunk.astype(d)
             acg = pd.concat([acg, chunk], ignore_index=True)
         break 
