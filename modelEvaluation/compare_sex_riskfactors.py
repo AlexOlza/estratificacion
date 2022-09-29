@@ -56,6 +56,7 @@ from modelEvaluation.independent_sex_riskfactors import beta_std_error, confiden
     WHICH VARIABLES DIFFER THE MOST WHEN PRESENT IN MEN VS WOMEN?
 """
 filename=os.path.join(config.PREDPATH, f'{config.ALGORITHM}_sexSpecificVariables.csv')
+N=5
 if not os.path.exists(filename):
     model=job.load(config.MODELPATH+'logisticSexInteraction.joblib')
     year=2018
@@ -81,7 +82,7 @@ if not os.path.exists(filename):
     print('Std. error for the intercept: ',stderrInt[0])
     
     beta=list(model.intercept_)+list(model.coef_[0])
-    low, high = confidence_interval_odds_ratio(beta,stderrInt, zInt)
+    low, high = confidence_interval_odds_ratio(beta,stderrInt, 0.95)
     
     #excluding the intercept from now on
     beta={name:value for name, value in zip(features, model.coef_[0])}
@@ -109,38 +110,51 @@ else:
     from modelEvaluation.independent_sex_riskfactors import translateVariables
     if not 'descripcion' in oddsContrib.columns:
         oddsContrib=translateVariables(oddsContrib) 
-    N=5
+        
     year=2018
     X,y=getData(year-1)
     female=X['FEMALE']==1
     male=X['FEMALE']==0
     sex=['Mujeres', 'Hombres']
     # X.drop('PATIENT_ID', axis=1, inplace=True)
-    for column in X:
-        if column!='FEMALE':
-            X[f'{column}INTsex']=X[column]*X['FEMALE']
+
+    interactions= X.drop(['PATIENT_ID', 'FEMALE'], axis=1).multiply(X.FEMALE,axis=0).astype(np.int8)
+    interactions.rename(columns={c:f'{c}INTsex' for c in interactions}, inplace=True)
+    
+    X=pd.concat([X, interactions], axis=1)
+    
     Xhom=X.loc[male]
     Xmuj=X.loc[female]
+    ymuj=y.loc[y.PATIENT_ID.isin(Xmuj.PATIENT_ID)]
+    yhom=y.loc[y.PATIENT_ID.isin(Xhom.PATIENT_ID)]
     
     oddsContrib['NMuj']=[Xmuj[re.sub('INTsex','',name)].sum() for name in oddsContrib.codigo]
     oddsContrib['NHom']=[Xhom[re.sub('INTsex','',name)].sum() for name in oddsContrib.codigo]
-    oddsContrib[['Low', 'Odds', 'High', 'Beta', 'StdErr(beta)', 'codigo', 'NMuj', 'NHom', 'descripcion']].to_csv(filename, index=False)
+    oddsContrib['NMuj_ingreso']=[len(ymuj.loc[y.PATIENT_ID.isin(Xmuj.loc[Xmuj[re.sub('INTsex','',name)]>0].PATIENT_ID)].urgcms.to_numpy().nonzero()[0]) for name in oddsContrib.codigo]
+    oddsContrib['NMuj_ingreso']=oddsContrib['NMuj_ingreso']/oddsContrib.NMuj*100
+    oddsContrib['NHom_ingreso']=[len(yhom.loc[y.PATIENT_ID.isin(Xhom.loc[Xhom[re.sub('INTsex','',name)]>0].PATIENT_ID)].urgcms.to_numpy().nonzero()[0]) for name in oddsContrib.codigo]
+    oddsContrib['NHom_ingreso']=oddsContrib['NHom_ingreso']/oddsContrib.NHom*100
+    oddsContrib[['Low', 'Odds', 'High', 'Beta', 'StdErr(beta)', 'codigo', 'NMuj', 'NHom','NMuj_ingreso', 'NHom_ingreso', 'descripcion']].to_csv(filename, index=False)
+
     
+assert all(oddsContrib.Low<=oddsContrib.Odds)
+assert all(oddsContrib.High>=oddsContrib.Odds)
+
 interactions=oddsContrib.loc[oddsContrib.codigo.str.endswith('INTsex')]
-significantRiskWomen=interactions.loc[(interactions.Low>=1) & (interactions.Odds>=1)]
-significantRiskMen=interactions.loc[(interactions.High<=1) & (interactions.Odds<=1)]
+significantRiskWomen=interactions.loc[(interactions.Low>1)]
+significantRiskMen=interactions.loc[(interactions.High<1)]
 print(f'TOP {N} variables cuya presencia acrecienta el riesgo para las mujeres más que para los hombres: ')
 #mayores interacciones positivas
-print(significantRiskWomen.sort_values(by='Odds', ascending=False)[['Odds','descripcion']])
+print(significantRiskWomen.sort_values(by='Odds', ascending=False)[['Odds','descripcion','NMuj', 'NHom','NMuj_ingreso', 'NHom_ingreso']].head(N).to_markdown(index=False))
 print('  ')
-significantRiskWomen.sort_values(by='Odds', ascending=False)[[ 'codigo', 'Low','Odds', 'High','descripcion', 'NMuj', 'NHom']].to_csv(os.path.join(config.PREDPATH, f'{config.ALGORITHM}_moreRiskWomen.csv'),
+significantRiskWomen.sort_values(by='Odds', ascending=False)[[ 'codigo', 'Low','Odds', 'High','descripcion', 'NMuj', 'NHom','NMuj_ingreso', 'NHom_ingreso',]].to_csv(os.path.join(config.PREDPATH, f'{config.ALGORITHM}_moreRiskWomen.csv'),
                                                                                                                                      index=False,
                                                                                                                                      sep='\t')
 
 print(f'TOP {N} variables cuya presencia acrecienta el riesgo para los hombres más que para las mujeres: ')
 significantRiskMen['invOdds']=1/significantRiskMen.Odds
-print(significantRiskMen.sort_values(by='invOdds', ascending=False)[[ 'invOdds', 'descripcion', 'NMuj', 'NHom']])
+print(significantRiskMen.sort_values(by='invOdds', ascending=False)[[ 'invOdds', 'descripcion', 'NMuj', 'NHom','NMuj_ingreso', 'NHom_ingreso',]])
 print('  ')
 
-significantRiskMen.sort_values(by='invOdds', ascending=False)[[ 'codigo', 'Low','Odds', 'invOdds', 'High','descripcion', 'NMuj', 'NHom']].to_csv(os.path.join(config.PREDPATH, f'{config.ALGORITHM}_moreRiskMen.csv'),
+significantRiskMen.sort_values(by='invOdds', ascending=False)[[ 'codigo', 'Low','Odds', 'invOdds', 'High','descripcion', 'NMuj', 'NHom','NMuj_ingreso', 'NHom_ingreso',]].to_csv(os.path.join(config.PREDPATH, f'{config.ALGORITHM}_moreRiskMen.csv'),
                                                                                                                                                  index=False, sep='\t')

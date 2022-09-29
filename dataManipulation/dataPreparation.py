@@ -48,26 +48,25 @@ def getData(yr,columns=config.COLUMNS,
         CCS = kwargs.get('CCS', config.CCS)
     except AttributeError:
         CCS = False
-        
-    oldbase = kwargs.get('oldbase', False)
-    
-    if oldbase or ('COSTE_TOTAL_ANO2' in columns):
-        if 'ingresoUrg' not in predictors and not ('COSTE_TOTAL_ANO2' in columns):
-            predictors=predictors+'|ingresoUrg'
-            response='ingresoUrg'
-        elif ('COSTE_TOTAL_ANO2' in columns):
-            predictors=predictors+'|COSTE_TOTAL_ANO2'
-            response='COSTE_TOTAL_ANO2'
-        if fullEDCs:
-            acg=create_fullacgfiles(config.FULLACGFILES[yr],yr,directory=config.DATAPATH,
-                    predictors=predictors)
-            coste=load(filename=config.ACGFILES[yr],predictors=r'PATIENT_ID|COSTE_TOTAL_ANO2')
-            acg=pd.merge(acg,coste,on='PATIENT_ID')
-        else:
-            acg=load(filename=config.ACGFILES[yr],predictors=predictors)
-        print('not opening allhospfile')
-        X=acg.drop(response,axis=1)
-        return(X.reindex(sorted(X.columns), axis=1),acg[['PATIENT_ID',response]])#Prevents bug #1
+
+    if ('COSTE_TOTAL_ANO2' in columns) :
+        coste=load(filename=config.ACGFILES[yr],predictors=r'PATIENT_ID|COSTE_TOTAL_ANO2')
+        response='COSTE_TOTAL_ANO2'
+        if not CCS: 
+            if fullEDCs:
+                acg=create_fullacgfiles(config.FULLACGFILES[yr],yr,directory=config.DATAPATH,
+                        predictors=predictors)
+                coste=load(filename=config.ACGFILES[yr],predictors=r'PATIENT_ID|COSTE_TOTAL_ANO2')
+                acg=pd.merge(acg,coste,on='PATIENT_ID')
+            else:
+                acg=load(filename=config.ACGFILES[yr],predictors=predictors)
+            print('not opening allhospfile')
+            X=acg.drop(response,axis=1)
+            return(X.reindex(sorted(X.columns), axis=1),acg[['PATIENT_ID',response]])#Prevents bug #1
+        elif CCS:
+            Xprovisional=load(filename=config.ACGFILES[yr],predictors=predictors)
+            full16=generateCCSData(yr,  Xprovisional, predictors=predictors)
+            return(full16.reindex(sorted(full16.columns), axis=1),coste)
 
     cols=columns.copy() 
     t0=time.time()
@@ -101,13 +100,14 @@ def getData(yr,columns=config.COLUMNS,
     elif CCS:
         Xprovisional=load(filename=config.ACGFILES[yr],predictors=predictors)
         full16=generateCCSData(yr,  Xprovisional, predictors=predictors)
+        del Xprovisional
     else:
         full16=load(filename=config.ACGFILES[yr],predictors=predictors)
    
     assert 'PATIENT_ID' in full16.columns
     pred16=pd.merge(full16,ingT[yr]['PATIENT_ID'],on='PATIENT_ID',how='left')
-
-            
+    
+           
     y17=pd.merge(ingT[yr+1],full16['PATIENT_ID'],on='PATIENT_ID',how='outer').fillna(0)
     print('number of patients y17: ', sum(np.where(y17[config.COLUMNS]>=1,1,0)))
     data=pd.merge(pred16,y17,on='PATIENT_ID')
@@ -115,7 +115,7 @@ def getData(yr,columns=config.COLUMNS,
     print('getData time: ',time.time()-t0)
     finalcols=listIntersection(data.columns,pred16.columns)
     X,y=data[finalcols].reindex(sorted(data[finalcols].columns), axis=1),data[cols]
-    
+       
     return(X[finalcols].reindex(sorted(data[finalcols].columns), axis=1),y[cols])
 
 def generateCCSData(yr,  X,
