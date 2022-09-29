@@ -61,8 +61,7 @@ def getData(yr,columns=config.COLUMNS,
             else:
                 acg=load(filename=config.ACGFILES[yr],predictors=predictors)
             print('not opening allhospfile')
-            X=acg.drop(response,axis=1)
-            return(X.reindex(sorted(X.columns), axis=1),acg[['PATIENT_ID',response]])#Prevents bug #1
+            return(acg.reindex(sorted(acg.columns), axis=1),coste)#Prevents bug #1
         elif CCS:
             Xprovisional=load(filename=config.ACGFILES[yr],predictors=predictors)
             full16=generateCCSData(yr,  Xprovisional, predictors=predictors)
