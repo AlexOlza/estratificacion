@@ -199,4 +199,4 @@ if __name__=="__main__":
     
     print('FACTORES DE RIESGO SIGNIFICATIVOS EN HOMBRES: ')
     riskFactors=oddsContrib.loc[(oddsContrib['LowH']>=1) & (oddsContrib.Hombres>=1)]
-    print(riskFactors.sort_values(by='Hombres', ascending=False)[['codigo','LowH','Hombres', 'NHom', 'NHom_ingreso','descripcion']].to_markdown(index=False))
+    print(riskFactors.sort_values(by='Hombres', ascending=False)[['codigo','LowH','Hombres', 'NHom', 'NHom_ingreso','descripcion']].head(10).to_markdown(index=False))
