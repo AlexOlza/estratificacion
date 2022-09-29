@@ -49,5 +49,13 @@ t0=time()
 fit=linear.fit(X, y)
 print('fitting time: ',time()-t0)
 #%%
-util.savemodel(config, fit)
+modelname, modelfilename=util.savemodel(config, fit, return_=True)
 
+#%%
+plot=False
+if plot:
+    import pandas as pd
+    df=pd.DataFrame({X.columns[i]:fit.coef_[0][i] for i in range(len(X.columns))})
+    df.rename(columns={0:'beta'},inplace=True)
+    df.nlargest(10,'beta').plot.bar(title=modelname)
+    df.nsmallest(10,'beta').plot.bar(title=modelname)

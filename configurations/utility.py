@@ -111,6 +111,7 @@ def readonly(filename):  os.chmod(filename, S_IREAD|S_IRGRP|S_IROTH)
 def readwrite(filename): os.chmod(filename, S_IWUSR|S_IREAD) # This makes the file read/write for the owner
 
 def savemodel(config,model,**kwargs):
+    return_=kwargs.get('return_',False)
     timestamp = str(dt.now())[:19]
     timestamp = re.sub(r'[\:-]','', timestamp) # replace unwanted chars
     NOW = re.sub(r'[\s]','_', timestamp)
@@ -126,6 +127,8 @@ def savemodel(config,model,**kwargs):
     os.chdir(config.USEDCONFIGPATH)
     attrs=saveconfig(config,configname)
     info(modelfilename,conf=attrs,**kwargs)
+    if return_:
+        return(modelname, modelfilename)
 
 def is_jsonable(x):
     try:
