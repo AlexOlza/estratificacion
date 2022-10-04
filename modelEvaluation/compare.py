@@ -99,10 +99,19 @@ def compare_nested(available_models, X, y, year):
     metrics = compare(available_models, X, y, year, predictors=predictors)
     return (metrics)
 
+def compare(selected, X, y, year, 
+            experiment_name=Path(config.MODELPATH).parts[-1],
+            **kwargs):
+    print('Not implemented')
+    return
 
 def compare(selected, X, y, year, 
             experiment_name=Path(config.MODELPATH).parts[-1],
             **kwargs):
+    if config.ALGORITHM=='linear':
+        return compare_linear(selected, X, y, year, 
+                    experiment_name=Path(config.MODELPATH).parts[-1],
+                    **kwargs)
     import traceback
     K = kwargs.get('K', 20000)
     cohorts=kwargs.get('cohorts', None)

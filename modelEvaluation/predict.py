@@ -68,13 +68,13 @@ def predict_save(yr,model,model_name,X,y,**kwargs):
     n=len(X)/CHUNK_SIZE
     filename=generate_filename(filename,yr,calibrated=False) if not filename else filename
 
-    if 'neural' in model_name:
+    if 'neural' in model_name or config.ALGORITHM=='linear':
         pred=model.predict
     else:
         pred=model.predict_proba
     with open(filename,'w') as predFile:
         csv_out=csv.writer(predFile)
-        csv_out.writerow(['PATIENT_ID','PRED','OBS'])
+        csv_out.writerow(['yPATIENT_ID','PATIENT_ID','PRED','OBS'])
         for index_slice in index_slices:
             if verbose:
                 i+=1
@@ -82,13 +82,15 @@ def predict_save(yr,model,model_name,X,y,**kwargs):
             chunk = X.iloc[index_slice] # your dataframe chunk ready for use
             ychunk=y.iloc[index_slice]
             if 'COSTE_TOTAL_ANO2' in config.COLUMNS:
-                predictions=model.predict(chunk.drop('PATIENT_ID',axis=1)) # predicted cost
+                predictions=model.predict(chunk.drop('PATIENT_ID',axis=1)).ravel() # predicted cost
             else:
                 if 'neural' in model_name:
                     predictions=pred(chunk.drop('PATIENT_ID',axis=1))[:,0] #Probab of hospitalization (Keras)
                 else:
                     predictions=pred(chunk.drop('PATIENT_ID',axis=1))[:,1] #Probab of hospitalization (sklearn)
-            for element in zip(chunk['PATIENT_ID'],ychunk['PATIENT_ID'],predictions,ychunk[columns]):
+                
+            observations=np.array(ychunk[columns]).ravel()
+            for element in zip(ychunk['PATIENT_ID'],chunk['PATIENT_ID'],predictions,observations):
                 csv_out.writerow(element)
                 del element
 

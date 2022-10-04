@@ -33,10 +33,10 @@ X,y=getData(2016)
 female=X['FEMALE']==1
 male=X['FEMALE']==0
 
-sex=[ 'Mujeres','Hombres']
+sex=[ 'Hombres', 'Mujeres']
 
 
-for group, groupname in zip([female,male],sex):
+for group, groupname in zip([male,female],sex):
     print(groupname)
     Xgroup=X.loc[group]
     ygroup=y.loc[group]
@@ -51,7 +51,7 @@ for group, groupname in zip([female,male],sex):
         ygroup=ygroup.ravel()
         estimator=LogisticRegression(penalty='none',max_iter=1000,verbose=0, warm_start=False)
     elif config.ALGORITHM=='linear':
-        y=y[config.COLUMNS]
+        ygroup=ygroup[config.COLUMNS]
         estimator=LinearRegression(n_jobs=-1)
     else:
         assert False, 'This script is only suitable for linear and logistic algorithms. Check your configuration!'
