@@ -24,7 +24,7 @@ util.makeAllPaths()
 from dataManipulation.dataPreparation import getData
 import numpy as np
 import pandas as pd
-from sklearn.linear_model import LogisticRegression
+from sklearn.linear_model import LogisticRegression, LinearRegression
 
 #%%
 np.random.seed(config.SEED)
@@ -88,12 +88,19 @@ except:
 
 print('first IDs (y)')
 print(y.head().PATIENT_ID)
-y=np.where(y[config.COLUMNS]>=1,1,0)
-y=y.ravel()
-print('Sample size ',len(X), 'positive: ',sum(y))
+
+print('Sample size ',len(X))
 
 #%%
-logistic=LogisticRegression(penalty='none',max_iter=1000,verbose=0)
+if config.ALGORITHM=='logistic':
+    y=np.where(y[config.COLUMNS]>=1,1,0)
+    y=y.ravel()
+    estimator=LogisticRegression(penalty='none',max_iter=1000,verbose=0, warm_start=False)
+elif config.ALGORITHM=='linear':
+    y=y[config.COLUMNS]
+    estimator=LinearRegression(n_jobs=-1)
+else:
+    assert False, 'This script is only suitable for linear and logistic algorithms. Check your configuration!'
 
 to_drop=['PATIENT_ID','ingresoUrg']
 for c in to_drop:
@@ -105,8 +112,8 @@ for c in to_drop:
         util.vprint('pass')
 from time import time
 t0=time()
-fit=logistic.fit(X, y)
+fit=estimator.fit(X, y)
 print('fitting time: ',time()-t0)
 #%%
-util.savemodel(config, fit,name='logistic_gender_balanced')
+util.savemodel(config, fit,name=f'{config.ALGORITHM}_gender_balanced')
 

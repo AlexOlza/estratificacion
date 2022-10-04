@@ -44,12 +44,14 @@ for group, groupname in zip([female,male],sex):
     print(Xgroup.PATIENT_ID)
     print(ygroup)
     assert (all(Xgroup['FEMALE']==1) or all(Xgroup['FEMALE']==0))
-    ygroup=np.where(ygroup[config.COLUMNS]>=1,1,0)
-    ygroup=ygroup.ravel()
-    print('Sample size ',len(Xgroup), 'positive: ',sum(ygroup))
+    
+    print('Sample size ',len(Xgroup))
     if config.ALGORITHM=='logistic':
+        ygroup=np.where(ygroup[config.COLUMNS]>=1,1,0)
+        ygroup=ygroup.ravel()
         estimator=LogisticRegression(penalty='none',max_iter=1000,verbose=0, warm_start=False)
     elif config.ALGORITHM=='linear':
+        y=y[config.COLUMNS]
         estimator=LinearRegression(n_jobs=-1)
     else:
         assert False, 'This script is only suitable for linear and logistic algorithms. Check your configuration!'
