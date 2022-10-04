@@ -145,7 +145,7 @@ significantRiskWomen=interactions.loc[(interactions.Low>1)]
 significantRiskMen=interactions.loc[(interactions.High<1)]
 print(f'TOP {N} variables cuya presencia acrecienta el riesgo para las mujeres más que para los hombres: ')
 #mayores interacciones positivas
-print(significantRiskWomen.sort_values(by='Odds', ascending=False)[['Odds','descripcion','NMuj', 'NHom','NMuj_ingreso', 'NHom_ingreso']].head(N).to_markdown(index=False))
+print(significantRiskWomen.sort_values(by='Odds', ascending=False)[['codigo', 'Low','Odds','descripcion','NMuj', 'NHom','NMuj_ingreso', 'NHom_ingreso']].head(N).to_markdown(index=False))
 print('  ')
 significantRiskWomen.sort_values(by='Odds', ascending=False)[[ 'codigo', 'Low','Odds', 'High','descripcion', 'NMuj', 'NHom','NMuj_ingreso', 'NHom_ingreso',]].to_csv(os.path.join(config.PREDPATH, f'{config.ALGORITHM}_moreRiskWomen.csv'),
                                                                                                                                      index=False,
