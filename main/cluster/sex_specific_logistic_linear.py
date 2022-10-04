@@ -23,7 +23,7 @@ util.makeAllPaths()
 
 from dataManipulation.dataPreparation import getData
 import numpy as np
-from sklearn.linear_model import LogisticRegression
+from sklearn.linear_model import LogisticRegression, LinearRegression
 
 #%%
 np.random.seed(config.SEED)
@@ -47,9 +47,11 @@ for group, groupname in zip([female,male],sex):
     ygroup=np.where(ygroup[config.COLUMNS]>=1,1,0)
     ygroup=ygroup.ravel()
     print('Sample size ',len(Xgroup), 'positive: ',sum(ygroup))
-    logistic=LogisticRegression(penalty='none',max_iter=1000,verbose=0, warm_start=False)
+    if config.ALGORITHM=='logistic':
+        estimator=LogisticRegression(penalty='none',max_iter=1000,verbose=0, warm_start=False)
+    elif config.ALGORITHM=='linear':
+        estimator=LinearRegression(n_jobs=-1)
 
-    
     to_drop=['PATIENT_ID','ingresoUrg', 'FEMALE']
     for c in to_drop:
         try:
@@ -60,8 +62,8 @@ for group, groupname in zip([female,male],sex):
             util.vprint('pass')
     from time import time
     t0=time()
-    fit=logistic.fit(Xgroup, ygroup)
+    fit=estimator.fit(Xgroup, ygroup)
     print('fitting time: ',time()-t0)
 
-    util.savemodel(config, fit,  name=f'logistic{groupname}')
+    util.savemodel(config, fit,  name=f'{config.ALGORITHM}{groupname}')
 
