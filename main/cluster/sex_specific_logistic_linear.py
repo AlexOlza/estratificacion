@@ -51,7 +51,8 @@ for group, groupname in zip([female,male],sex):
         estimator=LogisticRegression(penalty='none',max_iter=1000,verbose=0, warm_start=False)
     elif config.ALGORITHM=='linear':
         estimator=LinearRegression(n_jobs=-1)
-
+    else:
+        assert False, 'This script is only suitable for linear and logistic algorithms. Check your configuration!'
     to_drop=['PATIENT_ID','ingresoUrg', 'FEMALE']
     for c in to_drop:
         try:

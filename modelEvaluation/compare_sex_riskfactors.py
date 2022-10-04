@@ -68,15 +68,12 @@ if not os.path.exists(filename):
     
     X.drop('PATIENT_ID', axis=1, inplace=True)
     
-    # cols = {c:X[c]*X['FEMALE'] for c in X.drop('FEMALE',axis=1).columns}
     
-    
-    # out = pd.concat([ df.astype(np.int8).add_suffix(f'{k}INTsex') for k,df in cols.items()], axis=1)
-    # assert False
-    for column in X:
-        if column!='FEMALE':
-            X[f'{column}INTsex']=(X[column]*X['FEMALE']).astype(np.int8)
     features=X.columns
+    interactions= X.drop([ 'FEMALE'], axis=1).multiply(X.FEMALE,axis=0).astype(np.int8)
+    interactions.rename(columns={c:f'{c}INTsex' for c in interactions}, inplace=True)
+    X=pd.concat([X,interactions],axis=1)
+
     stderrInt, zInt, pInt=beta_std_error(model, X)
     print('Intercept: ',list(model.intercept_))
     print('Std. error for the intercept: ',stderrInt[0])
