@@ -83,7 +83,7 @@ if not Path(filename).is_file():
         assert all(sexContrib[f'High{sexname_abbr}'].fillna(sexContrib[f'beta{sexname_abbr}'].max())>=sexContrib[f'beta{sexname_abbr}'])
         
 
-        sexContrib[f'N{sexname_abbr}']=[Xmuj[name].sum() for name in sexContrib.index]
+        sexContrib[f'N{sexname_abbr}']=[Xx[name].sum() for name in sexContrib.index]
         # sexContrib[f'N{sexname_abbr}_ingreso']=[len(ymuj.loc[y.PATIENT_ID.isin(Xmuj.loc[Xmuj[re.sub('INTsex','',name)]>0].PATIENT_ID)].urgcms.to_numpy().nonzero()[0]) for name in sexContrib.codigo]
         # sexContrib[f'N{sexname_abbr}_ingreso']=sexContrib[f'N{sexname_abbr}_ingreso']/sexContrib.NMuj*100
         
