@@ -184,12 +184,12 @@ if __name__=="__main__":
     """
     #%% PRINT RISK FACTORS
     N=5
-    for s, col, low in zip(['Mujeres', 'Hombres'], ['NMuj', 'NHom'], ['LowM','LowH']):
+    for s, col, low,high in zip(['Mujeres', 'Hombres'], ['NMuj', 'NHom'], ['LowM','LowH'],['HighM','HighH']):
         print(f'TOP {N} factores de riesgo para {s}')
-        print(oddsContrib.sort_values(by=s, ascending=False).head(N)[[s,low,col,'descripcion']])
+        print(oddsContrib.sort_values(by=s, ascending=False).head(N)[['codigo',s,low,col,'descripcion']].to_markdown(index=False))
         print('  ')
         print(f'TOP {N} factores protectores para {s}')
-        print(oddsContrib.sort_values(by=s, ascending=True).head(N)[[s, low,col,'descripcion']])
+        print(oddsContrib.sort_values(by=s, ascending=True).head(N)[['codigo',s, high,col,'descripcion']].to_markdown(index=False))
         print('  ')
     print('-----'*N)
     print('  ')

@@ -67,7 +67,10 @@ if not os.path.exists(filename):
     sex=['Mujeres', 'Hombres']
     
     X.drop('PATIENT_ID', axis=1, inplace=True)
-    
+    try:
+        X.drop('AGE_85GT', axis=1, inplace=True)
+    except:
+        pass
     
     features=X.columns
     interactions= X.drop([ 'FEMALE'], axis=1).multiply(X.FEMALE,axis=0).astype(np.int8)
