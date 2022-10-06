@@ -23,7 +23,7 @@ util.makeAllPaths()
 
 from dataManipulation.dataPreparation import getData
 import numpy as np
-from sklearn.linear_model import LogisticRegression
+from sklearn.linear_model import LogisticRegression, LinearRegression
 
 #%%
 np.random.seed(config.SEED)
@@ -33,10 +33,10 @@ X,y=getData(2016)
 female=X['FEMALE']==1
 male=X['FEMALE']==0
 
-sex=[ 'Mujeres','Hombres']
+sex=[ 'Hombres', 'Mujeres']
 
 
-for group, groupname in zip([female,male],sex):
+for group, groupname in zip([male,female],sex):
     print(groupname)
     Xgroup=X.loc[group]
     ygroup=y.loc[group]
@@ -44,12 +44,17 @@ for group, groupname in zip([female,male],sex):
     print(Xgroup.PATIENT_ID)
     print(ygroup)
     assert (all(Xgroup['FEMALE']==1) or all(Xgroup['FEMALE']==0))
-    ygroup=np.where(ygroup[config.COLUMNS]>=1,1,0)
-    ygroup=ygroup.ravel()
-    print('Sample size ',len(Xgroup), 'positive: ',sum(ygroup))
-    logistic=LogisticRegression(penalty='none',max_iter=1000,verbose=0, warm_start=False)
-
     
+    print('Sample size ',len(Xgroup))
+    if config.ALGORITHM=='logistic':
+        ygroup=np.where(ygroup[config.COLUMNS]>=1,1,0)
+        ygroup=ygroup.ravel()
+        estimator=LogisticRegression(penalty='none',max_iter=1000,verbose=0, warm_start=False)
+    elif config.ALGORITHM=='linear':
+        ygroup=ygroup[config.COLUMNS]
+        estimator=LinearRegression(n_jobs=-1)
+    else:
+        assert False, 'This script is only suitable for linear and logistic algorithms. Check your configuration!'
     to_drop=['PATIENT_ID','ingresoUrg', 'FEMALE']
     for c in to_drop:
         try:
@@ -60,8 +65,8 @@ for group, groupname in zip([female,male],sex):
             util.vprint('pass')
     from time import time
     t0=time()
-    fit=logistic.fit(Xgroup, ygroup)
+    fit=estimator.fit(Xgroup, ygroup)
     print('fitting time: ',time()-t0)
 
-    util.savemodel(config, fit,  name=f'logistic{groupname}')
+    util.savemodel(config, fit,  name=f'{config.ALGORITHM}{groupname}')
 

@@ -33,6 +33,7 @@ X,y=getData(2016)
 y=np.where(y[config.COLUMNS]>=1,1,0)
 y=y.ravel()
 print('Sample size ',len(X), 'positive: ',sum(y))
+assert not 'AGE_85GT' in X.columns
 
 #%%
 logistic=LogisticRegression(penalty='none',max_iter=1000,verbose=0)

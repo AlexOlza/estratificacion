@@ -46,7 +46,10 @@ def translateVariables(df,**kwargs):
     for column in df.codigo.values:
         if column.endswith('INTsex') and not (column in dictionary.codigo):
             col=re.sub('INTsex','',column)
-            descr=dictionary.loc[dictionary.codigo==col].descripcion.values
+            try:
+                descr=dictionary.loc[dictionary.codigo==col].descripcion.values[0]
+            except:
+                descr='nan'
             # print(p)
             dictionary=dictionary.append(pd.DataFrame([[column,descr]],
                                          columns=['codigo','descripcion']),
@@ -119,8 +122,8 @@ if __name__=="__main__":
         modeloH=job.load(config.MODELPATH+'logisticHombres.joblib')
         modeloM=job.load(config.MODELPATH+'logisticMujeres.joblib')
         
-        stderrH, zH, pH=beta_std_error(modeloH, X)
-        stderrM, zM, pM=beta_std_error(modeloM, X)
+        stderrH, zH, pH=beta_std_error(modeloH, Xhom.drop(['PATIENT_ID','FEMALE'],axis=1))
+        stderrM, zM, pM=beta_std_error(modeloM, Xmuj.drop(['PATIENT_ID','FEMALE'],axis=1))
         
         stderrHdict={name:value  for name, value in zip(separateFeatures, stderrH)}
         stderrMdict={name:value  for name, value in zip(separateFeatures, stderrH)}
@@ -150,8 +153,9 @@ if __name__=="__main__":
         oddsContrib=pd.DataFrame.from_dict(oddsContrib,orient='index',
                                            columns=['LowM','Mujeres','HighM','LowH', 'Hombres', 'HighH', 'stderrM', 'stderrH'])
         
-        assert all(oddsContrib.LowH<=oddsContrib.Hombres)
-        assert all(oddsContrib.HighH>=oddsContrib.Hombres)
+        assert not any(oddsContrib.Hombres.isna())
+        assert all(oddsContrib.LowH.fillna(oddsContrib.Hombres.min())<=oddsContrib.Hombres)
+        assert all(oddsContrib.HighH.fillna(oddsContrib.Hombres.max())>=oddsContrib.Hombres)
         oddsContrib['codigo']=oddsContrib.index
         
         oddsContrib['LowratioH/M']=oddsContrib['LowH']/oddsContrib['LowM']
@@ -180,12 +184,12 @@ if __name__=="__main__":
     """
     #%% PRINT RISK FACTORS
     N=5
-    for s, col, low in zip(['Mujeres', 'Hombres'], ['NMuj', 'NHom'], ['LowM','LowH']):
+    for s, col, low,high in zip(['Mujeres', 'Hombres'], ['NMuj', 'NHom'], ['LowM','LowH'],['HighM','HighH']):
         print(f'TOP {N} factores de riesgo para {s}')
-        print(oddsContrib.sort_values(by=s, ascending=False).head(N)[[s,low,col,'descripcion']])
+        print(oddsContrib.sort_values(by=s, ascending=False).head(N)[['codigo',s,low,col,'descripcion']].to_markdown(index=False))
         print('  ')
         print(f'TOP {N} factores protectores para {s}')
-        print(oddsContrib.sort_values(by=s, ascending=True).head(N)[[s, low,col,'descripcion']])
+        print(oddsContrib.sort_values(by=s, ascending=True).head(N)[['codigo',s, high,col,'descripcion']].to_markdown(index=False))
         print('  ')
     print('-----'*N)
     print('  ')
@@ -195,8 +199,20 @@ if __name__=="__main__":
     
     print('FACTORES DE RIESGO SIGNIFICATIVOS EN MUJERES: ')
     riskFactors=oddsContrib.loc[(oddsContrib['LowM']>=1) & (oddsContrib.Mujeres>=1)]
-    print(riskFactors.sort_values(by='Mujeres', ascending=False)[['codigo','LowM','Mujeres',  'NMuj', 'NMuj_ingreso','descripcion']].to_markdown(index=False))
+    df1=riskFactors.sort_values(by='Mujeres', ascending=False)
+    print(df1[['codigo','LowM','Mujeres',  'NMuj', 'NMuj_ingreso','descripcion']].head(10).to_markdown(index=False))
+    df1.to_csv(config.PREDPATH+'/significativos_Mujeres.csv', index=False)
     
     print('FACTORES DE RIESGO SIGNIFICATIVOS EN HOMBRES: ')
     riskFactors=oddsContrib.loc[(oddsContrib['LowH']>=1) & (oddsContrib.Hombres>=1)]
-    print(riskFactors.sort_values(by='Hombres', ascending=False)[['codigo','LowH','Hombres', 'NHom', 'NHom_ingreso','descripcion']].head(10).to_markdown(index=False))
+    df2=riskFactors.sort_values(by='Hombres', ascending=False)
+    print(df2[['codigo','LowH','Hombres', 'NHom', 'NHom_ingreso','descripcion']].head(10).to_markdown(index=False))
+    df2.to_csv(config.PREDPATH+'/significativos_Hombres.csv', index=False)
+    
+    #%%
+    print('FACTORES DE RIESGO PARA LAS MUJERES QUE NO LO SON PARA LOS HOMBRES:')
+    print(df1.loc[df1.descripcion.isin(set(df1.descripcion.values)-set(df2.descripcion.values))][['codigo','LowM','Mujeres',  'NMuj', 'NMuj_ingreso','descripcion']].to_markdown(index=False))
+    
+    #%%
+    print('FACTORES DE RIESGO PARA LOS HOMBRES QUE NO LO SON PARA LAS MUJERES:')
+    print(df2.loc[df2.descripcion.isin(set(df2.descripcion.values)-set(df1.descripcion.values))][['codigo','LowH','Hombres',  'NHom', 'NHom_ingreso','descripcion']].to_markdown(index=False))
