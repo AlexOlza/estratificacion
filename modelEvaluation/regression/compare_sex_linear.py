@@ -165,6 +165,7 @@ for i, group, groupname in zip([1, 0], [female, male], sex):
         if rsquared<0:
             problematic=preds.iloc[((preds['PRED']-preds['OBS'])**2).nlargest(6).index].PATIENT_ID
             unproblematic=separate_preds[~separate_preds.PATIENT_ID.isin(problematic)]
+            print(problematic)
             rsquared=r2_score(unproblematic.OBS, unproblematic.PRED)
 
         
