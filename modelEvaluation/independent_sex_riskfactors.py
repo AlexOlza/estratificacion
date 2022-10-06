@@ -122,8 +122,8 @@ if __name__=="__main__":
         modeloH=job.load(config.MODELPATH+'logisticHombres.joblib')
         modeloM=job.load(config.MODELPATH+'logisticMujeres.joblib')
         
-        stderrH, zH, pH=beta_std_error(modeloH, X)
-        stderrM, zM, pM=beta_std_error(modeloM, X)
+        stderrH, zH, pH=beta_std_error(modeloH, Xhom.drop(['PATIENT_ID','FEMALE'],axis=1))
+        stderrM, zM, pM=beta_std_error(modeloM, Xmuj.drop(['PATIENT_ID','FEMALE'],axis=1))
         
         stderrHdict={name:value  for name, value in zip(separateFeatures, stderrH)}
         stderrMdict={name:value  for name, value in zip(separateFeatures, stderrH)}
@@ -153,8 +153,9 @@ if __name__=="__main__":
         oddsContrib=pd.DataFrame.from_dict(oddsContrib,orient='index',
                                            columns=['LowM','Mujeres','HighM','LowH', 'Hombres', 'HighH', 'stderrM', 'stderrH'])
         
-        assert all(oddsContrib.LowH<=oddsContrib.Hombres)
-        assert all(oddsContrib.HighH>=oddsContrib.Hombres)
+        assert not any(oddsContrib.Hombres.isna())
+        assert all(oddsContrib.LowH.fillna(oddsContrib.Hombres.min())<=oddsContrib.Hombres)
+        assert all(oddsContrib.HighH.fillna(oddsContrib.Hombres.max())>=oddsContrib.Hombres)
         oddsContrib['codigo']=oddsContrib.index
         
         oddsContrib['LowratioH/M']=oddsContrib['LowH']/oddsContrib['LowM']
