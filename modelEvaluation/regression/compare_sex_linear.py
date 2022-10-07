@@ -101,7 +101,7 @@ axhist, axhist2, axhist3, axhist4= axs[0,0], axs[0,1], axs[1,0], axs[1,1]
 
 for i, group, groupname in zip([1, 0], [female, male], sex):
     recall, ppv, spec, score, ap = {}, {}, {}, {}, {}
-    selected = [l for l in available_models if (bool(re.match(f'linear{groupname}|linear\d+', l)))]
+    selected = [l for l in available_models if (bool(re.match(f'linear{groupname}|linear\d+|neuralRegression', l)))]
     print('Selected models: ', selected)
     # LOAD MODELS
     globalmodelname = list(
