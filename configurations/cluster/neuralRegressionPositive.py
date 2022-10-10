@@ -69,8 +69,8 @@ if  args.experiment!=experiment:#required arg
     EXPERIMENT=args.experiment #OVERRIDE (this is the only variable from the imported experiment module that needs to be changed, because it creates moddel and prediction directories)
 MODELPATH=MODELSPATH+EXPERIMENT+'/'
 USEDCONFIGPATH+=EXPERIMENT+'/'
-ALGORITHM='neuralRegression'
-CONFIGNAME='neuralRegression.py'
+ALGORITHM='neuralRegressionPositive'
+CONFIGNAME='neuralRegressionPositive.py'
 PREDPATH=os.path.join(OUTPATH,EXPERIMENT)
 FIGUREPATH=os.path.join(ROOTPATH,'figures',EXPERIMENT)
 METRICSPATH=os.path.join(METRICSPATH,EXPERIMENT)
@@ -117,7 +117,7 @@ def build_model(units_0, n_hidden, activ, cyclic, early, **kwargs):
             units=hidden_units[f"units_{i}"],
             activation=activ))
     #output layer
-    model.add(keras.layers.Dense(1, activation='linear',name='output',
+    model.add(keras.layers.Dense(1, activation='relu',name='output',
             kernel_initializer=keras.initializers.he_uniform(seed=seed_hparam)))
 
    
