@@ -89,14 +89,16 @@ for group, groupname in zip([male,female],sex):
     assert (all(Xgroup['FEMALE']==1) or all(Xgroup['FEMALE']==0))
     
     print('Sample size ',len(Xgroup))
-    if config.ALGORITHM=='neuralNetwork':
+    if 'neuralNetwork' in config.ALGORITHM:
         ygroup=np.where(ygroup[config.COLUMNS]>=1,1,0)
         ygroup=ygroup.ravel()
-    elif config.ALGORITHM=='neuralRegression':
-        ygroup=ygroup[config.COLUMNS].to_numpy()
+    elif 'neuralRegression' in config.ALGORITHM:
+        ygroup=ygroup[config.COLUMNS]
 
     else:
         assert False, 'This script is only suitable for neural networks. Check your configuration!'
+    
+    
     to_drop=['PATIENT_ID','ingresoUrg', 'FEMALE']
     for c in to_drop:
         try:
@@ -113,7 +115,7 @@ for group, groupname in zip([male,female],sex):
     t0=time()
     
     print('Tuner: Random')
-    tuner = config.MyRandomTuner(X_train, y_train.reshape(-1,1),X_test, y_test.reshape(-1,1),
+    tuner = config.MyRandomTuner(X_train, y_train,X_test, y_test,
                  objective=kt.Objective("val_loss", direction="min"),
                  max_trials=10, 
                 overwrite=True,
