@@ -53,7 +53,7 @@ import configurations.utility as util
 util.makeAllPaths()
 seed_sampling= args.seed_sampling if hasattr(args, 'seed_sampling') else config.SEED #imported from default configuration
 seed_hparam= args.seed_hparam if hasattr(args, 'seed_hparam') else config.SEED
-name= args.model_name if hasattr(args,'model_name') else 'neuralRegressionMSLogE' 
+name= args.model_name if hasattr(args,'model_name') else config.ALGORITHM
 epochs=args.seed_hparam if hasattr(args, 'epochs') else 500
 #%%
 """ BEGGINNING """
@@ -61,13 +61,15 @@ from dataManipulation.dataPreparation import getData
 
 X,y=getData(2016)
 assert len(config.COLUMNS)==1, 'This model is built for a single response variable! Modify config.COLUMNS'
-y=y[config.COLUMNS].to_numpy()
+
 
 try:
     X.drop('PATIENT_ID',axis=1,inplace=True)
 except:
     pass
 
+y=y[config.COLUMNS]
+    
 X_train, X_test, y_train, y_test = train_test_split( X, y, test_size=0.2, random_state=42)
 X_test, X_test2, y_test, y_test2 = train_test_split( X_test, y_test, test_size=0.5, random_state=42)
 
@@ -81,9 +83,9 @@ print('Seed ', seed_hparam)
 model_name=config.MODELPATH+name
 
 print('Tuner: Random')
-tuner = config.MyRandomTuner(X_train, y_train.reshape(-1,1),X_test, y_test.reshape(-1,1),
+tuner = config.MyRandomTuner(X_train, y_train,X_test, y_test,
              objective=kt.Objective("val_loss", direction="min"),
-             max_trials=20, 
+             max_trials=10, 
             overwrite=True,
              seed=seed_hparam,
              cyclic=False,
@@ -107,7 +109,7 @@ best_hp_={k:v for k,v in best_hp.values.items() if not k.startswith('units')}
 best_hp_['units_0']=best_hp.values['units_0']
 best_hp_['hidden_units']={f'units_{i}':best_hp.values[f'units_{i}'] for i in range(1,best_hp.values['n_hidden']+1)}
 callbacks = [keras.callbacks.EarlyStopping(monitor='val_loss',mode='min',
-                                      patience=15,
+                                      patience=2,
                                       restore_best_weights=True)]
 
 
