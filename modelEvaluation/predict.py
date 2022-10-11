@@ -68,7 +68,7 @@ def predict_save(yr,model,model_name,X,y,**kwargs):
     n=len(X)/CHUNK_SIZE
     filename=generate_filename(filename,yr,calibrated=False) if not filename else filename
 
-    if 'neural' in model_name or config.ALGORITHM=='linear':
+    if ('neural' in model_name) or ('linear' in model_name):
         pred=model.predict
     else:
         pred=model.predict_proba
@@ -105,18 +105,20 @@ def to_zip(filename):
 import re
 def predict(model_name,experiment_name,year,**kwargs):
     predictors=kwargs.get('predictors',config.PREDICTORREGEX)
+    custom_objects=kwargs.get('custom_objects',None)
     filename=kwargs.get('filename',model_name)
     modelfilename=os.path.join(re.sub(config.EXPERIMENT,experiment_name,config.MODELPATH),model_name)
-    if 'neural' in model_name:
-        load=keras.models.load_model
-        if model_name=='neural_AGESEX':
-            predictors=r'PATIENT_ID|FEMALE|AGE'
-    else:
-        modelfilename+='.joblib'
-        load=job.load
+    
     if Path(modelfilename):
-        print('loading model ',model_name)
-        model=load(modelfilename)
+        print('loading model ',model_name, custom_objects)
+        if 'neural' in model_name:
+            model=keras.models.load_model(modelfilename, custom_objects)
+            if model_name=='neural_AGESEX':
+                predictors=r'PATIENT_ID|FEMALE|AGE'
+        else:
+            modelfilename+='.joblib'
+            load=job.load
+            model=load(modelfilename)
     else:
         print('Model not found :(')
         print('missing ',modelfilename)
