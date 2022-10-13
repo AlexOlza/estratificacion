@@ -139,13 +139,15 @@ def keras_code(x_train, y_train, x_val, y_val,
     lr=kwargs.get('lr',None)
     batch_size=kwargs.get('batch_size', 256)
     hidden_units=kwargs.get('hidden_units',{})
+    sample_weights=kwargs.get('sample_weights',None)
     # Build model
     model = build_model(units_0, n_hidden, activ, cyclic, early, 
                         lr=lr, hidden_units=hidden_units)
     callbacks.append(keras.callbacks.Callback())
     # Train & eval model
     history=model.fit(x_train, y_train, callbacks=callbacks, epochs=epochs,
-                      batch_size=batch_size, validation_data=(x_val,y_val), verbose=verbose)
+                      batch_size=batch_size, validation_data=(x_val,y_val),
+                      sample_weight=sample_weights, verbose=verbose)
     
     if save and saving_path:
         # Save model
@@ -195,11 +197,11 @@ def run(tuner, trial, **kwargs):
             units, lr)
         return keras_code(tuner.x_train, tuner.y_train, tuner.x_val, tuner.y_val,
             units_0, n_hidden, activ, cyclic, early, callbacks,
-            hidden_units=units, lr=lr, batch_size=batch_size )
+            hidden_units=units, lr=lr, batch_size=batch_size, **kwargs )
 
 
 class MyRandomTuner(kt.RandomSearch):
-    def __init__(self, x_train, y_train, x_val, y_val, cyclic=False,*args,**kwargs):
+    def __init__(self, x_train, y_train, x_val, y_val, cyclic=False, sample_weights=None,*args,**kwargs):
         super().__init__(*args,**kwargs)
         self.x_train=x_train
         self.y_train=y_train

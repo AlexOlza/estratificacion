@@ -63,19 +63,36 @@ X,y=getData(2016)
 assert len(config.COLUMNS)==1, 'This model is built for a single response variable! Modify config.COLUMNS'
 
 
+def drop_zeros(X,y):
+    yzero_ids=y.loc[(y[config.COLUMNS]==0).values].PATIENT_ID
+    y=y[~(y.PATIENT_ID.isin(yzero_ids))]
+    X=X[~(X.PATIENT_ID.isin(yzero_ids))]
+    return X,y
+# X,y=drop_zeros(X,y)
+
 try:
     X.drop('PATIENT_ID',axis=1,inplace=True)
 except:
     pass
-
 y=y[config.COLUMNS]
-    
+
+
+
 X_train, X_test, y_train, y_test = train_test_split( X, y, test_size=0.2, random_state=42)
 X_test, X_test2, y_test, y_test2 = train_test_split( X_test, y_test, test_size=0.5, random_state=42)
 
 print('Sample size ',len(y_train))
 print('---------------------------------------------------'*5)
 #%% 
+import pandas as pd
+import numpy as np
+from sklearn.utils.class_weight import compute_sample_weight
+
+hist, bin_edges = np.histogram(y_train, bins = 100)
+classes = y_train.apply(lambda x: pd.cut(x, bin_edges, labels = False, 
+                                                  include_lowest = True)).values
+sample_weights = compute_sample_weight('balanced', classes)
+#%%
 """ FIT MODEL """
 np.random.seed(seed_hparam)
 print('Seed ', seed_hparam)
@@ -85,12 +102,13 @@ model_name=config.MODELPATH+name
 print('Tuner: Random')
 tuner = config.MyRandomTuner(X_train, y_train,X_test, y_test,
              objective=kt.Objective("val_loss", direction="min"),
-             max_trials=10, 
+             max_trials=5, 
             overwrite=True,
              seed=seed_hparam,
              cyclic=False,
-             directory=model_name+'_search',
-             project_name=name)
+             directory=model_name+'100bins_search',
+             project_name=name+'100bins',
+             sample_weights=sample_weights)
   
 tuner.search(epochs=30)
 print('---------------------------------------------------'*5)
@@ -109,7 +127,7 @@ best_hp_={k:v for k,v in best_hp.values.items() if not k.startswith('units')}
 best_hp_['units_0']=best_hp.values['units_0']
 best_hp_['hidden_units']={f'units_{i}':best_hp.values[f'units_{i}'] for i in range(1,best_hp.values['n_hidden']+1)}
 callbacks = [keras.callbacks.EarlyStopping(monitor='val_loss',mode='min',
-                                      patience=2,
+                                      patience=5,
                                       restore_best_weights=True)]
 
 
@@ -118,6 +136,8 @@ print(best_hp_)
 print('---------------------------------------------------'*5)
 print(f'Retraining ({epochs} epochs):')
 config.keras_code(X_train,y_train,X_test2,y_test2, epochs=epochs,**best_hp_,
-            callbacks=callbacks, save=True, saving_path=model_name, verbose=1)
+            callbacks=callbacks, save=True, saving_path=model_name+'100bins',sample_weights=sample_weights, verbose=1)
 util.saveconfig(config,config.USEDCONFIGPATH+model_name.split('/')[-1]+'.json')
 print('Saved ')
+
+#%%
