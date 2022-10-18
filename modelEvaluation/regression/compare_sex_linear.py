@@ -32,7 +32,12 @@ sys.path.append('/home/aolza/Desktop/estratificacion/')
 
 
 # %%
-
+from keras import backend as K
+   
+def coeff_determination(y_true, y_pred):
+    SS_res =  K.sum(K.square( y_true-y_pred )) 
+    SS_tot = K.sum(K.square( y_true - K.mean(y_true) ) ) 
+    return ( 1 - SS_res/(SS_tot + K.epsilon()) )
 def translateVariables(df, **kwargs):
     dictionaryFile = kwargs.get('file', os.path.join(
         config.INDISPENSABLEDATAPATH+'diccionarioACG.csv'))
@@ -84,110 +89,111 @@ for i, group, groupname in zip([1, 0], [male, female], sex):
     selected_types={'neuralRegressionPositive':[s for s in selected if 'neuralRegressionPositive' in s],
                     'neuralRegression':[s for s in selected if ('neural' in s) and (not 'Positive' in s)],
                              'linear':[s for s in selected if 'linear' in s]}
-    
     for algorithm, selection in selected_types.items():
-        try:
-            print(selection)
-            # LOAD MODELS
-            globalmodelname = list(
-                set(selection)-set([f'{algorithm}{groupname}']))[0]
-            separatemodelname = f'{algorithm}{groupname}'
-         
-            if 'linear' in algorithm:
-                globalmodel = job.load(config.MODELPATH+globalmodelname+'.joblib')
-                separatemodel = job.load(config.MODELPATH+separatemodelname+'.joblib')
-            else:
-                globalmodel = keras.models.load_model(config.MODELPATH+globalmodelname,custom_objects={'coeff_determination':config.coeff_determination})
-                separatemodel = keras.models.load_model(config.MODELPATH+separatemodelname,custom_objects={'coeff_determination':config.coeff_determination}) 
+        if len(selection)>0:
+            try:
+                print(selection)
+                # LOAD MODELS
+                globalmodelname = list(
+                    set(selection)-set([f'{algorithm}{groupname}']))[0]
+                separatemodelname = f'{algorithm}{groupname}'
+             
+                if 'linear' in algorithm:
+                    globalmodel = job.load(config.MODELPATH+globalmodelname+'.joblib')
+                    separatemodel = job.load(config.MODELPATH+separatemodelname+'.joblib')
+                else:
+                    globalmodel = keras.models.load_model(config.MODELPATH+globalmodelname,custom_objects={'coeff_determination':coeff_determination})
+                    separatemodel = keras.models.load_model(config.MODELPATH+separatemodelname,custom_objects={'coeff_determination':coeff_determination}) 
+            
+                # SUBSET DATA
+                Xgroup = X.loc[group]
+                ygroup = y.loc[y.PATIENT_ID.isin(Xgroup.PATIENT_ID)]
+            
         
-            # SUBSET DATA
-            Xgroup = X.loc[group]
-            ygroup = y.loc[y.PATIENT_ID.isin(Xgroup.PATIENT_ID)]
-        
+                    
+                pastXgroup = pastX.loc[pastX['FEMALE'] == i]
+                pastygroup = pasty.loc[pasty.PATIENT_ID.isin(pastXgroup.PATIENT_ID)]
+            
+           
+            
+                assert (all(Xgroup['FEMALE'] == 1) or all(Xgroup['FEMALE'] == 0))
+            
+                # PREDICT
+                joint_preds, joint_r2= predict(globalmodelname,config.EXPERIMENT,year,
+                                               X=Xgroup,y=ygroup, filename=f'{globalmodelname}_{groupname}',
+                                               custom_objects={'coeff_determination':coeff_determination})
+                from time import time
+                t0=time()
+                separate_preds, separate_r2= predict(separatemodelname,config.EXPERIMENT,year,
+                                                     X=Xgroup.drop('FEMALE',axis=1),y=ygroup,
+                                                     custom_objects={'coeff_determination':coeff_determination})
+            
+                print(f'pred time {groupname} ',time()-t0)
+                
+                import seaborn as sns
     
-                
-            pastXgroup = pastX.loc[pastX['FEMALE'] == i]
-            pastygroup = pasty.loc[pasty.PATIENT_ID.isin(pastXgroup.PATIENT_ID)]
-        
-       
-        
-            assert (all(Xgroup['FEMALE'] == 1) or all(Xgroup['FEMALE'] == 0))
-        
-            # PREDICT
-            joint_preds, joint_r2= predict(globalmodelname,config.EXPERIMENT,year,
-                                           X=Xgroup,y=ygroup, filename=f'{globalmodelname}_{groupname}',
-                                           custom_objects={'coeff_determination':config.coeff_determination})
-            from time import time
-            t0=time()
-            separate_preds, separate_r2= predict(separatemodelname,config.EXPERIMENT,year,
-                                                 X=Xgroup.drop('FEMALE',axis=1),y=ygroup,
-                                                 custom_objects={'coeff_determination':config.coeff_determination})
-        
-            print(f'pred time {groupname} ',time()-t0)
+                axhist.set_xlim(xmin,xmax)
+                axhist2.set_xlim(xmin,xmax)
+    
+                sns.kdeplot(separate_preds.PRED, shade=True, ax=axhist,
+                             label=groupname, bw_method=0.3)
+                sns.kdeplot(joint_preds.PRED, shade=True, ax=axhist2,
+                             label=groupname, bw_method=0.3)
             
-            import seaborn as sns
-
-            axhist.set_xlim(xmin,xmax)
-            axhist2.set_xlim(xmin,xmax)
-
-            sns.kdeplot(separate_preds.PRED, shade=True, ax=axhist,
-                         label=groupname, bw_method=0.3)
-            sns.kdeplot(joint_preds.PRED, shade=True, ax=axhist2,
-                         label=groupname, bw_method=0.3)
-        
-            axhist.set_title('Modelos separados')
-            axhist2.set_title('Modelo global')
-            # plt.legend()
-            # plt.tight_layout()
-        
-            ax = axhist3 if groupname == 'Mujeres' else axhist4
-            ax.set_xlim(xmin,xmax)
-            # if tail:
-            #     ax.set_ylim(0,0.1)
-            sns.kdeplot(separate_preds.PRED, shade=True, ax=ax,
-                         label='Separados', bw_method=0.3)
-            sns.kdeplot(joint_preds.PRED, shade=True, ax=ax,
-                         label='Global', bw_method=0.3)
-            ax.set_title(groupname)
+                axhist.set_title('Modelos separados')
+                axhist2.set_title('Modelo global')
+                # plt.legend()
+                # plt.tight_layout()
             
-            obs=separate_preds.OBS
-        
-            # METRICS
-            for model, preds in zip(models, [joint_preds, separate_preds]):
-                print(model, algorithm, groupname)
-                residuals[f'{model}{algorithm}-{groupname[:3]}']=(preds.OBS-preds.PRED).describe()
-                rsquared=r2_score(y_true=preds['OBS'].values, y_pred=preds['PRED'].values)
-                rmse[model]=mean_squared_error(y_true=preds['OBS'].values, y_pred=preds['PRED'].values, squared=False)
-                if rsquared<0:
-                    problematic=preds.iloc[((preds['PRED']-preds['OBS'])**2).nlargest(6).index].PATIENT_ID
-                    unproblematic=separate_preds[~separate_preds.PATIENT_ID.isin(problematic)]
-                    print(problematic)
-                    rsquared=r2_score(unproblematic.OBS, unproblematic.PRED)
-        
+                ax = axhist3 if groupname == 'Mujeres' else axhist4
+                ax.set_xlim(xmin,xmax)
+                # if tail:
+                #     ax.set_ylim(0,0.1)
+                sns.kdeplot(separate_preds.PRED, shade=True, ax=ax,
+                             label='Separados', bw_method=0.3)
+                sns.kdeplot(joint_preds.PRED, shade=True, ax=ax,
+                             label='Global', bw_method=0.3)
+                ax.set_title(groupname)
                 
-                recallK, ppvK, specK, _ = performance(obs, preds['PRED'], K)
-                recall[model] = recallK
-                spec[model] = specK
-                score[model] = rsquared
-                ppv[model] = ppvK
-        
-            df = pd.DataFrame(list(zip([f'{model} {algorithm}- {groupname}' for model in models],
-                                       [score[model] for model in models],
-                                        [rmse[model] for model in models],
-                                       [recall[model] for model in models],
-                                       [spec[model] for model in models],
-                                       [ppv[model] for model in models])),
-                              columns=['Model', 'R2', 'RMSE',  f'Recall_{K}', f'Specificity_{K}', f'PPV_{K}'])
-            table = pd.concat([df, table])
-        
-            axhist2.legend()
-            axhist4.legend()
-            axhist3.legend()
-            axhist.legend()
-            plt.tight_layout()
-        except:
-            pass
+                obs=separate_preds.OBS
+            
+                # METRICS
+                for model, preds in zip(models, [joint_preds, separate_preds]):
+                    print(model, algorithm, groupname)
+                    residuals[f'{model}{algorithm}-{groupname[:3]}']=(preds.OBS-preds.PRED).describe()
+                    rsquared=r2_score(y_true=preds['OBS'].values, y_pred=preds['PRED'].values)
+                    rmse[model]=mean_squared_error(y_true=preds['OBS'].values, y_pred=preds['PRED'].values, squared=False)
+                    if rsquared<0:
+                        problematic=preds.iloc[((preds['PRED']-preds['OBS'])**2).nlargest(6).index].PATIENT_ID
+                        unproblematic=separate_preds[~separate_preds.PATIENT_ID.isin(problematic)]
+                        print(problematic)
+                        rsquared=r2_score(unproblematic.OBS, unproblematic.PRED)
+                        rmse[model]=mean_squared_error(unproblematic.OBS, unproblematic.PRED, squared=False)
+                    
+                    recallK, ppvK, specK, _ = performance(obs, preds['PRED'], K)
+                    recall[model] = recallK
+                    spec[model] = specK
+                    score[model] = rsquared
+                    ppv[model] = ppvK
+            
+                df = pd.DataFrame(list(zip([f'{model} {algorithm}- {groupname}' for model in models],
+                                           [score[model] for model in models],
+                                            [rmse[model] for model in models],
+                                           [recall[model] for model in models],
+                                           [spec[model] for model in models],
+                                           [ppv[model] for model in models])),
+                                  columns=['Model', 'R2', 'RMSE',  f'Recall_{K}', f'Specificity_{K}', f'PPV_{K}'])
+                table = pd.concat([df, table])
+            
+                axhist2.legend()
+                axhist4.legend()
+                axhist3.legend()
+                axhist.legend()
+                plt.tight_layout()
+            except:
+                pass
 # %%
-print(table.to_markdown(index=False))
+print(table[['Model', 'R2', 'RMSE', 'Recall_20000', 'PPV_20000']].to_markdown(index=False))
 
 #%%
+print(table[['Model', 'R2', 'RMSE', 'Recall_20000', 'PPV_20000']].to_latex(index=False, float_format='%.4f'))
