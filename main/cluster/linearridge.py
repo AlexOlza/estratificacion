@@ -34,7 +34,7 @@ y=y[config.COLUMNS]
 print('Sample size ',len(X))
 
 #%%
-linear=RidgeCV(alphas=np.logspace(start=1e-4, stop=100, num=10),scoring='neg_mean_squared_error')
+linear=RidgeCV(alphas=np.logspace(start=-2, stop=4, num=10),scoring='neg_mean_squared_error')
 
 to_drop=['PATIENT_ID','ingresoUrg', 'AGE_85GT']
 for c in to_drop:
