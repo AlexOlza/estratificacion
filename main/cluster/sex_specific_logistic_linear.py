@@ -23,7 +23,7 @@ util.makeAllPaths()
 
 from dataManipulation.dataPreparation import getData
 import numpy as np
-from sklearn.linear_model import LogisticRegression, LinearRegression
+from sklearn.linear_model import LogisticRegression, LinearRegression, RidgeCV
 
 #%%
 np.random.seed(config.SEED)
@@ -53,9 +53,13 @@ for group, groupname in zip([male,female],sex):
     elif config.ALGORITHM=='linear':
         ygroup=ygroup[config.COLUMNS]
         estimator=LinearRegression(n_jobs=-1)
+    elif config.ALGORITHM=='linearridge':
+        ygroup=ygroup[config.COLUMNS]
+        estimator=RidgeCV(alphas=np.logspace(start=1e-4, stop=100, num=10),scoring='neg_mean_square_error')
+
     else:
-        assert False, 'This script is only suitable for linear and logistic algorithms. Check your configuration!'
-    to_drop=['PATIENT_ID','ingresoUrg', 'FEMALE']
+        assert False, 'This script is only suitable for linear, ridge and logistic algorithms. Check your configuration!'
+    to_drop=['PATIENT_ID','ingresoUrg', 'FEMALE', 'AGE_85GT']
     for c in to_drop:
         try:
             Xgroup.drop(c,axis=1,inplace=True)
