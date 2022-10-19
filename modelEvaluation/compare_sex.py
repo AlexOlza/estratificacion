@@ -23,7 +23,7 @@ from modelEvaluation.compare import detect_models, compare, detect_latest, perfo
 
 import pandas as pd
 import re
-
+from tensorflow import keras
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.metrics import average_precision_score, roc_auc_score, RocCurveDisplay, roc_curve, auc, precision_recall_curve, PrecisionRecallDisplay
@@ -107,20 +107,25 @@ axhist, axhist2, axhist3, axhist4= axs[0,0], axs[0,1], axs[1,0], axs[1,1]
 
 for i, group, groupname in zip([1, 0], [female, male], sex):
     recall, ppv, spec, score, ap = {}, {}, {}, {}, {}
-    selected = [l for l in available_models if (bool(re.match(f'logistic{groupname}|logistic\d+|logistic_gender_balanced', l)))]
+    selected = [l for l in available_models if (bool(re.match(f'{config.ALGORITHM}Random$|{config.ALGORITHM}{groupname}$|{config.ALGORITHM}\d+|{config.ALGORITHM}_gender_balanced', l)))]
     print('Selected models: ', selected)
     # LOAD MODELS
     globalmodelname = list(
-        set(selected)-set([f'logistic{groupname}'])-set(['logistic_gender_balanced']))[0]
-    separatemodelname = f'logistic{groupname}.joblib'
-    globalmodel = job.load(config.MODELPATH+globalmodelname+'.joblib')
-    try:
-        sameprevmodel = job.load(
-            config.MODELPATH+'logistic_gender_balanced.joblib')
-    except FileNotFoundError:
-        print('Same prevalence model not found')
-    separatemodel = job.load(config.MODELPATH+separatemodelname)
-
+        set(selected)-set([f'{config.ALGORITHM}{groupname}'])-set([f'{config.ALGORITHM}_gender_balanced']))[0]
+    separatemodelname = f'{config.ALGORITHM}{groupname}'
+    if not 'neural' in config.ALGORITHM:
+        globalmodel = job.load(config.MODELPATH+globalmodelname+'.joblib')
+        try:
+            sameprevmodel = job.load(
+                config.MODELPATH+'{config.ALGORITHM}_gender_balanced.joblib')
+        except FileNotFoundError:
+            print('Same prevalence model not found')
+            sameprev=None
+        separatemodel = job.load(config.MODELPATH+separatemodelname+'.joblib')
+    else:
+        globalmodel = keras.models.load_model(config.MODELPATH+globalmodelname)
+        separatemodel = keras.models.load_model(config.MODELPATH+separatemodelname) 
+        sameprev=None
     # SUBSET DATA
     Xgroup = X.loc[group]
     ygroup = y.loc[y.PATIENT_ID.isin(Xgroup.PATIENT_ID)]
@@ -138,8 +143,8 @@ for i, group, groupname in zip([1, 0], [female, male], sex):
           'positive: ', pos, 'prevalence=', pos/len(Xgroup))
 
     # PREDICT
-    separate_cal[groupname] = cal.calibrate(f'logistic{groupname}', year,
-                                            filename=f'logistic{groupname}',
+    separate_cal[groupname] = cal.calibrate(f'{config.ALGORITHM}{groupname}', year,
+                                            filename=f'{config.ALGORITHM}{groupname}',
                                             predictors=[
                                                 p for p in predictors if not p == 'FEMALE'],
                                             presentX=Xgroup[predictors].drop(
@@ -154,12 +159,23 @@ for i, group, groupname in zip([1, 0], [female, male], sex):
                                          predictors=predictors,
                                          presentX=Xgroup[predictors], presentY=ygroup,
                                          pastX=pastXgroup[predictors], pastY=pastygroup)
-    balanced_cal[groupname] = cal.calibrate('logistic_gender_balanced', year,
-                                            filename=f'logistic_gender_balanced_{groupname}',
-                                            presentX=Xgroup[predictors], presentY=ygroup,
-                                            pastX=pastXgroup[predictors],
-                                            pastY=pastygroup,
-                                            )
+    # balanced_cal[groupname] = joint_cal[groupname] #provisional
+    if sameprev:
+        balanced_cal[groupname] = cal.calibrate(f'{config.ALGORITHM}_gender_balanced', year,
+                                                filename=f'{config.ALGORITHM}_gender_balanced_{groupname}',
+                                                presentX=Xgroup[predictors], presentY=ygroup,
+                                                pastX=pastXgroup[predictors],
+                                                pastY=pastygroup,
+                                                )
+        
+    else:
+        print('Omitting same prevalence model, we copy the global model results')
+        balanced_cal[groupname] =cal.calibrate(globalmodelname, year,
+                                             filename=f'{globalmodelname}_{groupname}',
+                                             predictors=predictors,
+                                             presentX=Xgroup[predictors], presentY=ygroup,
+                                             pastX=pastXgroup[predictors], pastY=pastygroup)
+
     balanced_preds = balanced_cal[groupname].PRED
     joint_preds = joint_cal[groupname].PRED
     separate_preds = separate_cal[groupname].PRED
