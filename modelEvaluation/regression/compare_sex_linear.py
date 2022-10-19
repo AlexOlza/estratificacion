@@ -12,8 +12,9 @@ import configurations.utility as util
 from python_settings import settings as config
 if not config.configured:
     experiment = input('Experiment: ')
+    algorithm= input('Algorithm: ')
     config_used = os.path.join(
-        os.environ['USEDCONFIG_PATH'], f'{experiment}/linearMujeres.json')
+        os.environ['USEDCONFIG_PATH'], f'{experiment}/{algorithm}Mujeres.json')
     configuration = util.configure(config_used)
 import joblib as job
 from dataManipulation.dataPreparation import getData
@@ -84,11 +85,12 @@ axhist, axhist2, axhist3, axhist4= axs[0,0], axs[0,1], axs[1,0], axs[1,1]
 
 for i, group, groupname in zip([1, 0], [male, female], sex):
     recall, ppv, spec, score, ap, rmse = {}, {}, {}, {}, {}, {}
-    selected = [l for l in available_models if (bool(re.match(f'(linear|neuralRegression|neuralRegressionGamma){groupname}$|linear\d+|neuralRegression[a-zA-Z]$|neuralRegressionGamma$', l)))]
+    selected = [l for l in available_models if (bool(re.match(f'({config.ALGORITHM}{groupname}$|{config.ALGORITHM}\d+|{config.ALGORITHM}$', l)))]
     print('Selected models: ', selected)
     selected_types={'neuralRegressionPositive':[s for s in selected if 'neuralRegressionPositive' in s],
                     'neuralRegression':[s for s in selected if ('neural' in s) and (not 'Positive' in s)],
-                             'linear':[s for s in selected if 'linear' in s]}
+                             'linear':[s for s in selected if 'linear' in s],
+                             'linearridge':[s for s in selected if 'linearridge' in s]}
     for algorithm, selection in selected_types.items():
         if len(selection)>0:
             try:

@@ -20,23 +20,27 @@ import pandas as pd
 #%%
 chosen_config='configurations.cluster.'+sys.argv[1]
 experiment='configurations.'+sys.argv[2]
-try:
-    usedconfigpath=os.environ['USEDCONFIG_PATH']
-except:
-    usedconfigpath=sys.argv[3]
-# experiment=input('Experiment: ')
-config_used=os.path.join(usedconfigpath,f'{sys.argv[2]}/linearMujeres.json')
-
+# try:
+#     usedconfigpath=os.environ['USEDCONFIG_PATH']
+# except:
+#     usedconfigpath=sys.argv[3]
+# # experiment=input('Experiment: ')
+# config_used=os.path.join(usedconfigpath,f'{sys.argv[2]}/linearMujeres.json')
+import importlib
+importlib.invalidate_caches()
 from python_settings import settings as config
+logistic_settings=importlib.import_module(chosen_config,package='estratificacion')
+if not config.configured:
+    config.configure(logistic_settings) # configure() receives a python module
+assert config.configured 
 import configurations.utility as util
-if not config.configured: 
-    configuration=util.configure(config_used)
+
 from dataManipulation.dataPreparation import getData
 from modelEvaluation.predict import generate_filename
 from modelEvaluation.independent_sex_riskfactors import translateVariables
 from modelEvaluation.regression.sex_functions import beta_std_error,confidence_interval_betas
 year=2018#int(input('YEAR TO PREDICT: '))
-filename=config.PREDPATH+'/sexSpecificBetas.csv'
+filename=config.PREDPATH+f'/{config.ALGORITHM}sexSpecificBetas.csv'
 #%%
 if not Path(filename).is_file():    
     X,y=getData(year-1)
@@ -57,7 +61,7 @@ if not Path(filename).is_file():
     
     for sexname, Xx, yy in zip(sex, [Xmuj, Xhom],[ymuj,yhom]):
         sexname_abbr=sexname[:3]
-        model=job.load(config.MODELPATH+f'linear{sexname}.joblib') 
+        model=job.load(config.MODELPATH+f'{config.ALGORITHM}{sexname}.joblib') 
         betas=list(model.intercept_)+list(model.coef_[0])
         stderr=beta_std_error(model, Xx.drop(['PATIENT_ID','FEMALE'],axis=1), yy[config.COLUMNS])
         low, high=confidence_interval_betas(betas, stderr, confidence_level=0.95)
@@ -98,13 +102,13 @@ else:
     
 #%%
 print('FACTORES DE RIESGO SIGNIFICATIVOS EN MUJERES: ')
-riskFactors=fullContrib.loc[(fullContrib['LowMuj']>=0)]
+riskFactors=fullContrib.loc[(fullContrib['LowMuj']>0)]
 df1=riskFactors.sort_values(by='betaMuj', ascending=False)
 print(df1[['codigo','LowMuj','betaMuj',  'NMuj','descripcion']].head(10).to_markdown(index=False))
 df1.to_csv(config.PREDPATH+'/significativos_Mujeres.csv', index=False)
 #%%
 print('FACTORES DE RIESGO SIGNIFICATIVOS EN HOMBRES: ')
-riskFactors=fullContrib.loc[(fullContrib['LowHom']>=0) ]
+riskFactors=fullContrib.loc[(fullContrib['LowHom']>0) ]
 df2=riskFactors.sort_values(by='betaHom', ascending=False)
 print(df2[['codigo','LowHom','betaHom', 'NHom', 'descripcion']].head(10).to_markdown(index=False))
 df2.to_csv(config.PREDPATH+'/significativos_Hombres.csv', index=False)
