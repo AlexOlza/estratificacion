@@ -55,7 +55,7 @@ for group, groupname in zip([male,female],sex):
         estimator=LinearRegression(n_jobs=-1)
     elif config.ALGORITHM=='linearridge':
         ygroup=ygroup[config.COLUMNS]
-        estimator=RidgeCV(alphas=np.logspace(start=1e-4, stop=100, num=10),scoring='neg_mean_square_error')
+        estimator=RidgeCV(alphas=np.logspace(start=1e-4, stop=100, num=10),scoring='neg_mean_squared_error')
 
     else:
         assert False, 'This script is only suitable for linear, ridge and logistic algorithms. Check your configuration!'
