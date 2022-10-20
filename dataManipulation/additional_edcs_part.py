@@ -27,7 +27,9 @@ ALLEDCFILES={2016:'additional_edcs2016.csv',
              2017:'additional_edcs2017.csv'}
 FULLACGFILES={2016:'fullacgs2016.csv',
              2017:'fullacgs2017.csv'}
-PREDICTORREGEX=r'PATIENT_ID|FEMALE|AGE_[0-9]+$|ACG|EDC_|HOSDOM|FRAILTY|RXMG_|INGRED_14GT'
+
+#We discard those EDCs and RXMGs that have NA values
+PREDICTORREGEX=r'PATIENT_ID|FEMALE|AGE_[0-9]+$|ACG|EDC_(?!NUR11|RES10)|HOSDOM|FRAILTY|RXMG_(?!ZZZX000)|INGRED_14GT'
 year=2016
 
 from pathlib import Path

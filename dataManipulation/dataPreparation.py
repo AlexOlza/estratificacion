@@ -48,6 +48,8 @@ def getData(yr,columns=config.COLUMNS,
         CCS = kwargs.get('CCS', config.CCS)
     except AttributeError:
         CCS = False
+        
+        
 
     if ('COSTE_TOTAL_ANO2' in columns) :
         coste=load(filename=config.ACGFILES[yr],predictors=r'PATIENT_ID|COSTE_TOTAL_ANO2')
