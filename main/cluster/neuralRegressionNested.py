@@ -65,7 +65,7 @@ print(config.PREDICTORREGEX)
 
 
 from  tensorflow.keras import backend as K   
-import tensorflow_addons as tfa
+# import tensorflow_addons as tfa
 
 def r2_variance(y_true, y_pred):
     SS_res =  K.sum(K.square( y_true-y_pred )) 
@@ -82,7 +82,7 @@ assert len(config.COLUMNS)==1, 'This model is built for a single response variab
 
 import pandas as pd
 import numpy as np
-from sklearn.utils.class_weight import compute_sample_weight
+# from sklearn.utils.class_weight import compute_sample_weight
 
 try:
     X.drop('PATIENT_ID',axis=1,inplace=True)
