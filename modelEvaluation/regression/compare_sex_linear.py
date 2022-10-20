@@ -33,7 +33,7 @@ sys.path.append('/home/aolza/Desktop/estratificacion/')
 
 
 # %%
-from keras import backend as K
+from tensorflow.keras import backend as K
    
 def coeff_determination(y_true, y_pred):
     SS_res =  K.sum(K.square( y_true-y_pred )) 

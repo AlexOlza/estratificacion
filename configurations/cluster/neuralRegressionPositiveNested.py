@@ -83,7 +83,7 @@ model_name= args.model_name if hasattr(args,'model_name') else ALGORITHM
 from main.cluster.clr_callback import CyclicLR
 """ DEFINITION OF THE HYPERPARAMETER SPACE """
 
-from keras import backend as K   
+from tensorflow.keras import backend as K   
 def coeff_determination(y_true, y_pred):
     SS_res =  K.sum(K.square( y_true-y_pred )) 
     SS_tot = K.sum(K.square( y_true - K.mean(y_true) ) ) 
