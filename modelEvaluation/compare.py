@@ -99,7 +99,7 @@ def compare_nested(available_models, X, y, year):
     metrics = compare(available_models, X, y, year, predictors=predictors)
     return (metrics)
 
-def compare(selected, X, y, year, 
+def compare_linear(selected, X, y, year, 
             experiment_name=Path(config.MODELPATH).parts[-1],
             **kwargs):
     print('Not implemented')
