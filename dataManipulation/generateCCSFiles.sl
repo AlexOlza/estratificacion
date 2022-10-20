@@ -24,7 +24,7 @@ module load KerasTuner/1.1.0-foss-2020b-Python-3.8.6
 module load TensorFlow
 module load SciPy-bundle/2020.11-foss-2020b-skrebate #INCLUDES scikit-learn 0.24
 
-srun python generateCCSFiles.py logistic nopredictors $year 
+srun python generateCCSFiles.py linear costCCS_noext $year 
 
 sleep 1
 echo "-------" 

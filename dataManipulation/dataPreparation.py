@@ -143,7 +143,7 @@ def generateCCSData(yr,  X,
     
     """ CHECK IF THE MATRIX IS ALREADY ON DISK """
     predictors=kwargs.get('predictors',None)
-    filename=os.path.join(config.DATAPATH,config.CCSFILES[yr])
+    filename=os.path.join(config.DATAPATH,'new'+config.CCSFILES[yr])
     if Path(filename).is_file():
         print('X number of columns is  ',len(X.columns))
         Xccs=load(config.CCSFILES[yr],directory=config.DATAPATH,
@@ -333,6 +333,10 @@ def generateCCSData(yr,  X,
     """ ASSIGN CCS CATEGORIES TO DIAGNOSTIC CODES """
     dict9=icd9[['CODE', 'CCS', 'DESCRIPTION', 'CIE_VERSION']]
     dict10=icd10cm[['CODE', 'CCS', 'DESCRIPTION', 'CIE_VERSION']]
+    dict10=pd.concat([dict10, 
+                      pd.DataFrame.from_dict({'CODE':['ONCOLO'], 'CCS':['ONCOLO'], 
+                                              'DESCRIPTION': ['Undetermined oncology code'],
+                                              'CIE_VERSION':['10']})])
     fulldict=pd.concat([dict9,dict10]).drop_duplicates()
     #Drop codes that were not diagnosed to any patient in the current year
     diags_with_ccs=pd.DataFrame({'PATIENT_ID':[],'CODE':[],'CCS':[], 'DESCRIPTION':[]})
@@ -363,15 +367,15 @@ def generateCCSData(yr,  X,
     
     print(f'{i} dfs processed')
     
-    X.reindex(sorted(X.columns), axis=1).to_csv(os.path.join(config.DATAPATH,f'CCS{yr}.csv'))
-    print('Saved ',os.path.join(config.DATAPATH,f'CCS{yr}.csv'))
+    X.reindex(sorted(X.columns), axis=1).to_csv(os.path.join(config.DATAPATH,f'newCCS{yr}.csv'))
+    print('Saved ',os.path.join(config.DATAPATH,f'newCCS{yr}.csv'))
     return 0,0
 #%%
 if __name__=='__main__':
     import sys
     sys.path.append('/home/aolza/Desktop/estratificacion/')
     yr=2017
-    X,Y=getData(yr, CCS=False)
+    X,Y=getData(yr, CCS=True)
     # _ , _ =generateCCSData(yr,  X)
     print('positive class ',sum(np.where(Y.urgcms>=1,1,0)))
     
