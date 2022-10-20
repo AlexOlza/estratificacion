@@ -173,3 +173,4 @@ for key, val in variables.items():
                       'R@20k': [recall], 'PPV@20K':[ppv]})])
     
 #%%
+print(table.to_markdown(index=False))
