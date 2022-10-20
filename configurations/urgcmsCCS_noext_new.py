@@ -1,19 +1,21 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Fri Sep 23 11:24:08 2022
+Created on Mon May  9 15:55:10 2022
 
 @author: aolza
 """
 
-EXPERIMENT='costCCS_noext'
-CONFIGNAME='costCCS_noext.py'
-COLUMNS=['COSTE_TOTAL_ANO2']
+EXPERIMENT='urgcmsCCS_noext'
+CONFIGNAME='urgcmsCCS_noext.py'
+COLUMNS=['urgcms']
 TRACEBACK=True
-EXCLUDE=[]
-"""PREDICTORS"""
-PREDICTORREGEX=r'PATIENT_ID|AGE_[0-9]+$|FEMALE|CCS(?!2601|2602|2603|2604|2605|2606|2607|2608|2609|2610|2611|2612|2613|2614|2615|2618|2619|2620|2621)[0-9]+|CCSONCOLO'
+
+"""PREDICTORS: They will be different for each script."""
+PREDICTORREGEX=r'PATIENT_ID|AGE_[0-9]+$|FEMALE|CCS(?!2601|2602|2603|2604|2605|2606|2607|2608|2609|2610|2611|2612|2613|2614|2615|2618|2619|2620|2621)[0-9]+|ONCOLO'
 INDICEPRIVACION=False
+COLUMNS=['urgcms']#variable respuesta
+EXCLUDE=['nbinj']
 #Exclude patients from Tolosaldea and Errioxa because they receive
 #most of their care outside of Osakidetza.
 EXCLUDEOSI=['OS16','OS22'] 
