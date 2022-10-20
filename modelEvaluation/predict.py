@@ -68,10 +68,14 @@ def predict_save(yr,model,model_name,X,y,**kwargs):
     n=len(X)/CHUNK_SIZE
     filename=generate_filename(filename,yr,calibrated=False) if not filename else filename
 
-    if ('neural' in model_name) or ('linear' in model_name):
-        pred=model.predict
-    else:
+    # if ('neural' in model_name) or ('linear' in model_name):
+    #     pred=model.predict
+    # else:
+    #     pred=model.predict_proba
+    try:
         pred=model.predict_proba
+    except AttributeError:
+        pred=model.predict
     with open(filename,'w') as predFile:
         csv_out=csv.writer(predFile)
         csv_out.writerow(['yPATIENT_ID','PATIENT_ID','PRED','OBS'])
@@ -111,7 +115,7 @@ def predict(model_name,experiment_name,year,**kwargs):
     
     if Path(modelfilename):
         print('loading model ',model_name, custom_objects)
-        if 'neural' in model_name:
+        if 'neural' in modelfilename:
             model=keras.models.load_model(modelfilename, custom_objects)
             if model_name=='neural_AGESEX':
                 predictors=r'PATIENT_ID|FEMALE|AGE'
@@ -194,4 +198,10 @@ if __name__=='__main__':
         return ( 1 - SS_res/(SS_tot + K.epsilon()) )
     year=int(input('YEAR YOU WANT TO PREDICT:'))
     custom_objects={'coeff_determination':coeff_determination} if 'neuralRegression' in config.CONFIGNAME else None
-    probs,score=predict(model_name,experiment_name,year,custom_objects=custom_objects)       
+    try:
+        probs,score=predict(model_name,experiment_name,year,custom_objects=custom_objects)       
+    except NameError:
+        model_name=input('Model name: ')
+        X,y=getData(year)
+        probs,score=predict(model_name,experiment_name,year,
+                            X=X, y=y,custom_objects=custom_objects)       
