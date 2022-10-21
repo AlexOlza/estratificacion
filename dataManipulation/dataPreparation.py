@@ -143,7 +143,7 @@ def generateCCSData(yr,  X,
     
     """ CHECK IF THE MATRIX IS ALREADY ON DISK """
     predictors=kwargs.get('predictors',None)
-    filename=os.path.join(config.DATAPATH,'new'+config.CCSFILES[yr])
+    filename=os.path.join(config.DATAPATH,config.CCSFILES[yr])
     if Path(filename).is_file():
         print('X number of columns is  ',len(X.columns))
         Xccs=load(config.CCSFILES[yr],directory=config.DATAPATH,
@@ -367,8 +367,8 @@ def generateCCSData(yr,  X,
     
     print(f'{i} dfs processed')
     
-    X.reindex(sorted(X.columns), axis=1).to_csv(os.path.join(config.DATAPATH,f'newCCS{yr}.csv'))
-    print('Saved ',os.path.join(config.DATAPATH,f'newCCS{yr}.csv'))
+    X.reindex(sorted(X.columns), axis=1).to_csv(filename)
+    print('Saved ',filename)
     return 0,0
 #%%
 if __name__=='__main__':

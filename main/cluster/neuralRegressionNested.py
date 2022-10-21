@@ -72,7 +72,7 @@ def r2_variance(y_true, y_pred):
     SS_tot = K.sum(K.square( y_true - K.mean(y_true) ) ) 
     return( 1 - SS_res/(SS_tot + K.epsilon()) )
 
-variables={#'Demo':'PATIENT_ID|FEMALE|AGE_[0-9]+$',
+variables={'Demo':'PATIENT_ID|FEMALE|AGE_[0-9]+$',
            'DemoDiag':'PATIENT_ID|FEMALE|AGE_[0-9]+$|EDC_' if 'ACG' in config.PREDICTORREGEX else 'PATIENT_ID|FEMALE|AGE_[0-9]+$|CCS',
            'DemoDiagPharma':'PATIENT_ID|FEMALE|AGE_[0-9]+$|EDC_|RXMG_' if 'ACG' in config.PREDICTORREGEX else None,
            'DemoDiagPharmaIsomorb':'PATIENT_ID|FEMALE|AGE_[0-9]+$|EDC_(?!NUR11|RES10)|RXMG_(?!ZZZX000)|ACG_' if 'ACG' in config.PREDICTORREGEX else None
@@ -83,16 +83,20 @@ assert len(config.COLUMNS)==1, 'This model is built for a single response variab
 import pandas as pd
 import numpy as np
 # from sklearn.utils.class_weight import compute_sample_weight
-
+PATIENT_ID=X.PATIENT_ID
 try:
     X.drop('PATIENT_ID',axis=1,inplace=True)
+    
 except:
     pass
 y=y[config.COLUMNS]
 #%%
+from pathlib import Path
 for key, val in variables.items():
     print('STARTING ',key, val)
     if not val:
+        continue
+    if Path(os.path.join(config.MODELPATH,key)).is_dir(): #the model is already there
         continue
     Xx=X.filter(regex=val, axis=1)
     
@@ -162,8 +166,10 @@ from modelEvaluation.predict import predict
 from modelEvaluation.compare import performance
 from sklearn.metrics import mean_squared_error, r2_score
 table=pd.DataFrame()
+X=pd.concat([X, PATIENT_ID], axis=1)
+y=pd.concat([y, PATIENT_ID], axis=1)
 for key, val in variables.items():
-    probs,R2=predict(model_name,experiment_name=config.EXPERIMENT,year=2018,
+    probs,R2=predict(key,experiment_name=config.EXPERIMENT,year=2018,
                     X=X.filter(regex=val, axis=1), y=y,
                     custom_objects={'coeff_determination':config.coeff_determination} )       
     recall, ppv, _, _ = performance(obs=probs.OBS, pred=probs.PRED, K=20000)
