@@ -85,7 +85,7 @@ axhist, axhist2, axhist3, axhist4= axs[0,0], axs[0,1], axs[1,0], axs[1,1]
 
 for i, group, groupname in zip([1, 0], [male, female], sex):
     recall, ppv, spec, score, ap, rmse = {}, {}, {}, {}, {}, {}
-    selected = [l for l in available_models if (bool(re.match(f'({config.ALGORITHM}{groupname}$|{config.ALGORITHM}\d+|{config.ALGORITHM}$', l)))]
+    selected = [l for l in available_models if (bool(re.match(f'({config.ALGORITHM}{groupname}$|{config.ALGORITHM}\d+|{config.ALGORITHM}$)', l)))]
     print('Selected models: ', selected)
     selected_types={'neuralRegressionPositive':[s for s in selected if 'neuralRegressionPositive' in s],
                     'neuralRegression':[s for s in selected if ('neural' in s) and (not 'Positive' in s)],

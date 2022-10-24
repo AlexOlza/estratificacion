@@ -166,9 +166,11 @@ from modelEvaluation.predict import predict
 from modelEvaluation.compare import performance
 from sklearn.metrics import mean_squared_error, r2_score
 table=pd.DataFrame()
-X=pd.concat([X, PATIENT_ID], axis=1)
-y=pd.concat([y, PATIENT_ID], axis=1)
+X=pd.concat([X, PATIENT_ID], axis=1) if not 'PATIENT_ID' in X else X
+y=pd.concat([y, PATIENT_ID], axis=1) if not 'PATIENT_ID' in y else y
 for key, val in variables.items():
+    if not val:
+        continue
     probs,R2=predict(key,experiment_name=config.EXPERIMENT,year=2018,
                     X=X.filter(regex=val, axis=1), y=y,
                     custom_objects={'coeff_determination':config.coeff_determination} )       
