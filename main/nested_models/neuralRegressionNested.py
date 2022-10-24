@@ -19,6 +19,11 @@ import os
 import re
 import importlib
 import random
+from sklearn.metrics import mean_squared_error, r2_score
+from  tensorflow.keras import backend as K  
+import pandas as pd
+import numpy as np 
+from pathlib import Path
 #%%
 """REPRODUCIBILITY"""
 seed_value=42
@@ -50,6 +55,10 @@ if not config.configured:
 assert config.configured 
 
 import configurations.utility as util
+from dataManipulation.dataPreparation import getData
+from modelEvaluation.predict import predict
+from modelEvaluation.compare import performance
+
 util.makeAllPaths()
 seed_sampling= args.seed_sampling if hasattr(args, 'seed_sampling') else config.SEED #imported from default configuration
 seed_hparam= args.seed_hparam if hasattr(args, 'seed_hparam') else config.SEED
@@ -57,20 +66,12 @@ name= args.model_name if hasattr(args,'model_name') else config.ALGORITHM
 epochs=args.seed_hparam if hasattr(args, 'epochs') else 500
 #%%
 """ BEGGINNING """
-from dataManipulation.dataPreparation import getData
 
 X,y=getData(2016)
 X=X[[c for c in X if X[c].max()>0]]
 print(config.PREDICTORREGEX)
 
 
-from  tensorflow.keras import backend as K   
-# import tensorflow_addons as tfa
-
-def r2_variance(y_true, y_pred):
-    SS_res =  K.sum(K.square( y_true-y_pred )) 
-    SS_tot = K.sum(K.square( y_true - K.mean(y_true) ) ) 
-    return( 1 - SS_res/(SS_tot + K.epsilon()) )
 
 variables={'Demo':'PATIENT_ID|FEMALE|AGE_[0-9]+$',
            'DemoDiag':'PATIENT_ID|FEMALE|AGE_[0-9]+$|EDC_' if 'ACG' in config.PREDICTORREGEX else 'PATIENT_ID|FEMALE|AGE_[0-9]+$|CCS',
@@ -78,10 +79,8 @@ variables={'Demo':'PATIENT_ID|FEMALE|AGE_[0-9]+$',
            'DemoDiagPharmaIsomorb':'PATIENT_ID|FEMALE|AGE_[0-9]+$|EDC_(?!NUR11|RES10)|RXMG_(?!ZZZX000)|ACG_' if 'ACG' in config.PREDICTORREGEX else None
            }
 
-assert len(config.COLUMNS)==1, 'This model is built for a single response variable! Modify config.COLUMNS'
 
-import pandas as pd
-import numpy as np
+
 # from sklearn.utils.class_weight import compute_sample_weight
 PATIENT_ID=X.PATIENT_ID
 try:
@@ -91,7 +90,7 @@ except:
     pass
 y=y[config.COLUMNS]
 #%%
-from pathlib import Path
+
 for key, val in variables.items():
     print('STARTING ',key, val)
     if not val:
@@ -162,9 +161,7 @@ for key, val in variables.items():
     keras.models.save_model(model, os.path.join(config.MODELPATH,key))
     print('Saved ',os.path.join(config.MODELPATH,key))
 #%%
-from modelEvaluation.predict import predict
-from modelEvaluation.compare import performance
-from sklearn.metrics import mean_squared_error, r2_score
+
 table=pd.DataFrame()
 X=pd.concat([X, PATIENT_ID], axis=1) if not 'PATIENT_ID' in X else X
 y=pd.concat([y, PATIENT_ID], axis=1) if not 'PATIENT_ID' in y else y
