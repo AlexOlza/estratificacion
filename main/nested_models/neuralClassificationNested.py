@@ -145,8 +145,8 @@ for key, val in variables.items():
     history = model.fit(X_train, y_train, epochs=50, verbose=1, validation_split=0.2,callbacks=[stop_early],
                         )
     
-    val_acc_per_epoch = history.history['val_auc']
-    best_epoch = val_acc_per_epoch.index(max(val_acc_per_epoch)) + 1
+    val_acc_per_epoch = history.history['val_loss']
+    best_epoch = val_acc_per_epoch.index(min(val_acc_per_epoch)) + 1
     print('Best epoch: %d' % (best_epoch,))
 
     keras.models.save_model(model, os.path.join(config.MODELPATH,key))
