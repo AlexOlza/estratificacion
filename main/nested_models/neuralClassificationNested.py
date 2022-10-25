@@ -95,6 +95,7 @@ else:
     y=pd.Series(np.where(y[config.COLUMNS]>0,1,0).ravel(),name=config.COLUMNS[0])
     compute_weight=False
  
+#%%
 
 #%%
 for key, val in variables.items():
@@ -140,9 +141,9 @@ for key, val in variables.items():
                          )
     
     stop_early = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=2)
-    abort_bad_trials =tf.keras.callbacks.EarlyStopping(monitor='auc', baseline=0.6, mode='max', patience =0)
+    abort_bad_trials =tf.keras.callbacks.EarlyStopping(monitor='val_auc', baseline=0.5, mode='max', min_delta=0.01, patience =0)
     
-    tuner.search(X_train, y_train,epochs=10, validation_split=0.2,callbacks=[stop_early, abort_bad_trials],
+    tuner.search(X_train, y_train,epochs=10, validation_split=0.2,callbacks=[stop_early, config.TerminateOnBaseline()],
                  class_weight=class_weight
                  # sample_weight=sample_weights
                  )
