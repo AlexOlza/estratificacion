@@ -90,9 +90,11 @@ except:
 
 if hasattr(config, 'target_binarizer'):
     y=config.target_binarizer(y)
+    compute_weight=True
 else:
     y=pd.Series(np.where(y[config.COLUMNS]>0,1,0).ravel(),name=config.COLUMNS[0])
-
+    compute_weight=False
+ 
 
 #%%
 for key, val in variables.items():
@@ -103,9 +105,19 @@ for key, val in variables.items():
         continue
     Xx=X.filter(regex=val, axis=1)
     
-    X_train, X_test, y_train, y_test = train_test_split( Xx, y, test_size=0.2, random_state=42)
-    X_test, X_test2, y_test, y_test2 = train_test_split( X_test, y_test, test_size=0.5, random_state=42)
+    X_train, X_test, y_train, y_test = train_test_split( Xx, y, test_size=0.2, random_state=42, stratify=y)
+    X_test, X_test2, y_test, y_test2 = train_test_split( X_test, y_test, test_size=0.5, random_state=42, stratify=y_test)
     
+    if compute_weight:
+        from sklearn.utils import class_weight as cw
+        class_weight = cw.compute_class_weight('balanced',
+                                                     classes=np.unique(y_train),
+                                                     y=y_train)
+        class_weight={i:class_weight[i] for i in range(len(class_weight))}
+    else:
+        class_weight=None
+        
+    print(class_weight)
     print('Sample size ',len(y_train))
     print('---------------------------------------------------'*5)
  
@@ -128,9 +140,10 @@ for key, val in variables.items():
                          )
     
     stop_early = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=2)
+    abort_bad_trials =tf.keras.callbacks.EarlyStopping(monitor='auc', baseline=0.6, mode='max', patience =0)
     
-    tuner.search(X_train, y_train,epochs=10, validation_split=0.2,callbacks=[stop_early],
-                 
+    tuner.search(X_train, y_train,epochs=10, validation_split=0.2,callbacks=[stop_early, abort_bad_trials],
+                 class_weight=class_weight
                  # sample_weight=sample_weights
                  )
     print('---------------------------------------------------'*5)

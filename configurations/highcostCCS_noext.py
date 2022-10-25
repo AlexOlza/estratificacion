@@ -28,7 +28,8 @@ ICDTOCCSFILES={'ICD10CM':'ccs/translate_icd10cm_ccs_2018.csv',
 CCSFILES={2016:'newCCS2016.csv',
           2017: 'newCCS2017.csv'}
 
-def target_binarizer(y, K=20000, column=COLUMNS):
+K=20000
+def target_binarizer(y, K=K, column=COLUMNS):
     import pandas as pd
     import numpy as np
     cutoff_value=y[column].nlargest(K,columns=column).min()
