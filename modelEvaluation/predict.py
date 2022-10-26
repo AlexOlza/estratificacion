@@ -129,6 +129,7 @@ def predict(model_name,experiment_name,year,**kwargs):
         print('missing ',modelfilename)
         return (None, None)
     Xx=kwargs.get('X',None)
+    print(Xx)
     Yy=kwargs.get('y',None)
     if (not isinstance(Xx,pd.DataFrame)) or (not isinstance(Yy,pd.DataFrame)):
         Xx,Yy=getData(year-1,predictors=predictors)
