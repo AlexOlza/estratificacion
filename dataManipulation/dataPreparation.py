@@ -53,6 +53,7 @@ def getData(yr,columns=config.COLUMNS,
 
     if ('COSTE_TOTAL_ANO2' in columns) :
         coste=load(filename=config.ACGFILES[yr],predictors=r'PATIENT_ID|COSTE_TOTAL_ANO2')
+        print(coste)
         response='COSTE_TOTAL_ANO2'
         if not CCS: 
             if fullEDCs:

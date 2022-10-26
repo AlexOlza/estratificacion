@@ -87,11 +87,12 @@ def predict_save(yr,model,model_name,X,y,**kwargs):
             ychunk=y.iloc[index_slice]
             if 'COSTE_TOTAL_ANO2' in config.COLUMNS:
                 predictions=model.predict(chunk.drop('PATIENT_ID',axis=1)).ravel() # predicted cost
+                print(predictions)
             else:
                 if 'neural' in filename:
-                    predictions=pred(chunk.drop('PATIENT_ID',axis=1))[:,0] #Probab of hospitalization (Keras)
+                    predictions=model.predict(chunk.drop('PATIENT_ID',axis=1)) #Probab of hospitalization (Keras)
                 else:
-                    predictions=pred(chunk.drop('PATIENT_ID',axis=1))[:,1] #Probab of hospitalization (sklearn)
+                    predictions=model.predict_proba(chunk.drop('PATIENT_ID',axis=1))[:,1] #Probab of hospitalization (sklearn)
                 
             observations=np.array(ychunk[columns]).ravel()
             for element in zip(ychunk['PATIENT_ID'],chunk['PATIENT_ID'],predictions,observations):
