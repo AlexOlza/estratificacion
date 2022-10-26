@@ -141,9 +141,8 @@ for key, val in variables.items():
                          )
     
     stop_early = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=2)
-    abort_bad_trials =tf.keras.callbacks.EarlyStopping(monitor='val_auc', baseline=0.5, mode='max', min_delta=0.01, patience =0)
     
-    tuner.search(X_train, y_train,epochs=10, validation_split=0.2,callbacks=[stop_early, config.TerminateOnBaseline()],
+    tuner.search(X_train, y_train,epochs=10, validation_split=0.2,callbacks=[stop_early],
                  class_weight=class_weight
                  # sample_weight=sample_weights
                  )
@@ -159,6 +158,7 @@ for key, val in variables.items():
     model = tuner.hypermodel.build(best_hp)
     history = model.fit(X_train, y_train, epochs=50, verbose=1, validation_split=0.2,callbacks=[stop_early],
                         )
+    
     
     val_acc_per_epoch = history.history['val_loss']
     best_epoch = val_acc_per_epoch.index(min(val_acc_per_epoch)) + 1
