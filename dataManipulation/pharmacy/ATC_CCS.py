@@ -5,17 +5,18 @@ import pandas as pd
 import os
 import re
 
-DATAPATH='/home/aolza/Desktop/estratificacionDatos/'
-INDISPENSABLEDATAPATH=DATAPATH+'indispensable/'
-yr=2016
+from pathlib import Path
+from python_settings import settings as config
 
-# df=pd.read_csv(os.path.join(INDISPENSABLEDATAPATH,'ccs','diccionario_ATC_farmacia.csv'))
+import configurations.utility as util
+configuration=util.configure()
+from dataManipulation.generarTablasVariables import prepare,resourceUsageDataFrames,load, create_fullacgfiles
 
 def text_preprocessing(df, col):
     df[col]=df[col].str.upper()
     df[col]=df[col].str.replace(r'[^a-zA-Z\d]', r'',regex=True).values #drop non-alphanumeric
     return df
-def generateCCSData(yr,  X,
+def generatePharmacyData(yr,  X,
             **kwargs):
     
     """ CHECK IF THE MATRIX IS ALREADY ON DISK """
@@ -36,9 +37,9 @@ def generateCCSData(yr,  X,
  
     #%%
     """ READ EVERYTHING """ 
-    atc_dict=pd.read_csv(os.path.join(INDISPENSABLEDATAPATH,'ccs',
+    atc_dict=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,'ccs',
                                      'diccionario_ATC_farmacia.csv'))
-    rx=pd.read_csv(os.path.join(INDISPENSABLEDATAPATH,'ccs',f'rx_in_{yr}.txt'), 
+    rx=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,'ccs',f'rx_in_{yr}.txt'), 
                    names=['PATIENT_ID','date','CODE','a','number' ])
     #%%
     """ TEXT PREPROCESSING """
@@ -50,34 +51,20 @@ def generateCCSData(yr,  X,
     unique_codes_prescribed=pd.DataFrame({'CODE':rx.CODE.drop_duplicates()})
     import numpy as np
     unique_codes_prescribed['drug_group']=np.nan
-    for start in atc_dict.starts_with.drop_duplicates(): 
-        # print(atc_dict.loc[atc_dict.starts_with==start, 'drug_group'].values[0])
+    for start in atc_dict.starts_with.drop_duplicates().sort_values(key=lambda x: x.str.len()): 
         unique_codes_prescribed.loc[unique_codes_prescribed.CODE.str.startswith(start),'drug_group']=atc_dict.loc[atc_dict.starts_with==start, 'drug_group'].values[0]
-    n_distinct_drugs=len([c for c in unique_codes_prescribed.drug_group.unique() if c!=''])
+    n_distinct_drugs=len([c for c in unique_codes_prescribed.drug_group.dropna().unique()])
+  
     print(f'In year {yr}, {n_distinct_drugs} distinct drug groups from the dictionary were prescribed to patients')
     print(f'We have not found a group for {len(unique_codes_prescribed)-n_distinct_drugs} distinct codes')
-    print(f'{len(atc_dict.starts_with)-n_distinct_drugs} dictionary entries have not been used')
+    print(f'{len(atc_dict.drug_group.unique())-n_distinct_drugs} dictionary entries have not been used')
     
     #Drop codes that were not prescribed to any patient in the current year
     rx_with_drug_group=pd.DataFrame({'PATIENT_ID':[],'CODE':[],'drug_group':[]})
     # df=diags.copy()
-    rx_with_drug_group=pd.merge(rx, unique_codes_prescribed, on=['CODE'], how='inner')[['PATIENT_ID','CODE','drug_group']]
-    withoutna=rx_with_drug_group.dropna()
-    print()33793525-
-    #%%
-    """ ASSIGN CCS CATEGORIES TO DIAGNOSTIC CODES """
-    dict9=icd9[['CODE', 'CCS', 'DESCRIPTION', 'CIE_VERSION']]
-    dict10=icd10cm[['CODE', 'CCS', 'DESCRIPTION', 'CIE_VERSION']]
-    dict10=pd.concat([dict10, 
-                      pd.DataFrame.from_dict({'CODE':['ONCOLO'], 'CCS':['ONCOLO'], 
-                                              'DESCRIPTION': ['Undetermined oncology code'],
-                                              'CIE_VERSION':['10']})])
-    fulldict=pd.concat([dict9,dict10]).drop_duplicates()
-    #Drop codes that were not diagnosed to any patient in the current year
-    diags_with_ccs=pd.DataFrame({'PATIENT_ID':[],'CODE':[],'CCS':[], 'DESCRIPTION':[]})
-    # df=diags.copy()
-    diags_with_ccs=pd.merge(diags, fulldict, on=['CODE','CIE_VERSION'], how='inner')[['PATIENT_ID','CODE','CCS']]
+    rx_with_drug_group=pd.merge(rx, unique_codes_prescribed, on=['CODE'], how='inner')[['PATIENT_ID','CODE','drug_group']].dropna()
     
+
     #%%
     """ COMPUTE THE DATA MATRIX """
     i=0
@@ -87,14 +74,15 @@ def generateCCSData(yr,  X,
         X.set_index('PATIENT_ID', inplace=True)
     except KeyError:
         pass
-    for ccs_number, df in diags_with_ccs.groupby('CCS'):
+    for group_, df in rx_with_drug_group.groupby('drug_group'):
         # print(ccs_number,df['DESCRIPTION'].values[0])
-        amount_per_patient=df.groupby('PATIENT_ID').size().to_frame(name=f'CCS{ccs_number}')
-        X[f'CCS{ccs_number}']=np.int16(0)
+        group=re.sub("[^a-zA-Z\d_]",'',re.sub('\s', '_', group_))
+        amount_per_patient=df.groupby('PATIENT_ID').size().to_frame(name=f'{group}')
+        X[f'{group}']=np.int16(0)
         
         X.update(amount_per_patient)
-        X[f'CCS{ccs_number}'].fillna(0,axis=0,inplace=True)
-        print(f'CCS{ccs_number}', X[f'CCS{ccs_number}'].sum())
+        X[f'{group}'].fillna(0,axis=0,inplace=True)
+        print(f'{group}', X[f'{group}'].sum())
         i+=1
     X.reset_index()
     print('TIME : ' , time.time()-t0)
@@ -104,4 +92,4 @@ def generateCCSData(yr,  X,
     
     X.reindex(sorted(X.columns), axis=1).to_csv(filename)
     print('Saved ',filename)
-    return 0,0
+    return 0

@@ -16,7 +16,8 @@ import configurations.utility as util
 configuration=util.configure()
 from dataManipulation.generarTablasIngresos import createYearlyDataFrames, loadIng,assertMissingCols, report_transform
 from dataManipulation.generarTablasVariables import prepare,resourceUsageDataFrames,load, create_fullacgfiles
-# from matplotlib_venn import venn2
+from dataManipulation.pharmacy.ATC_CCS import generatePharmacyData
+
 def listIntersection(a,b): return list(set(a) & set(b))
 # FIXME not robust!!!
 def excludeHosp(df,filtros,criterio):
@@ -49,7 +50,10 @@ def getData(yr,columns=config.COLUMNS,
     except AttributeError:
         CCS = False
         
-        
+    try:
+        PHARMACY = kwargs.get('PHARMACY', config.PHARMACY)
+    except AttributeError:
+        PHARMACY = False    
 
     if ('COSTE_TOTAL_ANO2' in columns) :
         coste=load(filename=config.ACGFILES[yr],predictors=r'PATIENT_ID|COSTE_TOTAL_ANO2')
@@ -66,7 +70,7 @@ def getData(yr,columns=config.COLUMNS,
             return(acg.reindex(sorted(acg.columns), axis=1),coste)#Prevents bug #1
         elif CCS:
             Xprovisional=load(filename=config.ACGFILES[yr],predictors=predictors)
-            full16=generateCCSData(yr,  Xprovisional, predictors=predictors)
+            full16=generateCCSData(yr,  Xprovisional, predictors=predictors, **kwargs)
             return(full16.reindex(sorted(full16.columns), axis=1),coste)
 
     cols=columns.copy() 
@@ -100,7 +104,7 @@ def getData(yr,columns=config.COLUMNS,
                     predictors=predictors)
     elif CCS:
         Xprovisional=load(filename=config.ACGFILES[yr],predictors=predictors)
-        full16=generateCCSData(yr,  Xprovisional, predictors=predictors)
+        full16=generateCCSData(yr,  Xprovisional, predictors=predictors, **kwargs)
         del Xprovisional
     else:
         full16=load(filename=config.ACGFILES[yr],predictors=predictors)
@@ -143,6 +147,8 @@ def generateCCSData(yr,  X,
     
     """ CHECK IF THE MATRIX IS ALREADY ON DISK """
     predictors=kwargs.get('predictors',None)
+    PHARMACY=kwargs.get('PHARMACY', False)
+    
     filename=os.path.join(config.DATAPATH,config.CCSFILES[yr])
     if Path(filename).is_file():
         print('X number of columns is  ',len(X.columns))
@@ -153,6 +159,8 @@ def generateCCSData(yr,  X,
         assert 'PATIENT_ID' in Xccs.columns
         cols_to_merge=['PATIENT_ID']+[c for c in X if (('AGE' in c) or ('FEMALE' in c))]
         Xx=pd.merge(X, Xccs, on=cols_to_merge, how='outer')
+        if PHARMACY:
+            Xx=generatePharmacyData(yr,  Xx, **kwargs)
         return Xx
     #%%
     """ FUNCTIONS """
@@ -374,8 +382,8 @@ def generateCCSData(yr,  X,
 if __name__=='__main__':
     import sys
     sys.path.append('/home/aolza/Desktop/estratificacion/')
-    yr=2017
-    X,Y=getData(yr, CCS=True)
+    yr=2016
+    X,Y=getData(yr, CCS=True, PHARMACY=True)
     # _ , _ =generateCCSData(yr,  X)
     print('positive class ',sum(np.where(Y.urgcms>=1,1,0)))
     

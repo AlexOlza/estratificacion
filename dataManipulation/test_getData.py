@@ -6,6 +6,17 @@ Created on Wed Jan 12 11:19:22 2022
 
 @author: aolza
 """
+import importlib
+import sys
+chosen_config='configurations.cluster.'+sys.argv[1]
+importlib.invalidate_caches()
+from python_settings import settings as config
+settings=importlib.import_module(chosen_config,package='estratificacion')
+if not config.configured:
+    config.configure(settings) # configure() receives a python module
+assert config.configured 
+
+
 from dataManipulation.dataPreparation import getData
 import pandas as pd
 X,y=getData(2016)
