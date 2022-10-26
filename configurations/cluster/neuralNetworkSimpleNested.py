@@ -67,13 +67,13 @@ from configurations.default import *
 
 if  args.experiment!=experiment:#required arg
     EXPERIMENT=args.experiment #OVERRIDE (this is the only variable from the imported experiment module that needs to be changed, because it creates moddel and prediction directories)
-MODELPATH=MODELSPATH+EXPERIMENT+'/nested/'
-USEDCONFIGPATH+=EXPERIMENT+'/nested/'
+MODELPATH=MODELSPATH+EXPERIMENT+'/nested_neural/'
+USEDCONFIGPATH+=EXPERIMENT+'/nested_neural/'
 ALGORITHM='neuralNetworkSimpleNested'
 CONFIGNAME='neuralNetworkSimpleNested.py'
-PREDPATH=os.path.join(OUTPATH,EXPERIMENT,'nested')
-FIGUREPATH=os.path.join(ROOTPATH,'figures',EXPERIMENT, 'nested')
-METRICSPATH=os.path.join(METRICSPATH,EXPERIMENT, 'nested')
+PREDPATH=os.path.join(OUTPATH,EXPERIMENT,'nested_neural')
+FIGUREPATH=os.path.join(ROOTPATH,'figures',EXPERIMENT, 'nested_neural')
+METRICSPATH=os.path.join(METRICSPATH,EXPERIMENT, 'nested_neural')
 
 TRACEBACK=True
 
