@@ -88,7 +88,7 @@ def predict_save(yr,model,model_name,X,y,**kwargs):
             if 'COSTE_TOTAL_ANO2' in config.COLUMNS:
                 predictions=model.predict(chunk.drop('PATIENT_ID',axis=1)).ravel() # predicted cost
             else:
-                if 'neural' in model_name:
+                if 'neural' in filename:
                     predictions=pred(chunk.drop('PATIENT_ID',axis=1))[:,0] #Probab of hospitalization (Keras)
                 else:
                     predictions=pred(chunk.drop('PATIENT_ID',axis=1))[:,1] #Probab of hospitalization (sklearn)
