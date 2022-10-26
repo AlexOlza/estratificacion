@@ -7,10 +7,14 @@ import re
 
 DATAPATH='/home/aolza/Desktop/estratificacionDatos/'
 INDISPENSABLEDATAPATH=DATAPATH+'indispensable/'
+yr=2016
 
-df=pd.read_csv(os.path.join(INDISPENSABLEDATAPATH,'ccs','diccionario_ATC_farmacia.csv'))
+# df=pd.read_csv(os.path.join(INDISPENSABLEDATAPATH,'ccs','diccionario_ATC_farmacia.csv'))
 
-
+def text_preprocessing(df, col):
+    df[col]=df[col].str.upper()
+    df[col]=df[col].str.replace(r'[^a-zA-Z\d]', r'',regex=True).values #drop non-alphanumeric
+    return df
 def generateCCSData(yr,  X,
             **kwargs):
     
@@ -38,7 +42,8 @@ def generateCCSData(yr,  X,
                    names=['PATIENT_ID','date','CODE','a','number' ])
     #%%
     """ TEXT PREPROCESSING """
-  
+    rx=text_preprocessing(rx, 'CODE')
+    atc_dict=text_preprocessing(atc_dict, 'starts_with')
     #%%
     """ ASSIGN DRUG GROUP TO CODES """
     #Unique codes prescribed in the current year
@@ -58,7 +63,7 @@ def generateCCSData(yr,  X,
     # df=diags.copy()
     rx_with_drug_group=pd.merge(rx, unique_codes_prescribed, on=['CODE'], how='inner')[['PATIENT_ID','CODE','drug_group']]
     withoutna=rx_with_drug_group.dropna()
-    print()
+    print()33793525-
     #%%
     """ ASSIGN CCS CATEGORIES TO DIAGNOSTIC CODES """
     dict9=icd9[['CODE', 'CCS', 'DESCRIPTION', 'CIE_VERSION']]
