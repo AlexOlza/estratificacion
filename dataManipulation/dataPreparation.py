@@ -68,6 +68,8 @@ def getData(yr,columns=config.COLUMNS,
         elif CCS:
             Xprovisional=load(filename=config.ACGFILES[yr],predictors=predictors)
             full16=generateCCSData(yr,  Xprovisional, predictors=predictors)
+            # coste=pd.merge(full16['PATIENT_ID'],coste,on='PATIENT_ID', validate='one_to_one')
+            full16=pd.merge(full16,coste['PATIENT_ID'],on='PATIENT_ID', validate='one_to_one')
             return(full16.reindex(sorted(full16.columns), axis=1),coste)
 
     cols=columns.copy() 
