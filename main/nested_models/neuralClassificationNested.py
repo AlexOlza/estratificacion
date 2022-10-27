@@ -171,6 +171,7 @@ for key, val in variables.items():
 
 X, y=getData(2017)
 X=X[[c for c in X if X[c].max()>0]]
+PATIENT_ID=X.PATIENT_ID
 if hasattr(config, 'target_binarizer'):
     y=config.target_binarizer(y)
     compute_weight=True
@@ -178,14 +179,14 @@ else:
     y=pd.Series(np.where(y[config.COLUMNS]>0,1,0).ravel(),name=config.COLUMNS[0])
    
 # X=pd.concat([X, PATIENT_ID], axis=1) if not 'PATIENT_ID' in X else X
-# y=pd.concat([y, PATIENT_ID], axis=1) if not 'PATIENT_ID' in y else y
+y=pd.concat([y, PATIENT_ID], axis=1) if not 'PATIENT_ID' in y else y
 #%%
 table=pd.DataFrame()
 for key, val in variables.items():
     if not val:
         continue
     probs,auc=predict(key,experiment_name=config.EXPERIMENT,year=2018,
-                      X=X.filter(regex=val, axis=1), y=y.to_frame())
+                      X=X.filter(regex=val, axis=1), y=y)
     recall, ppv, _, _ = performance(obs=probs.OBS, pred=probs.PRED, K=20000)
     brier=brier_score_loss(y_true=probs.OBS, y_prob=probs.PRED)
     ap=average_precision_score(probs.OBS,probs.PRED)
