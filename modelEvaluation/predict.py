@@ -61,7 +61,7 @@ def predict_save(yr,model,model_name,X,y,**kwargs):
     # X=X.filter(regex=predictors)
     # print(predictors, len(X.filter(regex=predictors).columns))
     from more_itertools import sliced
-    CHUNK_SIZE = 50000 #TODO experiment with this to try to speed up prediction
+    CHUNK_SIZE = 100000 #TODO experiment with this to try to speed up prediction
     
     index_slices = sliced(range(len(X)), CHUNK_SIZE)
     i=0
@@ -87,10 +87,9 @@ def predict_save(yr,model,model_name,X,y,**kwargs):
             ychunk=y.iloc[index_slice]
             if 'COSTE_TOTAL_ANO2' in config.COLUMNS:
                 predictions=model.predict(chunk.drop('PATIENT_ID',axis=1)).ravel() # predicted cost
-                print(predictions)
             else:
                 if 'neural' in filename:
-                    predictions=model.predict(chunk.drop('PATIENT_ID',axis=1)) #Probab of hospitalization (Keras)
+                    predictions=model.predict(chunk.drop('PATIENT_ID',axis=1)).ravel() #Probab of hospitalization (Keras)
                 else:
                     predictions=model.predict_proba(chunk.drop('PATIENT_ID',axis=1))[:,1] #Probab of hospitalization (sklearn)
                 
