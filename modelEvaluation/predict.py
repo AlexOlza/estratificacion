@@ -61,17 +61,21 @@ def predict_save(yr,model,model_name,X,y,**kwargs):
     # X=X.filter(regex=predictors)
     # print(predictors, len(X.filter(regex=predictors).columns))
     from more_itertools import sliced
-    CHUNK_SIZE = 50000 #TODO experiment with this to try to speed up prediction
+    CHUNK_SIZE = 100000 #TODO experiment with this to try to speed up prediction
     
     index_slices = sliced(range(len(X)), CHUNK_SIZE)
     i=0
     n=len(X)/CHUNK_SIZE
     filename=generate_filename(filename,yr,calibrated=False) if not filename else filename
 
-    if ('neural' in model_name) or ('linear' in model_name):
-        pred=model.predict
-    else:
+    # if ('neural' in model_name) or ('linear' in model_name):
+    #     pred=model.predict
+    # else:
+    #     pred=model.predict_proba
+    try:
         pred=model.predict_proba
+    except AttributeError:
+        pred=model.predict
     with open(filename,'w') as predFile:
         csv_out=csv.writer(predFile)
         csv_out.writerow(['yPATIENT_ID','PATIENT_ID','PRED','OBS'])
@@ -84,10 +88,10 @@ def predict_save(yr,model,model_name,X,y,**kwargs):
             if 'COSTE_TOTAL_ANO2' in config.COLUMNS:
                 predictions=model.predict(chunk.drop('PATIENT_ID',axis=1)).ravel() # predicted cost
             else:
-                if 'neural' in model_name:
-                    predictions=pred(chunk.drop('PATIENT_ID',axis=1))[:,0] #Probab of hospitalization (Keras)
+                if 'neural' in filename:
+                    predictions=model.predict(chunk.drop('PATIENT_ID',axis=1)).ravel() #Probab of hospitalization (Keras)
                 else:
-                    predictions=pred(chunk.drop('PATIENT_ID',axis=1))[:,1] #Probab of hospitalization (sklearn)
+                    predictions=model.predict_proba(chunk.drop('PATIENT_ID',axis=1))[:,1] #Probab of hospitalization (sklearn)
                 
             observations=np.array(ychunk[columns]).ravel()
             for element in zip(ychunk['PATIENT_ID'],chunk['PATIENT_ID'],predictions,observations):
@@ -111,7 +115,7 @@ def predict(model_name,experiment_name,year,**kwargs):
     
     if Path(modelfilename):
         print('loading model ',model_name, custom_objects)
-        if 'neural' in model_name:
+        if 'neural' in modelfilename:
             model=keras.models.load_model(modelfilename, custom_objects)
             if model_name=='neural_AGESEX':
                 predictors=r'PATIENT_ID|FEMALE|AGE'
@@ -124,6 +128,7 @@ def predict(model_name,experiment_name,year,**kwargs):
         print('missing ',modelfilename)
         return (None, None)
     Xx=kwargs.get('X',None)
+    print(Xx)
     Yy=kwargs.get('y',None)
     if (not isinstance(Xx,pd.DataFrame)) or (not isinstance(Yy,pd.DataFrame)):
         Xx,Yy=getData(year-1,predictors=predictors)
@@ -186,7 +191,7 @@ def predict(model_name,experiment_name,year,**kwargs):
     return (probs,score)
 #%%
 if __name__=='__main__':
-    from keras import backend as K
+    from tensorflow.keras import backend as K
        
     def coeff_determination(y_true, y_pred):
         SS_res =  K.sum(K.square( y_true-y_pred )) 
@@ -194,4 +199,10 @@ if __name__=='__main__':
         return ( 1 - SS_res/(SS_tot + K.epsilon()) )
     year=int(input('YEAR YOU WANT TO PREDICT:'))
     custom_objects={'coeff_determination':coeff_determination} if 'neuralRegression' in config.CONFIGNAME else None
-    probs,score=predict(model_name,experiment_name,year,custom_objects=custom_objects)       
+    try:
+        probs,score=predict(model_name,experiment_name,year,custom_objects=custom_objects)       
+    except NameError:
+        model_name=input('Model name: ')
+        X,y=getData(year)
+        probs,score=predict(model_name,experiment_name,year,
+                            X=X, y=y,custom_objects=custom_objects)       

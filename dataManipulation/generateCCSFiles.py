@@ -25,5 +25,6 @@ from dataManipulation.dataPreparation import getData, generateCCSData
 #%%
 
 X,y=getData(year,  predictors='PATIENT_ID|AGE_|FEMALE')
+assert 'ONCOLO' in X
 # _ , _ =generateCCSData(year,  X)
 

@@ -59,7 +59,15 @@ def translateVariables(df, **kwargs):
     dictionary.index = dictionary.codigo
     df = pd.merge(df, dictionary, right_index=True, left_index=True)
     return df
-
+from sklearn.metrics import recall_score
+def precision_at_recall(precision, recall, threshold, modelname, value):
+    df = pd.DataFrame()
+    df['precision'] = precision[:-1]
+    df['recall'] = recall[:-1]
+    # df['specificity'] = specificity[:-1]
+    df['threshold'] = threshold
+    df['model'] = modelname    
+    return(df.iloc[(df['recall']-value).abs().argsort()[:1]])
 
 # %%
 year = int(input('YEAR TO PREDICT: '))
@@ -96,7 +104,7 @@ PRECISION, RECALL, THRESHOLDS = {k: {} for k in sex}, {
     k: {} for k in sex}, {k: {} for k in sex}
 FPR, TPR, ROCTHRESHOLDS = {k: {} for k in sex}, {k: {}
                                                  for k in sex}, {k: {} for k in sex}
-
+prec_at_rec=pd.DataFrame()
 table = pd.DataFrame()
 K = 20000
 models = ['Global', 'Separado', 'Misma Prevalencia']
@@ -117,7 +125,8 @@ for i, group, groupname in zip([1, 0], [female, male], sex):
         globalmodel = job.load(config.MODELPATH+globalmodelname+'.joblib')
         try:
             sameprevmodel = job.load(
-                config.MODELPATH+'{config.ALGORITHM}_gender_balanced.joblib')
+                config.MODELPATH+f'{config.ALGORITHM}_gender_balanced.joblib')
+            sameprev=True
         except FileNotFoundError:
             print('Same prevalence model not found')
             sameprev=None
@@ -215,6 +224,7 @@ for i, group, groupname in zip([1, 0], [female, male], sex):
     # METRICS
     for model, preds in zip(models, [joint_preds, separate_preds, balanced_preds]):
         prec, rec, thre = precision_recall_curve(obs, preds)
+        # spec = [recall_score(obs, preds >= t, pos_label=0) for t in thre]
         fpr, tpr, rocthresholds = roc_curve(obs, preds)
         FPR[groupname][model] = fpr
         TPR[groupname][model] = tpr
@@ -234,7 +244,15 @@ for i, group, groupname in zip([1, 0], [female, male], sex):
         score[model] = rocauc
         ppv[model] = ppvK
         ap[model] = avg_prec
+        
+        prec_at_rec_model=precision_at_recall(prec,rec,thre,f'{model}- {groupname}',0.14)
+        t=prec_at_rec_model.threshold.values[0]
+        specif = [recall_score(obs, preds >= t, pos_label=0)]
+        prec_at_rec_model['specificity']=specif
 
+        prec_at_rec=pd.concat([prec_at_rec,prec_at_rec_model])
+        print(prec_at_rec)
+        
     df = pd.DataFrame(list(zip([f'{model}- {groupname}' for model in models],
                                [score[model] for model in models],
                                [ap[model] for model in models],

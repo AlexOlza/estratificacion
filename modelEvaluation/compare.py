@@ -42,7 +42,7 @@ parser.add_argument('--all', '-a', dest='all', action='store_true', default=True
 parser.add_argument('--config_used', type=str, default=argparse.SUPPRESS,
                     help='Full path to configuration json file: ')
 
-args = parser.parse_args()
+args, _ = parser.parse_known_args()
 
 from python_settings import settings as config
 
@@ -99,7 +99,7 @@ def compare_nested(available_models, X, y, year):
     metrics = compare(available_models, X, y, year, predictors=predictors)
     return (metrics)
 
-def compare(selected, X, y, year, 
+def compare_linear(selected, X, y, year, 
             experiment_name=Path(config.MODELPATH).parts[-1],
             **kwargs):
     print('Not implemented')

@@ -1,14 +1,15 @@
 #!/bin/bash
 
 #SBATCH--time=80:00:00
-#SBATCH--job-name="CCS"
+#SBATCH--job-name="noname"
 #SBATCH--partition="large"
 #SBATCH--mem-per-cpu=26G
+
 ######################################################################
 #                            USAGE                                   #
 ######################################################################
-
-# sbatch --job-name=CCS16 --out=$(pwd)/outCCSgeneration2016 --error=$(pwd)/errCCSgeneration2016 --export=ALL,year=2016 generateCCSFiles.sl 
+# export out=... ; export err=... ;
+# sbatch --output=$out --error=$err [--job-name="hgb" --time=...] --export=ALL,ALGORITHM=hgb,EXPERIMENT=urgcms_excl_nbinj slurm_job.sl 
 
 echo "-------" 
 echo "Copying input files to temporary run dir" 
@@ -24,7 +25,7 @@ module load KerasTuner/1.1.0-foss-2020b-Python-3.8.6
 module load TensorFlow
 module load SciPy-bundle/2020.11-foss-2020b-skrebate #INCLUDES scikit-learn 0.24
 
-srun python generateCCSFiles.py linear costCCS_noext $year 
+srun python $SCRIPT.py $OPTIONS $ALGORITHM $EXPERIMENT 
 
 sleep 1
 echo "-------" 

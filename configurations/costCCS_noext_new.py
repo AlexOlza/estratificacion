@@ -6,8 +6,8 @@ Created on Fri Sep 23 11:24:08 2022
 @author: aolza
 """
 
-EXPERIMENT='costCCS_noext'
-CONFIGNAME='costCCS_noext.py'
+EXPERIMENT='costCCS_noext_new'
+CONFIGNAME='costCCS_noext_new.py'
 COLUMNS=['COSTE_TOTAL_ANO2']
 TRACEBACK=True
 EXCLUDE=[]
@@ -25,5 +25,5 @@ ICDFILES={2016:'ccs/dx_in_2016.txt',
           2017:'ccs/dx_in_2017.txt'}
 ICDTOCCSFILES={'ICD10CM':'ccs/translate_icd10cm_ccs_2018.csv',
                'ICD9':'ccs/translate_icd9_ccs_2015.csv'}
-CCSFILES={2016:'CCS2016.csv',
-          2017: 'CCS2017.csv'}
+CCSFILES={2016:'newCCS2016.csv',
+          2017: 'newCCS2017.csv'}

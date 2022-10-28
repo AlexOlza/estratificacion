@@ -48,9 +48,12 @@ def getData(yr,columns=config.COLUMNS,
         CCS = kwargs.get('CCS', config.CCS)
     except AttributeError:
         CCS = False
+        
+        
 
     if ('COSTE_TOTAL_ANO2' in columns) :
         coste=load(filename=config.ACGFILES[yr],predictors=r'PATIENT_ID|COSTE_TOTAL_ANO2')
+        print(coste)
         response='COSTE_TOTAL_ANO2'
         if not CCS: 
             if fullEDCs:
@@ -65,6 +68,8 @@ def getData(yr,columns=config.COLUMNS,
         elif CCS:
             Xprovisional=load(filename=config.ACGFILES[yr],predictors=predictors)
             full16=generateCCSData(yr,  Xprovisional, predictors=predictors)
+            # coste=pd.merge(full16['PATIENT_ID'],coste,on='PATIENT_ID', validate='one_to_one')
+            full16=pd.merge(full16,coste['PATIENT_ID'],on='PATIENT_ID', validate='one_to_one')
             return(full16.reindex(sorted(full16.columns), axis=1),coste)
 
     cols=columns.copy() 
@@ -331,6 +336,10 @@ def generateCCSData(yr,  X,
     """ ASSIGN CCS CATEGORIES TO DIAGNOSTIC CODES """
     dict9=icd9[['CODE', 'CCS', 'DESCRIPTION', 'CIE_VERSION']]
     dict10=icd10cm[['CODE', 'CCS', 'DESCRIPTION', 'CIE_VERSION']]
+    dict10=pd.concat([dict10, 
+                      pd.DataFrame.from_dict({'CODE':['ONCOLO'], 'CCS':['ONCOLO'], 
+                                              'DESCRIPTION': ['Undetermined oncology code'],
+                                              'CIE_VERSION':['10']})])
     fulldict=pd.concat([dict9,dict10]).drop_duplicates()
     #Drop codes that were not diagnosed to any patient in the current year
     diags_with_ccs=pd.DataFrame({'PATIENT_ID':[],'CODE':[],'CCS':[], 'DESCRIPTION':[]})
@@ -361,15 +370,15 @@ def generateCCSData(yr,  X,
     
     print(f'{i} dfs processed')
     
-    X.reindex(sorted(X.columns), axis=1).to_csv(os.path.join(config.DATAPATH,f'CCS{yr}.csv'))
-    print('Saved ',os.path.join(config.DATAPATH,f'CCS{yr}.csv'))
+    X.reindex(sorted(X.columns), axis=1).to_csv(filename)
+    print('Saved ',filename)
     return 0,0
 #%%
 if __name__=='__main__':
     import sys
     sys.path.append('/home/aolza/Desktop/estratificacion/')
     yr=2017
-    X,Y=getData(yr, CCS=False)
+    X,Y=getData(yr, CCS=True)
     # _ , _ =generateCCSData(yr,  X)
     print('positive class ',sum(np.where(Y.urgcms>=1,1,0)))
     

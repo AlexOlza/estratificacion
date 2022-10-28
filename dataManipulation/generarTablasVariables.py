@@ -103,7 +103,7 @@ def resourceUsageDataFrames(years=[2016,2017],exploratory=False):
          
         else:
             # for f,yr,stryr in zip(filenames,years,stryears):
-            outputDFs[yr]=pd.read_csv(f)
+            outputDFs[yr]=pd.read_csv(f,sep=',|;',engine='python')
             print('Loaded ',f)
             types={'id': 'int64','dial':'Int64','consultas':'Int64',
                    'urgencias':'Int64','resi':'int8'}
@@ -119,8 +119,15 @@ def resourceUsageDataFrames(years=[2016,2017],exploratory=False):
         JUNTAR CON LOS ACGS
         
 """''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+import csv
+
+def get_delimiter(file_path, bytes = 40960):
+    sniffer = csv.Sniffer()
+    data = open(file_path, "r").read(bytes)
+    delimiter = sniffer.sniff(data).delimiter
+    return delimiter
 def load_predictors(path,predictors=None):
-    df=pd.read_csv(path,nrows=5)
+    df=pd.read_csv(path,nrows=5,sep=get_delimiter(path))
     if predictors: #nonempty list or str
         is_list=isinstance(predictors,list)
         is_str=isinstance(predictors,str)
@@ -146,7 +153,7 @@ def load(filename,directory=config.DATAPATH,predictors=None):
     for path in Path(directory).rglob(filename):
         predictors=load_predictors(path,predictors)
         print('Loading ',path)
-        for chunk in pd.read_csv(path, chunksize=100000,usecols=predictors):
+        for chunk in pd.read_csv(path, chunksize=100000,usecols=predictors,sep=get_delimiter(path)):
             d = dict.fromkeys(chunk.columns, np.int8)
             d['PATIENT_ID']=np.int64
             if 'COSTE_TOTAL_ANO2' in predictors:
@@ -189,11 +196,11 @@ def retrieveIndicePrivacion(save=True,verbose=config.VERBOSE,yrs=[2016,2017,2018
             continue
         t1=time.time()
         print('Generating ',f)
-        indice=pd.read_csv(old,usecols=['PATIENT_ID','INDICE_PRIVACION'],delimiter=';')
+        indice=pd.read_csv(old,usecols=['PATIENT_ID','INDICE_PRIVACION'],delimiter=',|;',engine='python')
         util.vprint('read indice ',time.time()-t1)
         t2=time.time()
         acg=pd.DataFrame()
-        for chunk in pd.read_csv(new, chunksize=100000):
+        for chunk in pd.read_csv(new, chunksize=100000,sep=',|;',engine='python'):
                 d = dict.fromkeys(chunk.select_dtypes(np.int64).columns, np.int8)
                 d['PATIENT_ID']=np.int64
                 chunk= chunk.astype(d)
@@ -228,7 +235,7 @@ def create_fullacgfiles(filename,year,directory=config.DATAPATH,
         print(p)
         edc_data=pd.read_csv(config.INDISPENSABLEDATAPATH+config.ALLEDCFILES[year],
         usecols=['patient_id', 'edc_codes', 'rxmg_codes'],
-        delimiter=';')
+        delimiter=',|;',engine='python')
         edc_data.rename(columns={'patient_id':'PATIENT_ID'},inplace=True)
         edc_data['all_codes']=edc_data['edc_codes']+' '+edc_data['rxmg_codes']
         
