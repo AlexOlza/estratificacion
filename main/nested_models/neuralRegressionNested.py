@@ -162,9 +162,12 @@ for key, val in variables.items():
     print('Saved ',os.path.join(config.MODELPATH,key))
 #%%
 
+X,y=getData(2017)
+X=X[[c for c in X if X[c].max()>0]]
+#%%
 table=pd.DataFrame()
-X=pd.concat([X, PATIENT_ID], axis=1) if not 'PATIENT_ID' in X else X
-y=pd.concat([y, PATIENT_ID], axis=1) if not 'PATIENT_ID' in y else y
+# X=pd.concat([X, PATIENT_ID], axis=1) if not 'PATIENT_ID' in X else X
+# y=pd.concat([y, PATIENT_ID], axis=1) if not 'PATIENT_ID' in y else y
 for key, val in variables.items():
     if not val:
         continue
