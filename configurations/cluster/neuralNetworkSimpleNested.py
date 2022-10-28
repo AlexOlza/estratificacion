@@ -31,10 +31,7 @@ np.random.seed(seed_value)
 # 4. Set `tensorflow` pseudo-random generator at a fixed value
 import tensorflow as tf
 tf.random.set_seed(seed_value) # tensorflow 2.x
-# 5. Configure a new global `tensorflow` session
-# session_conf = tf.compat.v1.ConfigProto(intra_op_parallelism_threads=1, inter_op_parallelism_threads=3,allow_soft_placement=True)
-# sess = tf.compat.v1.Session(graph=tf.compat.v1.get_default_graph(), config=session_conf)
-# tf.compat.v1.keras.backend.set_session(sess)
+
 #%%
 """ OUR ARGUMENTS AND IMPORTS """
 parser = argparse.ArgumentParser(description='Train neural regression and save model')

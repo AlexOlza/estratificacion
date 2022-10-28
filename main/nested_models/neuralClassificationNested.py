@@ -147,8 +147,6 @@ for key, val in variables.items():
     stop_early = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=2)
     
     tuner.search(X_train, y_train,epochs=10, validation_split=0.2,callbacks=[stop_early],
-                 # class_weight=class_weight
-                 # sample_weight=sample_weights
                  )
     print('---------------------------------------------------'*5)
     print('SEARCH SPACE SUMMARY:')
@@ -181,7 +179,6 @@ if hasattr(config, 'target_binarizer'):
 else:
     y=pd.Series(np.where(y[config.COLUMNS]>0,1,0).ravel(),name=config.COLUMNS[0])
    
-# X=pd.concat([X, PATIENT_ID], axis=1) if not 'PATIENT_ID' in X else X
 y=pd.concat([y, PATIENT_ID], axis=1) if not 'PATIENT_ID' in y else y
 #%%
 table=pd.DataFrame()
