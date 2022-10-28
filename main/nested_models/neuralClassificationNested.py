@@ -71,7 +71,7 @@ X,y=getData(2016)
 X=X[[c for c in X if X[c].max()>0]]
 print(config.PREDICTORREGEX)
 
-
+undersampling=True if 'highcost' in config.EXPERIMENT else False
 
 variables={'Demo':'PATIENT_ID|FEMALE|AGE_[0-9]+$',
            'DemoDiag':'PATIENT_ID|FEMALE|AGE_[0-9]+$|EDC_' if 'ACG' in config.PREDICTORREGEX else 'PATIENT_ID|FEMALE|AGE_[0-9]+$|CCS',
@@ -82,18 +82,29 @@ variables={'Demo':'PATIENT_ID|FEMALE|AGE_[0-9]+$',
 assert len(config.COLUMNS)==1, 'This model is built for a single response variable! Modify config.COLUMNS'
 
 PATIENT_ID=X.PATIENT_ID
+if hasattr(config, 'target_binarizer'):
+    y=config.target_binarizer(y)
+    if undersampling:
+        ID_highcost= y.loc[y[config.COLUMNS[0]]==1].PATIENT_ID 
+        y_lowcost = y.loc[y[config.COLUMNS[0]]==0].sample(y[config.COLUMNS].sum().values[0])
+        y = pd.concat([y_lowcost, y.loc[y[config.COLUMNS[0]]==1]])
+        X = pd.concat([X.loc[X.PATIENT_ID.isin(y_lowcost.PATIENT_ID)] , X.loc[X.PATIENT_ID.isin(ID_highcost)]])
+        predictors=X.columns
+        df=pd.merge(X, y, on='PATIENT_ID')
+        df=df.sample(frac=1,random_state=42).reset_index()
+        X,y=df[predictors],df[config.COLUMNS]
+    # y=y[config.COLUMNS]
+else:
+    y=pd.Series(np.where(y[config.COLUMNS]>0,1,0).ravel(),name=config.COLUMNS[0])
+    undersampling=False
+    
 try:
     X.drop('PATIENT_ID',axis=1,inplace=True)
     
 except:
     pass
 
-if hasattr(config, 'target_binarizer'):
-    y=config.target_binarizer(y)
-    compute_weight=True
-else:
-    y=pd.Series(np.where(y[config.COLUMNS]>0,1,0).ravel(),name=config.COLUMNS[0])
-    compute_weight=False
+
  
 #%%
 
@@ -106,19 +117,12 @@ for key, val in variables.items():
         continue
     Xx=X.filter(regex=val, axis=1)
     
+    
+    
     X_train, X_test, y_train, y_test = train_test_split( Xx, y, test_size=0.2, random_state=42, stratify=y)
     X_test, X_test2, y_test, y_test2 = train_test_split( X_test, y_test, test_size=0.5, random_state=42, stratify=y_test)
     
-    if compute_weight:
-        from sklearn.utils import class_weight as cw
-        class_weight = cw.compute_class_weight('balanced',
-                                                     classes=np.unique(y_train),
-                                                     y=y_train)
-        class_weight={i:class_weight[i] for i in range(len(class_weight))}
-    else:
-        class_weight=None
-        
-    print(class_weight)
+    
     print('Sample size ',len(y_train))
     print('---------------------------------------------------'*5)
  
@@ -143,7 +147,7 @@ for key, val in variables.items():
     stop_early = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=2)
     
     tuner.search(X_train, y_train,epochs=10, validation_split=0.2,callbacks=[stop_early],
-                 class_weight=class_weight
+                 # class_weight=class_weight
                  # sample_weight=sample_weights
                  )
     print('---------------------------------------------------'*5)
@@ -174,7 +178,6 @@ X=X[[c for c in X if X[c].max()>0]]
 PATIENT_ID=X.PATIENT_ID
 if hasattr(config, 'target_binarizer'):
     y=config.target_binarizer(y)
-    compute_weight=True
 else:
     y=pd.Series(np.where(y[config.COLUMNS]>0,1,0).ravel(),name=config.COLUMNS[0])
    
@@ -185,8 +188,9 @@ table=pd.DataFrame()
 for key, val in variables.items():
     if not val:
         continue
-    probs,auc=predict(key,experiment_name=config.EXPERIMENT,year=2018,
+    probs,_=predict(key,experiment_name=config.EXPERIMENT,year=2018,
                       X=X.filter(regex=val, axis=1), y=y)
+    auc=roc_auc_score(probs.OBS,probs.PRED)
     recall, ppv, _, _ = performance(obs=probs.OBS, pred=probs.PRED, K=20000)
     brier=brier_score_loss(y_true=probs.OBS, y_prob=probs.PRED)
     ap=average_precision_score(probs.OBS,probs.PRED)
