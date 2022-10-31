@@ -60,10 +60,10 @@ def predict_save(yr,model,model_name,X,y,**kwargs):
     filename=kwargs.get('filename',None)
     # X=X.filter(regex=predictors)
     # print(predictors, len(X.filter(regex=predictors).columns))
-    from more_itertools import sliced
-    CHUNK_SIZE = 100000 #TODO experiment with this to try to speed up prediction
+    from more_itertools import sliced, chunked
+    CHUNK_SIZE = 250000 #TODO experiment with this to try to speed up prediction
     
-    index_slices = sliced(range(len(X)), CHUNK_SIZE)
+    index_slices = chunked(X.index, CHUNK_SIZE)
     i=0
     n=len(X)/CHUNK_SIZE
     filename=generate_filename(filename,yr,calibrated=False) if not filename else filename

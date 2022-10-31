@@ -194,10 +194,16 @@ y=pd.concat([y, PATIENT_ID], axis=1) if not 'PATIENT_ID' in y else y
 #%%
 table=pd.DataFrame()
 for key, val in variables.items():
+    Xx=X.copy()
     if not val:
         continue
+    if key=='DemoDiagPharmaBinary':
+        print(Xx.PHARMA_Transplant.describe())
+        Xx[[c for c in Xx if c.startswith('PHARMA')]]=(Xx[[c for c in Xx if c.startswith('PHARMA')]]>0).astype(int)
+        print(Xx.PHARMA_Transplant.describe())
+    
     probs,_=predict(key,experiment_name=config.EXPERIMENT,year=2018,
-                      X=X.filter(regex=val, axis=1), y=y)
+                      X=Xx.filter(regex=val, axis=1), y=y)
     auc=roc_auc_score(probs.OBS,probs.PRED)
     recall, ppv, _, _ = performance(obs=probs.OBS, pred=probs.PRED, K=20000)
     brier=brier_score_loss(y_true=probs.OBS, y_prob=probs.PRED)
