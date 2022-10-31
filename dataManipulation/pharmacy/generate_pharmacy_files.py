@@ -25,7 +25,7 @@ from dataManipulation.dataPreparation import getData
 from dataManipulation.pharmacy.ATC_CCS import generatePharmacyData
 #%%
 
-X,y=getData(year,  predictors='PATIENT_ID|FEMALE')
+X,y=getData(year)
 X=generatePharmacyData(year, X)
 
 

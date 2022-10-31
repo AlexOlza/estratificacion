@@ -28,12 +28,13 @@ def ATC_drug_group_descriptive(rx_with_drug_group, yr):
     df=pd.merge(unique_rx_with_group,number_of_cases,on='CODE').sort_values('N', ascending=False)
     df.to_excel(f'{config.ROOTPATH}dataManipulation/pharmacy/pharmacy_descriptive_{yr}.xlsx')
 
-def generatePharmacyData(yr,  X,
+def generatePharmacyData(yr,  X, binarize=False,
             **kwargs):
     
     """ CHECK IF THE MATRIX IS ALREADY ON DISK """
     predictors=kwargs.get('predictors',None)
     filename=os.path.join(config.DATAPATH,config.ATCFILES[yr])
+    
     if Path(filename).is_file():
         print('X number of columns is  ',len(X.columns))
         Xatc=load(config.ATCFILES[yr],directory=config.DATAPATH,
@@ -41,8 +42,10 @@ def generatePharmacyData(yr,  X,
         print('Xatc number of columns is ',len(Xatc.columns) )
         assert 'PATIENT_ID' in X.columns
         assert 'PATIENT_ID' in Xatc.columns
-        cols_to_merge=['PATIENT_ID']+[c for c in X if (('AGE' in c) or ('FEMALE' in c)) or ('CCS' in c)]
-        Xx=pd.merge(X, Xatc, on=cols_to_merge, how='outer')
+        cols_to_merge=['PATIENT_ID']
+        if binarize:
+            Xatc=(Xatc>0).astype(int)
+        Xx=pd.merge(X, Xatc, on=cols_to_merge, how='inner')
         return Xx
 
     #%%
@@ -101,14 +104,14 @@ def generatePharmacyData(yr,  X,
     print(f'{i} dfs processed')
     
     print('Condition 1: Congestive_heart_failure must have at least one in every block')
-    X_heart_fail=X.filter(regex='PATIENT_ID|Congestive_heart_failure', axis=1)
+    X_heart_fail=X.filter(regex='PATIENT_ID|PHARMA_Congestive_heart_failure', axis=1)
     condition1=X_heart_fail.drop(['PATIENT_ID'],axis=1).min(axis=1)>0
     for block in [1,2,3]:
-        col=f'Congestive_heart_failure_block_{block}'
+        col=f'PHARMA_Congestive_heart_failure_block_{block}'
         X.loc[~condition1,col]=0
         
     print('Condition 2: Benign_prostatic_hyperplasia must be zero for females')
-    X.loc[X.FEMALE==1, 'Benign_prostatic_hyperplasia']=0
+    X.loc[X.FEMALE==1, 'PHARMA_Benign_prostatic_hyperplasia']=0
     # sum_heart_fail_meds=X_heart_fail.drop(['PATIENT_ID'],axis=1).sum(axis=1)
     # X_heart_fail['Congestive_heart_failure']=np.where(condition1,sum_heart_fail_meds,0)
     
@@ -122,4 +125,4 @@ def generatePharmacyData(yr,  X,
     
     n_patients_per_group=X_binary.sum()
     n_patients_per_group.to_excel(f'{config.ROOTPATH}dataManipulation/pharmacy/patients_per_group_{yr}.xlsx')
-    return 0
+    return X

@@ -54,6 +54,11 @@ def getData(yr,columns=config.COLUMNS,
         PHARMACY = kwargs.get('PHARMACY', config.PHARMACY)
     except AttributeError:
         PHARMACY = False    
+        
+    try:
+        binarize = kwargs.get('BINARIZEPHARMA', config.BINARIZEPHARMA)
+    except AttributeError:
+        binarize = False    
 
     if ('COSTE_TOTAL_ANO2' in columns) :
         coste=load(filename=config.ACGFILES[yr],predictors=r'PATIENT_ID|COSTE_TOTAL_ANO2')
@@ -72,7 +77,7 @@ def getData(yr,columns=config.COLUMNS,
             Xprovisional=load(filename=config.ACGFILES[yr],predictors=predictors)
             full16=generateCCSData(yr,  Xprovisional, predictors=predictors, **kwargs)
             if PHARMACY:
-                full16=generatePharmacyData(yr, full16, **kwargs)
+                full16=generatePharmacyData(yr, full16,binarize=binarize, **kwargs)
             return(full16.reindex(sorted(full16.columns), axis=1),coste)
 
     cols=columns.copy() 
@@ -108,7 +113,7 @@ def getData(yr,columns=config.COLUMNS,
         Xprovisional=load(filename=config.ACGFILES[yr],predictors=predictors)
         full16=generateCCSData(yr,  Xprovisional, predictors=predictors, **kwargs)
         if PHARMACY:
-            full16=generatePharmacyData(yr, full16, **kwargs)
+            full16=generatePharmacyData(yr, full16, binarize=binarize, **kwargs)
         del Xprovisional
     else:
         full16=load(filename=config.ACGFILES[yr],predictors=predictors)
