@@ -71,6 +71,8 @@ def getData(yr,columns=config.COLUMNS,
         elif CCS:
             Xprovisional=load(filename=config.ACGFILES[yr],predictors=predictors)
             full16=generateCCSData(yr,  Xprovisional, predictors=predictors, **kwargs)
+            if PHARMACY:
+                full16=generatePharmacyData(yr, full16, **kwargs)
             return(full16.reindex(sorted(full16.columns), axis=1),coste)
 
     cols=columns.copy() 
@@ -105,6 +107,8 @@ def getData(yr,columns=config.COLUMNS,
     elif CCS:
         Xprovisional=load(filename=config.ACGFILES[yr],predictors=predictors)
         full16=generateCCSData(yr,  Xprovisional, predictors=predictors, **kwargs)
+        if PHARMACY:
+            full16=generatePharmacyData(yr, full16, **kwargs)
         del Xprovisional
     else:
         full16=load(filename=config.ACGFILES[yr],predictors=predictors)
