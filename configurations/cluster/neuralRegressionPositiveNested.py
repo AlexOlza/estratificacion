@@ -80,7 +80,7 @@ TRACEBACK=True
 seed_sampling= args.seed_sampling if hasattr(args, 'seed_sampling') else SEED #imported from default configuration
 seed_hparam= args.seed_hparam if hasattr(args, 'seed_hparam') else SEED
 model_name= args.model_name if hasattr(args,'model_name') else ALGORITHM
-from main.cluster.clr_callback import CyclicLR
+
 """ DEFINITION OF THE HYPERPARAMETER SPACE """
 
 from tensorflow.keras import backend as K   

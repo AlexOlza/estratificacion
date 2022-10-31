@@ -31,10 +31,7 @@ np.random.seed(seed_value)
 # 4. Set `tensorflow` pseudo-random generator at a fixed value
 import tensorflow as tf
 tf.random.set_seed(seed_value) # tensorflow 2.x
-# 5. Configure a new global `tensorflow` session
-# session_conf = tf.compat.v1.ConfigProto(intra_op_parallelism_threads=1, inter_op_parallelism_threads=3,allow_soft_placement=True)
-# sess = tf.compat.v1.Session(graph=tf.compat.v1.get_default_graph(), config=session_conf)
-# tf.compat.v1.keras.backend.set_session(sess)
+
 #%%
 """ OUR ARGUMENTS AND IMPORTS """
 parser = argparse.ArgumentParser(description='Train neural regression and save model')
@@ -96,8 +93,8 @@ def build_model(hp):
     model.add(keras.layers.Dense(units=hp_units, activation=activ))
   
     # Tune the learning rate for the optimizer
-    # Choose an optimal value from 0.01, 0.001, or 0.0001
-    hp_learning_rate = hp.Choice('learning_rate', values=[1e-2, 1e-3, 1e-4])
+    # Choose an optimal value from 0.00001, 0.001, or 0.0001
+    hp_learning_rate = hp.Choice('learning_rate', values=[1e-5, 1e-3, 1e-4])
 
     #hidden layers
     for i in range(1,n_hidden+1):
@@ -117,22 +114,3 @@ def build_model(hp):
    
     
     return model
-
-from keras.callbacks import Callback
-
-class TerminateOnBaseline(Callback):
-    """Callback that terminates training when either acc or val_acc reaches a specified baseline
-    source: https://stackoverflow.com/questions/53500047/stop-training-in-keras-when-accuracy-is-already-1-0
-    """
-    def __init__(self, monitor='auc', baseline=0.5):
-        super(TerminateOnBaseline, self).__init__()
-        self.monitor = monitor
-        self.baseline = baseline
-
-    def on_epoch_end(self, epoch, logs=None):
-        logs = logs or {}
-        acc = logs.get(self.monitor)
-        if acc is not None:
-            if acc <= self.baseline:
-                print('Epoch %d: Reached baseline, terminating training' % (epoch))
-                self.model.stop_training = True

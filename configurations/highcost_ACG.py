@@ -18,9 +18,9 @@ EXCLUDE=[]
 EXCLUDEOSI=['OS16','OS22'] 
 RESOURCEUSAGE=False
 K=20000
-
 def target_binarizer(y, K=K, column=COLUMNS):
     import pandas as pd
     import numpy as np
     cutoff_value=y[column].nlargest(K,columns=column).min()
-    return pd.Series(np.where(y[column]>=cutoff_value,1,0).ravel(),name=column[0])
+    y[column[0]]=np.where(y[column]>=cutoff_value,1,0).ravel()
+    return y

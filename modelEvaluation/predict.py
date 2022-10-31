@@ -61,7 +61,7 @@ def predict_save(yr,model,model_name,X,y,**kwargs):
     # X=X.filter(regex=predictors)
     # print(predictors, len(X.filter(regex=predictors).columns))
     from more_itertools import sliced
-    CHUNK_SIZE = 50000 #TODO experiment with this to try to speed up prediction
+    CHUNK_SIZE = 100000 #TODO experiment with this to try to speed up prediction
     
     index_slices = sliced(range(len(X)), CHUNK_SIZE)
     i=0
@@ -89,9 +89,9 @@ def predict_save(yr,model,model_name,X,y,**kwargs):
                 predictions=model.predict(chunk.drop('PATIENT_ID',axis=1)).ravel() # predicted cost
             else:
                 if 'neural' in filename:
-                    predictions=pred(chunk.drop('PATIENT_ID',axis=1))[:,0] #Probab of hospitalization (Keras)
+                    predictions=model.predict(chunk.drop('PATIENT_ID',axis=1)).ravel() #Probab of hospitalization (Keras)
                 else:
-                    predictions=pred(chunk.drop('PATIENT_ID',axis=1))[:,1] #Probab of hospitalization (sklearn)
+                    predictions=model.predict_proba(chunk.drop('PATIENT_ID',axis=1))[:,1] #Probab of hospitalization (sklearn)
                 
             observations=np.array(ychunk[columns]).ravel()
             for element in zip(ychunk['PATIENT_ID'],chunk['PATIENT_ID'],predictions,observations):
@@ -128,6 +128,7 @@ def predict(model_name,experiment_name,year,**kwargs):
         print('missing ',modelfilename)
         return (None, None)
     Xx=kwargs.get('X',None)
+    print(Xx)
     Yy=kwargs.get('y',None)
     if (not isinstance(Xx,pd.DataFrame)) or (not isinstance(Yy,pd.DataFrame)):
         Xx,Yy=getData(year-1,predictors=predictors)

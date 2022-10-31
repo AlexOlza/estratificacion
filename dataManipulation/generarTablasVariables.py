@@ -128,7 +128,6 @@ def get_delimiter(file_path, bytes = 40960):
     return delimiter
 def load_predictors(path,predictors=config.PREDICTORREGEX):
     df=pd.read_csv(path,nrows=5,sep=get_delimiter(path))
-    print(df)
     if predictors: #nonempty list or str
         is_list=isinstance(predictors,list)
         is_str=isinstance(predictors,str)

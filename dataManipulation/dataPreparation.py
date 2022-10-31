@@ -62,6 +62,7 @@ def getData(yr,columns=config.COLUMNS,
 
     if ('COSTE_TOTAL_ANO2' in columns) :
         coste=load(filename=config.ACGFILES[yr],predictors=r'PATIENT_ID|COSTE_TOTAL_ANO2')
+        print(coste)
         response='COSTE_TOTAL_ANO2'
         if not CCS: 
             if fullEDCs:
@@ -75,6 +76,7 @@ def getData(yr,columns=config.COLUMNS,
             return(acg.reindex(sorted(acg.columns), axis=1),coste)#Prevents bug #1
         elif CCS:
             Xprovisional=load(filename=config.ACGFILES[yr],predictors=predictors)
+
             full16=generateCCSData(yr,  Xprovisional, predictors=predictors, **kwargs)
             if PHARMACY:
                 full16=generatePharmacyData(yr, full16,binarize=binarize, **kwargs)
