@@ -126,7 +126,7 @@ def get_delimiter(file_path, bytes = 40960):
     data = open(file_path, "r").read(bytes)
     delimiter = sniffer.sniff(data).delimiter
     return delimiter
-def load_predictors(path,predictors=None):
+def load_predictors(path,predictors=config.PREDICTORREGEX):
     df=pd.read_csv(path,nrows=5,sep=get_delimiter(path))
     if predictors: #nonempty list or str
         is_list=isinstance(predictors,list)
@@ -146,7 +146,7 @@ def load_predictors(path,predictors=None):
 
     return predictors
 
-def load(filename,directory=config.DATAPATH,predictors=None):
+def load(filename,directory=config.DATAPATH,predictors=config.PREDICTORREGEX):
     acg=pd.DataFrame()
     t0=time.time()
     
