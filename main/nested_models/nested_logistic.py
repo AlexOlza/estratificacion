@@ -28,7 +28,14 @@ from dataManipulation.dataPreparation import getData
 import numpy as np
 from time import time
 from sklearn.linear_model import LogisticRegression
-
+from pathlib import Path
+import os
+config.MODELPATH=os.path.join(config.MODELPATH,'nested_logistic/') if not 'nested_logistic' in config.MODELPATH else config.MODELPATH
+config.PREDPATH=os.path.join(config.PREDPATH,'nested_logistic/') if not 'nested_logistic' in config.PREDPATH else config.PREDPATH
+for direct in [config.MODELPATH, config.PREDPATH]:
+    if not os.path.exists(direct):
+        os.makedirs(direct)
+        print('new dir ', direct)
 #%%
 np.random.seed(config.SEED)
 
@@ -45,19 +52,82 @@ for c in to_drop:
 
 y=np.where(y[config.COLUMNS]>=1,1,0)
 y=y.ravel()
+
+
 print('Sample size ',len(X), 'positive: ',sum(y))
 # assert False
 variable_groups=[r'FEMALE|AGE_[0-9]+$','EDC_','RXMG_','ACG']
 
-for i in range(1,len(variable_groups)+1):
-    regex=r'|'.join(variable_groups[:i])
-    Xx=X.filter(regex=regex)
+if (not 'ACG' in config.PREDICTORREGEX):
+    if (hasattr(config, 'PHARMACY')):
+        if config.PHARMACY:
+            CCSPHARMA='PATIENT_ID|FEMALE|AGE_[0-9]+$|CCS|PHARMA'
+else: 
+    CCSPHARMA=None
+
+variables={'Demo':'PATIENT_ID|FEMALE|AGE_[0-9]+$',
+           'DemoDiag':'PATIENT_ID|FEMALE|AGE_[0-9]+$|EDC_' if 'ACG' in config.PREDICTORREGEX else 'PATIENT_ID|FEMALE|AGE_[0-9]+$|CCS',
+           'DemoDiagPharmaBinary': CCSPHARMA,
+           'DemoDiagPharma':'PATIENT_ID|FEMALE|AGE_[0-9]+$|EDC_|RXMG_' if 'ACG' in config.PREDICTORREGEX else CCSPHARMA,
+           'DemoDiagPharmaIsomorb':'PATIENT_ID|FEMALE|AGE_[0-9]+$|EDC_(?!NUR11|RES10)|RXMG_(?!ZZZX000)|ACG_' if 'ACG' in config.PREDICTORREGEX else None
+           }
+#%%
+for key, val in variables.items():
+    print('STARTING ',key, val)
+    if not val:
+        continue
+    if Path(os.path.join(config.MODELPATH,f'{key}.joblib')).is_file(): #the model is already there
+        continue
+    Xx=X.filter(regex=val, axis=1)
+    
+    if key=='DemoDiagPharmaBinary':
+        print(Xx.PHARMA_Transplant.describe())
+        Xx[[c for c in Xx if c.startswith('PHARMA')]]=(Xx[[c for c in Xx if c.startswith('PHARMA')]]>0).astype(int)
+        print(Xx.PHARMA_Transplant.describe())
+    
+
     print('Number of predictors: ',len(Xx.columns))
     logistic=LogisticRegression(penalty='none',max_iter=1000,verbose=0) 
     t0=time()
     fit=logistic.fit(Xx, y)
     print('fitting time: ',time()-t0)
-    #%%
-    util.savemodel(config, fit, name='nested_log{0}'.format(i))
+
+    util.savemodel(config, fit, name='/{0}'.format(key))
 
 
+#%%
+import pandas as pd
+from modelEvaluation.predict import predict
+X, y=getData(2017)
+X=X[[c for c in X if X[c].max()>0]]
+PATIENT_ID=X.PATIENT_ID
+if hasattr(config, 'target_binarizer'):
+    y=config.target_binarizer(y)
+else:
+    y=pd.Series(np.where(y[config.COLUMNS]>0,1,0).ravel(),name=config.COLUMNS[0])
+   
+y=pd.concat([y, PATIENT_ID], axis=1) if not 'PATIENT_ID' in y else y
+#%%
+table=pd.DataFrame()
+for key, val in variables.items():
+    Xx=X.copy()
+    if not val:
+        continue
+    if key=='DemoDiagPharmaBinary':
+        print(Xx.PHARMA_Transplant.describe())
+        Xx[[c for c in Xx if c.startswith('PHARMA')]]=(Xx[[c for c in Xx if c.startswith('PHARMA')]]>0).astype(int)
+        print(Xx.PHARMA_Transplant.describe())
+    
+    probs,_=predict(key,experiment_name=config.EXPERIMENT,year=2018,
+                      X=Xx.filter(regex=val, axis=1), y=y)
+    auc=roc_auc_score(probs.OBS,probs.PRED)
+    recall, ppv, _, _ = performance(obs=probs.OBS, pred=probs.PRED, K=20000)
+    brier=brier_score_loss(y_true=probs.OBS, y_prob=probs.PRED)
+    ap=average_precision_score(probs.OBS,probs.PRED)
+    table=pd.concat([table,
+                     pd.DataFrame.from_dict({'Model':[key], 'AUC':[ auc], 'AP':[ap],
+                      'R@20k': [recall], 'PPV@20K':[ppv], 
+                      'Brier':[brier]})])
+    
+#%%
+print(table.to_markdown(index=False))
