@@ -112,7 +112,7 @@ for key, val in variables.items():
         print(Xx.PHARMA_Transplant.describe())
     
     
-    Xx=X.filter(regex=val, axis=1)
+    # Xx=X.filter(regex=val, axis=1)
     
     X_train, X_test, y_train, y_test = train_test_split( Xx, y, test_size=0.2, random_state=42)
     X_test, X_test2, y_test, y_test2 = train_test_split( X_test, y_test, test_size=0.5, random_state=42)
