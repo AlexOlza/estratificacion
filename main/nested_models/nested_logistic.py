@@ -23,7 +23,10 @@ if not config.configured:
 assert config.configured 
 import configurations.utility as util
 util.makeAllPaths()
-
+import pandas as pd
+from modelEvaluation.predict import predict
+from sklearn.metrics import roc_auc_score, brier_score_loss, average_precision_score
+from modelEvaluation.compare import performance
 from dataManipulation.dataPreparation import getData
 import numpy as np
 from time import time
@@ -55,8 +58,6 @@ y=y.ravel()
 
 
 print('Sample size ',len(X), 'positive: ',sum(y))
-# assert False
-variable_groups=[r'FEMALE|AGE_[0-9]+$','EDC_','RXMG_','ACG']
 
 if (not 'ACG' in config.PREDICTORREGEX):
     if (hasattr(config, 'PHARMACY')):
@@ -92,12 +93,10 @@ for key, val in variables.items():
     fit=logistic.fit(Xx, y)
     print('fitting time: ',time()-t0)
 
-    util.savemodel(config, fit, name='/{0}'.format(key))
+    util.savemodel(config, fit, name='{0}'.format(key))
 
 
 #%%
-import pandas as pd
-from modelEvaluation.predict import predict
 X, y=getData(2017)
 X=X[[c for c in X if X[c].max()>0]]
 PATIENT_ID=X.PATIENT_ID
