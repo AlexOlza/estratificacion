@@ -59,10 +59,35 @@ def getData(yr,columns=config.COLUMNS,
         binarize = kwargs.get('BINARIZEPHARMA', config.BINARIZEPHARMA)
     except AttributeError:
         binarize = False    
+    
+    if ('DEATH_1YEAR' in columns) :
+        alldead=pd.read_csv(config.DECEASEDFILE)
+        dead=alldead.loc[alldead.date_of_death.str.startswith(str(yr+1))]
+        if not CCS: 
+            if fullEDCs:
+                acg=create_fullacgfiles(config.FULLACGFILES[yr],yr,directory=config.DATAPATH,
+                        predictors=predictors)
+            else:
+                acg=load(filename=config.ACGFILES[yr],predictors=predictors)
+            print('not opening allhospfile')
+            dead_or_alive=acg.PATIENT_ID.to_frame()
+            dead_or_alive['DEATH_1YEAR']=np.where(dead_or_alive.PATIENT_ID.isin(dead.PATIENT_ID),1,0)
+            print(f'Number of deaths in {yr+1}: ',dead_or_alive['DEATH_1YEAR'].sum())
+            return(acg.reindex(sorted(acg.columns), axis=1),dead_or_alive)#Prevents bug #1
+        elif CCS:
+            Xprovisional=load(filename=config.ACGFILES[yr],predictors=predictors)
+    
+            full16=generateCCSData(yr,  Xprovisional, predictors=predictors, **kwargs)
+            if PHARMACY:
+                full16=generatePharmacyData(yr, full16,binarize=binarize, **kwargs)
+            dead_or_alive=full16.PATIENT_ID.to_frame()
+            dead_or_alive['DEATH_1YEAR']=np.where(dead_or_alive.PATIENT_ID.isin(dead.PATIENT_ID),1,0)
+            print(f'Number of deaths in {yr+1}: ',dead_or_alive['DEATH_1YEAR'].sum())
+            data=pd.merge(full16, dead_or_alive, on='PATIENT_ID')
+            return(data[full16.columns].reindex(sorted(full16.columns), axis=1),data[dead_or_alive.columns])
 
     if ('COSTE_TOTAL_ANO2' in columns) :
         coste=load(filename=config.ACGFILES[yr],predictors=r'PATIENT_ID|COSTE_TOTAL_ANO2')
-        print(coste)
         response='COSTE_TOTAL_ANO2'
         if not CCS: 
             if fullEDCs:
