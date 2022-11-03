@@ -19,7 +19,7 @@ assert config.configured
 
 from dataManipulation.dataPreparation import getData
 import pandas as pd
-X,y=getData(2016)
+X,y=getData(2016, columns='DEATH_1YEAR')
 # outcome=['urg']
 # # outcome.remove('PATIENT_ID')
 
