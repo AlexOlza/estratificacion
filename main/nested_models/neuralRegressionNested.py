@@ -73,15 +73,21 @@ print(config.PREDICTORREGEX)
 
 
 
+if (not 'ACG' in config.PREDICTORREGEX):
+    if (hasattr(config, 'PHARMACY')):
+        if config.PHARMACY:
+            CCSPHARMA='PATIENT_ID|FEMALE|AGE_[0-9]+$|CCS|PHARMA'
+else: 
+    CCSPHARMA=None
+
 variables={'Demo':'PATIENT_ID|FEMALE|AGE_[0-9]+$',
            'DemoDiag':'PATIENT_ID|FEMALE|AGE_[0-9]+$|EDC_' if 'ACG' in config.PREDICTORREGEX else 'PATIENT_ID|FEMALE|AGE_[0-9]+$|CCS',
-           'DemoDiagPharma':'PATIENT_ID|FEMALE|AGE_[0-9]+$|EDC_|RXMG_' if 'ACG' in config.PREDICTORREGEX else None,
+           'DemoDiagPharmaBinary': CCSPHARMA,
+           'DemoDiagPharma':'PATIENT_ID|FEMALE|AGE_[0-9]+$|EDC_|RXMG_' if 'ACG' in config.PREDICTORREGEX else CCSPHARMA,
            'DemoDiagPharmaIsomorb':'PATIENT_ID|FEMALE|AGE_[0-9]+$|EDC_(?!NUR11|RES10)|RXMG_(?!ZZZX000)|ACG_' if 'ACG' in config.PREDICTORREGEX else None
            }
 
 
-
-# from sklearn.utils.class_weight import compute_sample_weight
 PATIENT_ID=X.PATIENT_ID
 try:
     X.drop('PATIENT_ID',axis=1,inplace=True)
@@ -97,7 +103,16 @@ for key, val in variables.items():
         continue
     if Path(os.path.join(config.MODELPATH,key)).is_dir(): #the model is already there
         continue
+    
     Xx=X.filter(regex=val, axis=1)
+    
+    if key=='DemoDiagPharmaBinary':
+        print(Xx.PHARMA_Transplant.describe())
+        Xx[[c for c in Xx if c.startswith('PHARMA')]]=(Xx[[c for c in Xx if c.startswith('PHARMA')]]>0).astype(int)
+        print(Xx.PHARMA_Transplant.describe())
+    
+    
+    # Xx=X.filter(regex=val, axis=1)
     
     X_train, X_test, y_train, y_test = train_test_split( Xx, y, test_size=0.2, random_state=42)
     X_test, X_test2, y_test, y_test2 = train_test_split( X_test, y_test, test_size=0.5, random_state=42)
@@ -171,6 +186,11 @@ table=pd.DataFrame()
 for key, val in variables.items():
     if not val:
         continue
+    if key=='DemoDiagPharmaBinary':
+        print(Xx.PHARMA_Transplant.describe())
+        Xx[[c for c in Xx if c.startswith('PHARMA')]]=(Xx[[c for c in Xx if c.startswith('PHARMA')]]>0).astype(int)
+        print(Xx.PHARMA_Transplant.describe())
+    
     probs,R2=predict(key,experiment_name=config.EXPERIMENT,year=2018,
                     X=X.filter(regex=val, axis=1), y=y,
                     custom_objects={'coeff_determination':config.coeff_determination} )       

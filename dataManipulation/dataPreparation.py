@@ -80,7 +80,8 @@ def getData(yr,columns=config.COLUMNS,
             full16=generateCCSData(yr,  Xprovisional, predictors=predictors, **kwargs)
             if PHARMACY:
                 full16=generatePharmacyData(yr, full16,binarize=binarize, **kwargs)
-            return(full16.reindex(sorted(full16.columns), axis=1),coste)
+            data=pd.merge(full16, coste, on='PATIENT_ID')
+            return(data[full16.columns].reindex(sorted(full16.columns), axis=1),data[coste.columns])
 
     cols=columns.copy() 
     t0=time.time()
