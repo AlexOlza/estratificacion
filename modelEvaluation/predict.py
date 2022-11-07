@@ -54,6 +54,8 @@ def generate_filename(model_name,yr, calibrated=False):
         fname=os.path.join(config.PREDPATH,'{0}__{1}.csv'.format(model_name,yr))
     return fname
 def predict_save(yr,model,model_name,X,y,**kwargs):
+    assert len(X)==len(y)
+    assert all(X.index==y.index)
     columns=kwargs.get('columns',config.COLUMNS[0])
     verbose=kwargs.get('verbose',config.VERBOSE)
     predictors=kwargs.get('predictors',config.PREDICTORREGEX)
@@ -63,7 +65,7 @@ def predict_save(yr,model,model_name,X,y,**kwargs):
     from more_itertools import sliced, chunked
     CHUNK_SIZE = 250000 #TODO experiment with this to try to speed up prediction
     
-    index_slices = chunked(X.index, CHUNK_SIZE)
+    index_slices = sliced(X.index, CHUNK_SIZE)
     i=0
     n=len(X)/CHUNK_SIZE
     filename=generate_filename(filename,yr,calibrated=False) if not filename else filename
@@ -80,11 +82,10 @@ def predict_save(yr,model,model_name,X,y,**kwargs):
         csv_out=csv.writer(predFile)
         csv_out.writerow(['yPATIENT_ID','PATIENT_ID','PRED','OBS'])
         for index_slice in index_slices:
-            if verbose:
-                i+=1
-                print(i,'/',n)
-            chunk = X.iloc[index_slice] # your dataframe chunk ready for use
-            ychunk=y.iloc[index_slice]
+            i+=1
+            print(i,'/',n)
+            chunk = X.loc[index_slice] # your dataframe chunk ready for use
+            ychunk=y.loc[index_slice]
             if 'COSTE_TOTAL_ANO2' in config.COLUMNS:
                 predictions=model.predict(chunk.drop('PATIENT_ID',axis=1)).ravel() # predicted cost
             else:
