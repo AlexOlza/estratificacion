@@ -281,6 +281,7 @@ fig1.savefig(os.path.join(config.FIGUREPATH, 'rocCurve.png'))
 fig2.savefig(os.path.join(config.FIGUREPATH, 'prCurve.png'))
 plt.show()
 print(table.to_markdown(index=False,))
+print(prec_at_rec.to_markdown(index=False,))
 # %%
 # %%
 for i, model in enumerate(models):
