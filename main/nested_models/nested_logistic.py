@@ -107,6 +107,8 @@ else:
    
 y=pd.concat([y, PATIENT_ID], axis=1) if not 'PATIENT_ID' in y else y
 #%%
+future_dead=pd.read_csv(config.FUTUREDECEASEDFILE)
+dead2019=future_dead.loc[future_dead.date_of_death.str.startswith('2019')].PATIENT_ID
 table=pd.DataFrame()
 for key, val in variables.items():
     Xx=X.copy()
@@ -120,13 +122,21 @@ for key, val in variables.items():
     probs,_=predict(key,experiment_name=config.EXPERIMENT,year=2018,
                       X=Xx.filter(regex=val, axis=1), y=y)
     auc=roc_auc_score(probs.OBS,probs.PRED)
-    recall, ppv, _, _ = performance(obs=probs.OBS, pred=probs.PRED, K=20000)
+    recall, ppv, spec, newpred = performance(obs=probs.OBS, pred=probs.PRED, K=20000)
+    
     brier=brier_score_loss(y_true=probs.OBS, y_prob=probs.PRED)
     ap=average_precision_score(probs.OBS,probs.PRED)
     table=pd.concat([table,
                      pd.DataFrame.from_dict({'Model':[key], 'AUC':[ auc], 'AP':[ap],
                       'R@20k': [recall], 'PPV@20K':[ppv], 
                       'Brier':[brier]})])
+    probs['TOP20k']=newpred
+    false_positives=probs.loc[(probs.OBS.values==0) ] #are not actually positives!!
+    n_selected=len(false_positives) # this is the length of list, should be K with enough flexibility (not for Demo)
+    false_positives=false_positives.loc[(false_positives.TOP20k.values==1)]
+    almost_true=len(false_positives.loc[false_positives.PATIENT_ID.isin(dead2019)])
+    print(f'Out of {len(false_positives)} false positives, {almost_true} died in 2019 ({round(almost_true*100/len(false_positives),2)}%)')
     
+
 #%%
 print(table.to_markdown(index=False))

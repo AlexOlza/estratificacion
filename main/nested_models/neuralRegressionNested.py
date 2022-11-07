@@ -180,6 +180,7 @@ for key, val in variables.items():
 X,y=getData(2017)
 X=X[[c for c in X if X[c].max()>0]]
 #%%
+Xx=X.copy()
 table=pd.DataFrame()
 # X=pd.concat([X, PATIENT_ID], axis=1) if not 'PATIENT_ID' in X else X
 # y=pd.concat([y, PATIENT_ID], axis=1) if not 'PATIENT_ID' in y else y
@@ -192,7 +193,7 @@ for key, val in variables.items():
         print(Xx.PHARMA_Transplant.describe())
     
     probs,R2=predict(key,experiment_name=config.EXPERIMENT,year=2018,
-                    X=X.filter(regex=val, axis=1), y=y,
+                    X=Xx.filter(regex=val, axis=1), y=y,
                     custom_objects={'coeff_determination':config.coeff_determination} )       
     recall, ppv, _, _ = performance(obs=probs.OBS, pred=probs.PRED, K=20000)
     rmse=mean_squared_error(probs.OBS,probs.PRED, squared=False)

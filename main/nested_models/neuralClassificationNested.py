@@ -126,6 +126,7 @@ for key, val in variables.items():
     Xx=X.filter(regex=val, axis=1)
     
     if key=='DemoDiagPharmaBinary':
+        continue
         print(Xx.PHARMA_Transplant.describe())
         Xx[[c for c in Xx if c.startswith('PHARMA')]]=(Xx[[c for c in Xx if c.startswith('PHARMA')]]>0).astype(int)
         print(Xx.PHARMA_Transplant.describe())
@@ -158,7 +159,7 @@ for key, val in variables.items():
     stop_early = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=5)
     
     tuner.search(X_train, y_train,epochs=30, validation_split=0.2,callbacks=[stop_early],
-                 )
+                  )
     print('---------------------------------------------------'*5)
     print('SEARCH SPACE SUMMARY:')
     print(tuner.search_space_summary())  
@@ -167,6 +168,7 @@ for key, val in variables.items():
     """ SAVE TRAINED MODEL """
     """ work in progress """
     best_hp = tuner.get_best_hyperparameters()[0]
+
     
     model = tuner.hypermodel.build(best_hp)
     history = model.fit(X_train, y_train, epochs=50, verbose=1, validation_split=0.2,callbacks=[stop_early],
