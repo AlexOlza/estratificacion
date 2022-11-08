@@ -122,7 +122,7 @@ model_name=config.MODELPATH+'propensity_score_model'
 
 print('Tuner: Bayesian')
 tuner= kt.BayesianOptimization(config.build_model,
-                     objective=kt.Objective("val_loss", direction="min"),
+                     objective=kt.Objective("loss", direction="min"),
                       max_trials=10,
                       overwrite=False,
                       num_initial_points=4,
@@ -131,9 +131,9 @@ tuner= kt.BayesianOptimization(config.build_model,
                      
                      )
 
-stop_early = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=5)
+stop_early = tf.keras.callbacks.EarlyStopping(monitor='loss', patience=5)
 
-tuner.search(Xx, z,epochs=10, validation_split=0.3,callbacks=[stop_early],
+tuner.search(Xx, z,epochs=10, validation_split=0.1,callbacks=[stop_early],
               )
 print('---------------------------------------------------'*5)
 print('SEARCH SPACE SUMMARY:')
@@ -146,7 +146,7 @@ best_hp = tuner.get_best_hyperparameters()[0]
 
 
 model = tuner.hypermodel.build(best_hp)
-history = model.fit(Xx, z, epochs=50, verbose=1, validation_split=0.3,callbacks=[stop_early],
+history = model.fit(Xx, z, epochs=50, verbose=1, validation_split=0.1,callbacks=[stop_early],
                     )
 
 
