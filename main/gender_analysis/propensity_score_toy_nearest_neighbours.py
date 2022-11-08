@@ -29,7 +29,7 @@ np.random.seed(config.SEED)
 
 X,y=getData(2016)
 #%%
-Xx=X.sample(1000000)
+Xx=X#.sample(1000000)
 z=Xx['FEMALE']
 df_data =Xx
 Xx=Xx.drop(['FEMALE', 'PATIENT_ID'], axis=1)
