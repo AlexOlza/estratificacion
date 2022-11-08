@@ -29,130 +29,74 @@ np.random.seed(config.SEED)
 
 X,y=getData(2016)
 #%%
-
-z=X['FEMALE']
-Xx=X.drop('FEMALE', axis=1)
+Xx=X.sample(50000)
+z=Xx['FEMALE']
+df_data =Xx
+Xx=Xx.drop(['FEMALE', 'PATIENT_ID'], axis=1)
 print('Sample size ',len(X), 'positive: ',sum(z))
 assert not 'AGE_85GT' in X.columns
 
 #%%
 logistic=LogisticRegression(penalty='none',max_iter=1000,verbose=0)
 
-to_drop=['PATIENT_ID','ingresoUrg']
-for c in to_drop:
-    try:
-        X.drop(c,axis=1,inplace=True)
-        util.vprint('dropping col ',c)
-    except:
-        pass
-        util.vprint('pass')
 from time import time
+from scipy.special import logit
+from sklearn.neighbors import NearestNeighbors
 t0=time()
-# fit=logistic.fit(Xx, z)
-# print('fitting time: ',time()-t0)
-from sklearn.metrics import roc_auc_score
-# print('Logistic AUC=',roc_auc_score(z.ravel(), fit.predict_proba(Xx)[:,0]))
+fit=logistic.fit(Xx, z)
+print('fitting time: ',time()-t0)
 #%%
-import keras_tuner as kt
-from sklearn.model_selection import train_test_split
-from tensorflow import keras
-import tensorflow as tf
-import argparse
-import os
-import importlib
-import random
+propensity_scores=fit.predict_proba(Xx)[:,1]
+propensity_logit = np.array([logit(xi) for xi in propensity_scores])
 
-import pandas as pd
-import numpy as np 
-from pathlib import Path
+
+df_data.loc[:,'propensity_score'] = propensity_scores
+df_data.loc[:,'propensity_score_logit'] = propensity_logit
+df_data.loc[:,'outcome'] = y.iloc[Xx.index][config.COLUMNS].values
 #%%
-"""REPRODUCIBILITY"""
-seed_value=42
-# 1. Set `PYTHONHASHSEED` environment variable at a fixed value
-os.environ['PYTHONHASHSEED']=str(seed_value)
-# GPU
-print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
-# 2. Set `python` built-in pseudo-random generator at a fixed value
-random.seed(seed_value)
-# 3. Set `numpy` pseudo-random generator at a fixed value
-np.random.seed(seed_value)
-# 4. Set `tensorflow` pseudo-random generator at a fixed value
-tf.random.set_seed(seed_value) # tensorflow 2.x
-parser = argparse.ArgumentParser(description='Train and save Neural Network')
-parser.add_argument('chosen_config', type=str,
-                    help='The name of the config file (without .py), which must be located in configurations/cluster.')
-parser.add_argument('experiment',
-                    help='The name of the experiment config file (without .py), which must be located in configurations.')
-
-
-args, unknown_args = parser.parse_known_args()
-
-chosen_config='configurations.cluster.'+args.chosen_config
-importlib.invalidate_caches()
-from python_settings import settings as config
-settings=importlib.import_module(chosen_config,package='estratificacion')
-if not config.configured:
-    config.configure(settings) # configure() receives a python module
-assert config.configured 
-
-import configurations.utility as util
-from dataManipulation.dataPreparation import getData
-from modelEvaluation.predict import predict
-from modelEvaluation.compare import performance
-
-seed_sampling= args.seed_sampling if hasattr(args, 'seed_sampling') else config.SEED #imported from default configuration
-seed_hparam= args.seed_hparam if hasattr(args, 'seed_hparam') else config.SEED
-name= args.model_name if hasattr(args,'model_name') else config.ALGORITHM
-epochs=args.seed_hparam if hasattr(args, 'epochs') else 500
+# import seaborn as sns
+# from matplotlib import pyplot as plt
+# sns.set(rc={'figure.figsize':(16,10)}, font_scale=1.3)
+# # Density distribution of propensity score (logic) broken down by treatment status
+# fig, ax = plt.subplots(1,2)
+# fig.suptitle('Density distribution plots for propensity score and logit(propensity score).')
+# sns.kdeplot(x = propensity_scores, hue = z , ax = ax[0])
+# ax[0].set_title('Propensity Score')
+# sns.kdeplot(x = propensity_logit, hue = z , ax = ax[1])
+# ax[1].axvline(-0.4, ls='--')
+# ax[1].set_title('Logit of Propensity Score')
+# plt.show()
 
 #%%
-# X_train, X_test, y_train, y_test = train_test_split( Xx, z, test_size=0.2, random_state=42)
-# X_test, X_test2, y_test, y_test2 = train_test_split( X_test, y_test, test_size=0.5, random_state=42)
+""" MATCHING """
 
+common_support = (propensity_logit > -20) & (propensity_logit < 30)
+caliper = np.std(propensity_scores) * 0.25
 
-# print('Sample size ',len(y_train))
-print('---------------------------------------------------'*5)
- 
+print('\nCaliper (radius) is: {:.4f}\n'.format(caliper))#Caliper (radius) is: 0.0579
 
-""" FIT MODEL """
-np.random.seed(seed_hparam)
-print('Seed ', seed_hparam)
+#%%
+knn = NearestNeighbors(n_neighbors=3 , p = 2, radius=caliper)
+knn.fit(propensity_logit.reshape(-1, 1))
 
-model_name=config.MODELPATH+'propensity_score_model'
+#%%
+df_data.index=range(len(df_data))
+distances , indexes = knn.kneighbors(
+    df_data.propensity_score_logit.to_numpy().reshape(-1, 1), \
+    n_neighbors=10)
 
-print('Tuner: Bayesian')
-tuner= kt.BayesianOptimization(config.build_model,
-                     objective=kt.Objective("loss", direction="min"),
-                      max_trials=10,
-                      overwrite=False,
-                      num_initial_points=4,
-                     directory=model_name+'_search',
-                     project_name='propensity_score_model',   
-                     
-                     )
+print('For item 0, the 4 closest distances are (first item is self):')
+for ds in distances[0,0:4]:
+    print('Element distance: {:4f}'.format(ds))
+print('...')
 
-stop_early = tf.keras.callbacks.EarlyStopping(monitor='loss', patience=5)
+#%%
+def perfom_matching_v2(row, indexes, df_data):
+    current_index = int(row['index']) # Obtain value from index-named column, not the actual DF index.
+    prop_score_logit = row['propensity_score_logit']
+    for idx in indexes[current_index,:]:
+        if (current_index != idx) and (row.FEMALE == 1) and (df_data.loc[idx].FEMALE == 0):
+            return int(idx)
+         
+df_data['matched_element'] = df_data.reset_index().apply(perfom_matching_v2, axis = 1, args = (indexes, df_data))
 
-tuner.search(Xx, z,epochs=10, validation_split=0.1,callbacks=[stop_early],
-              )
-print('---------------------------------------------------'*5)
-print('SEARCH SPACE SUMMARY:')
-print(tuner.search_space_summary())  
-
-
-""" SAVE TRAINED MODEL """
-""" work in progress """
-best_hp = tuner.get_best_hyperparameters()[0]
-
-
-model = tuner.hypermodel.build(best_hp)
-history = model.fit(Xx, z, epochs=50, verbose=1, validation_split=0.1,callbacks=[stop_early],
-                    )
-
-
-val_acc_per_epoch = history.history['loss']
-best_epoch = val_acc_per_epoch.index(min(val_acc_per_epoch)) + 1
-print('Best epoch: %d' % (best_epoch,))
-
-keras.models.save_model(model, os.path.join(config.MODELPATH,'propensity_score_model'))
-print('Saved ',os.path.join(config.MODELPATH,'propensity_score_model'))
