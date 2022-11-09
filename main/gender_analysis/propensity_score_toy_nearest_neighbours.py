@@ -124,27 +124,28 @@ pairs=pd.concat([males, females])
 import os
 pairs.to_csv(os.path.join(config.DATAPATH,'pairs.csv'), index=False)
 #%%
-import seaborn as sns
-from matplotlib import pyplot as plt
-sns.set(rc={'figure.figsize':(16,10)}, font_scale=1.3)
-# Density distribution of propensity score (logic) broken down by treatment status
-fig, ax = plt.subplots(1,2)
-fig.suptitle('Density distribution plots for propensity score and logit(propensity score).')
-sns.kdeplot(x = propensity_scores, hue = z , ax = ax[0])
-ax[0].set_title('Propensity Score')
-sns.kdeplot(x = propensity_logit, hue = z , ax = ax[1])
-ax[1].axvline(-0.4, ls='--')
-ax[1].set_title('Logit of Propensity Score')
-plt.show()
-plt.savefig(os.path.join(config.FIGUREPATH,'before.png'))
+print('Saved ',os.path.join(config.DATAPATH,'pairs.csv'))
+# import seaborn as sns
+# from matplotlib import pyplot as plt
+# sns.set(rc={'figure.figsize':(16,10)}, font_scale=1.3)
+# # Density distribution of propensity score (logic) broken down by treatment status
+# fig, ax = plt.subplots(1,2)
+# fig.suptitle('Density distribution plots for propensity score and logit(propensity score).')
+# sns.kdeplot(x = propensity_scores, hue = z , ax = ax[0])
+# ax[0].set_title('Propensity Score')
+# sns.kdeplot(x = propensity_logit, hue = z , ax = ax[1])
+# ax[1].axvline(-0.4, ls='--')
+# ax[1].set_title('Logit of Propensity Score')
+# plt.show()
+# plt.savefig(os.path.join(config.FIGUREPATH,'before.png'))
 
 
-sns.set(rc={'figure.figsize':(16,10)}, font_scale=1.3)
-# Density distribution of propensity score (logic) broken down by treatment status
-fig, ax = plt.subplots(1,1)
-fig.suptitle('Density distribution plots for propensity score and logit(propensity score).')
-sns.kdeplot(x = pairs.propensity_score, hue = pairs.FEMALE , ax = ax)
-ax.set_title('Propensity Score')
-plt.show()
-plt.savefig(os.path.join(config.FIGUREPATH,'after.png'))
+# sns.set(rc={'figure.figsize':(16,10)}, font_scale=1.3)
+# # Density distribution of propensity score (logic) broken down by treatment status
+# fig, ax = plt.subplots(1,1)
+# fig.suptitle('Density distribution plots for propensity score and logit(propensity score).')
+# sns.kdeplot(x = pairs.propensity_score, hue = pairs.FEMALE , ax = ax)
+# ax.set_title('Propensity Score')
+# plt.show()
+# plt.savefig(os.path.join(config.FIGUREPATH,'after.png'))
 #%%
