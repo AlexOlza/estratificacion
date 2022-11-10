@@ -107,7 +107,7 @@ FPR, TPR, ROCTHRESHOLDS = {k: {} for k in sex}, {k: {}
 prec_at_rec=pd.DataFrame()
 table = pd.DataFrame()
 K = 20000
-models = ['Global', 'Separado', 'Misma Prevalencia']
+models = ['Global', 'Separado', 'PSM']
 fighist, axs = plt.subplots(2, 2, figsize=(25, 20))
 
 axhist, axhist2, axhist3, axhist4= axs[0,0], axs[0,1], axs[1,0], axs[1,1]
@@ -115,17 +115,17 @@ axhist, axhist2, axhist3, axhist4= axs[0,0], axs[0,1], axs[1,0], axs[1,1]
 
 for i, group, groupname in zip([1, 0], [female, male], sex):
     recall, ppv, spec, score, ap = {}, {}, {}, {}, {}
-    selected = [l for l in available_models if (bool(re.match(f'{config.ALGORITHM}Random$|{config.ALGORITHM}{groupname}$|{config.ALGORITHM}\d+|{config.ALGORITHM}_gender_balanced', l)))]
+    selected = [l for l in available_models if (bool(re.match(f'{config.ALGORITHM}Random$|{config.ALGORITHM}{groupname}$|{config.ALGORITHM}\d+|{config.ALGORITHM}_psm', l)))]
     print('Selected models: ', selected)
     # LOAD MODELS
     globalmodelname = list(
-        set(selected)-set([f'{config.ALGORITHM}{groupname}'])-set([f'{config.ALGORITHM}_gender_balanced']))[0]
+        set(selected)-set([f'{config.ALGORITHM}{groupname}'])-set([f'{config.ALGORITHM}_psm']))[0]
     separatemodelname = f'{config.ALGORITHM}{groupname}'
     if not 'neural' in config.ALGORITHM:
         globalmodel = job.load(config.MODELPATH+globalmodelname+'.joblib')
         try:
             sameprevmodel = job.load(
-                config.MODELPATH+f'{config.ALGORITHM}_gender_balanced.joblib')
+                config.MODELPATH+f'{config.ALGORITHM}_psm.joblib')
             sameprev=True
         except FileNotFoundError:
             print('Same prevalence model not found')
@@ -170,8 +170,8 @@ for i, group, groupname in zip([1, 0], [female, male], sex):
                                          pastX=pastXgroup[predictors], pastY=pastygroup)
     # balanced_cal[groupname] = joint_cal[groupname] #provisional
     if sameprev:
-        balanced_cal[groupname] = cal.calibrate(f'{config.ALGORITHM}_gender_balanced', year,
-                                                filename=f'{config.ALGORITHM}_gender_balanced_{groupname}',
+        balanced_cal[groupname] = cal.calibrate(f'{config.ALGORITHM}_psm', year,
+                                                filename=f'{config.ALGORITHM}_psm_{groupname}',
                                                 presentX=Xgroup[predictors], presentY=ygroup,
                                                 pastX=pastXgroup[predictors],
                                                 pastY=pastygroup,
