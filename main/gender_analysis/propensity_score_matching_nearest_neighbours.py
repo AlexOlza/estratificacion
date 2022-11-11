@@ -34,7 +34,7 @@ np.random.seed(config.SEED)
 
 X,y=getData(2016)
 #%%
-filename=os.path.join(config.PREDPATH,'pairs_duplicates.csv')
+filename=os.path.join(config.PREDPATH,'pairs.csv')
 if not Path(filename).is_file():
     Xx=X#.sample(1000000)
     z=Xx['FEMALE']
@@ -47,7 +47,13 @@ if not Path(filename).is_file():
     logistic=LogisticRegression(penalty='none',max_iter=1000,verbose=0)
     
 
-    from scipy.special import logit
+    def logit(x, eps=1e-16):
+        if x==0:
+            return -1e6
+        if x==1:
+            return 1e6
+        logit_=np.log(x)-np.log(1-x)
+        return logit_
     from sklearn.neighbors import NearestNeighbors
     t0=time()
     fit=logistic.fit(Xx, z)
@@ -65,7 +71,7 @@ if not Path(filename).is_file():
     
     """ MATCHING """
     
-    common_support = (propensity_logit > -20) & (propensity_logit < 30)
+    # common_support = (propensity_logit > -20) & (propensity_logit < 30)
     caliper = np.std(propensity_logit) * 0.25
     
     print('\nCaliper (radius) is: {:.4f}\n'.format(caliper))#Caliper (radius) is: 0.0579
@@ -91,35 +97,8 @@ if not Path(filename).is_file():
         for idx in indexes[current_index,:]:
             if (current_index != idx) and (row.FEMALE == 1) and (df_data.loc[idx].FEMALE == 0):
                 return int(idx)
-    """
-    knn = NearestNeighbors(n_neighbors=len(dfB)).fit(dfB)
-    distances, indices = knn.kneighbors(dfA)
-    
-    matched = []
-    pairs = []
-    for indexA, candidatesB in enumerate(indices):
-        personA = dfA.index[indexA]
-        for indexB in candidatesB:
-            if indexB not in matched:
-                matched.append(indexB)
-                personB = dfB.index[indexB]
-                pairs.append([personA, personB])
-                break
-    
-    matches = pd.DataFrame(pairs, columns=['SetA', 'SetB'])
-    
-    """
-    # def vectorized_matching(indexes, df_data):
-    #     pass
-    #     noself=[idx[1:] for ind in indexes] #exclude self as match       
-    #     noduplicates= [idx.pop()]
-    # def perfom_matching_v2(row, indexes, df_data): #MATCHES WITH REPLACEMENT!! 
-    #     current_index = int(row['index']) # Obtain value from index-named column, not the actual DF index.
-    #     prop_score_logit = row['propensity_score_logit']
-    #     for idx in indexes[current_index,:]:
-    #         if (current_index != idx) and (row.FEMALE == 1) and (df_data.loc[idx].FEMALE == 0):
-    #             return int(idx)
-    
+   
+   
     df_data['matched_element'] = df_data.reset_index().apply(perfom_matching_v2, axis = 1, args = (indexes, df_data))
     
     females=df_data.loc[~df_data.matched_element.isna()]#.drop_duplicates('matched_element')
@@ -132,7 +111,7 @@ if not Path(filename).is_file():
 else:
     pairs=pd.read_csv(filename)
 #%%
-plot=False
+plot=True
 if plot:
     import seaborn as sns
     from matplotlib import pyplot as plt
@@ -146,7 +125,7 @@ if plot:
     ax[1].axvline(-0.4, ls='--')
     ax[1].set_title('Logit of Propensity Score')
     plt.show()
-    # plt.savefig(os.path.join(config.FIGUREPATH,'before.png'))
+    plt.savefig(os.path.join(config.FIGUREPATH,'propensity_densities_before.png'))
     
     
     sns.set(rc={'figure.figsize':(16,10)}, font_scale=1.3)
@@ -190,7 +169,7 @@ if plot:
 
 #%%
 overview = pairs[['outcome','FEMALE']].groupby(by = ['FEMALE']).aggregate([np.mean, np.var, np.std, 'count'])
-print(overview)
+print(overview.to_markdown())
 
 treated_outcome = overview['outcome']['mean'][1]
 treated_counterfactual_outcome = overview['outcome']['mean'][0]
@@ -199,22 +178,30 @@ print('The Average Treatment Effect (ATT): {:.4f}'.format(att))
 #Vemos que, en una muestra de mujeres y hombres con las mismas 
 #características clínicas, las mujeres ingresan menos (ATT<0)
 #%%
-y=pairs.outcome
+ypairs=pairs.outcome
 x=pairs[X.columns]
 try:
-    x.drop('PATIENT_ID',axis=1,inplace=True)
+    x.drop(['PATIENT_ID'],axis=1,inplace=True)
 except:
     pass
 
-y=np.where(y>=1,1,0)
-y=y.ravel()
+ypairs=np.where(ypairs>=1,1,0)
+ypairs=ypairs.ravel()
 #%%
 logistic=LogisticRegression(penalty='none',max_iter=1000,verbose=0)
 t0=time()
-fit=logistic.fit(x, y)
+fit=logistic.fit(x, ypairs)
 print('fitting time: ',time()-t0)
 #%%
 util.savemodel(config, fit,name='logistic_psm')
-from sklearn.metrics import roc_auc_score
-preds=fit.predict_proba(x)
-print('AUC= ',roc_auc_score(y,preds[:,1]))
+#%%
+yMale=np.where(pairs.loc[pairs.FEMALE==0].outcome>=1,1,0)
+yFemale=np.where(pairs.loc[pairs.FEMALE==1].outcome>=1,1,0)
+from sklearn.metrics import roc_auc_score, average_precision_score
+predsMale=fit.predict_proba(x.loc[x.FEMALE==0])
+print('AUC Male= ',roc_auc_score(yMale,predsMale[:,1]))
+print('AP Male= ',average_precision_score(yMale,predsMale[:,1]))
+
+predsFemale=fit.predict_proba(x.loc[x.FEMALE==1])
+print('AUC Female= ',roc_auc_score(yFemale,predsFemale[:,1]))
+print('AP Female= ',average_precision_score(yFemale,predsFemale[:,1]))
