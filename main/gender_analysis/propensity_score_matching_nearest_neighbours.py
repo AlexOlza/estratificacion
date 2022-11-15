@@ -25,7 +25,6 @@ util.makeAllPaths()
 
 import pandas as pd
 import joblib as job
-from matplotlib import pyplot as plt
 from dataManipulation.dataPreparation import getData
 from modelEvaluation.compare import performance
 import numpy as np
@@ -126,7 +125,8 @@ if not Path(filename).is_file():
     X.loc[:,'outcome'] = y.iloc[X.index][config.COLUMNS].values
     
     if plot:
-        
+        import seaborn as sns
+        from matplotlib import pyplot as plt
         sns.set(rc={'figure.figsize':(16,10)}, font_scale=1.3)
         # Density distribution of propensity score (logic) broken down by treatment status
         fig, ax = plt.subplots(1,1)
