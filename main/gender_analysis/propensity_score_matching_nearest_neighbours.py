@@ -24,7 +24,6 @@ import configurations.utility as util
 util.makeAllPaths()
 
 import pandas as pd
-import seaborn as sns
 import joblib as job
 from matplotlib import pyplot as plt
 from dataManipulation.dataPreparation import getData
@@ -51,17 +50,44 @@ def perfom_matching_v2(row, indexes, df_data): #MATCHES WITH REPLACEMENT!!
             return int(idx)
         
 
-def get_matching_pairs(treated, non_treated, caliper):
-    nbrs = NearestNeighbors(n_neighbors=1,n_jobs=-1, radius=caliper).fit(non_treated)
-    distances, indices = nbrs.kneighbors(treated)
-    indices = indices.reshape(indices.shape[0])
-    matched = non_treated.iloc[indices]
-    return matched
+def get_matching_pairs(treated_df, non_treated_df, caliper):
+    treated_df.index=range(len(treated_df))
+    non_treated_df.index=range(len(non_treated_df))
+    
+    treated_x = treated_df.propensity_score_logit.values.reshape(-1,1)
+    non_treated_x = non_treated_df.propensity_score_logit.values.reshape(-1,1)
+
+    nbrs = NearestNeighbors(n_neighbors=1,n_jobs=-1, radius=caliper).fit(non_treated_x)
+    distances, indices = nbrs.kneighbors(treated_x) #who are the males closest to these females?
+    # print(distances)
+    # print(indices)
+    indices = indices.reshape(indices.shape[0]) #these are the indexes of the males
+    matched_males = non_treated_df.iloc[indices]
+    matched_males['counterfactual']=treated_df.PATIENT_ID.values
+    treated_df['counterfactual']=matched_males.PATIENT_ID.values
+    pairs=pd.concat([treated_df, matched_males]).sample(frac=1)# to shuffle the data
+    return pairs
+
+def load_pairs(filename,directory=config.DATAPATH):
+    pairs=pd.DataFrame()
+    t0=time()
+    print('Loading ',filename)
+    for chunk in pd.read_csv(filename, chunksize=100000):
+        d = dict.fromkeys(chunk.columns, np.int8)
+        d['PATIENT_ID']=np.int64
+        d['counterfactual']=np.int64
+        d['propensity_score']=np.float64
+        d['propensity_score_logit']=np.float64
+        chunk= chunk.astype(d)
+        pairs = pd.concat([pairs, chunk], ignore_index=True)
+
+    util.vprint('Loaded in ',time()-t0,' seconds')
+    return(pairs)
 #%%
 np.random.seed(config.SEED)
-no_duplicates=eval(input('Drop duplicates? (True/False) '))
-plot=eval(input('Make plots? (True/False) '))
-evaluate_matching=eval(input('Evaluate matching? (True/False) '))
+no_duplicates=False#eval(input('Drop duplicates? (True/False) '))
+plot=False#eval(input('Make plots? (True/False) '))
+evaluate_matching=True#eval(input('Evaluate matching? (True/False) '))
 #%%
 X,y=getData(2016)
 original_columns=X.columns
@@ -69,7 +95,7 @@ print('Sample size ',len(X), 'females: ',X.FEMALE.sum())
 assert not 'AGE_85GT' in X.columns
 
 #%%
-filename=os.path.join(config.PREDPATH,'two_neighbour_pairs.csv')
+filename=os.path.join(config.DATAPATH,'single_neighbour_pairs.csv')
 ps_model_filename=os.path.join(config.MODELPATH,'logistic_propensity_score_model.joblib')
 #%%
 """ COMPUTE OR RELOAD PROPENSITY SCORE MODEL """
@@ -113,62 +139,63 @@ if not Path(filename).is_file():
     
     """ MATCHING """
     
-    # common_support = (propensity_logit > -20) & (propensity_logit < 30)
-    caliper = np.std(propensity_logit) * 0.25
+    common_support = (propensity_logit > -150) & (propensity_logit < 40)
+    caliper = np.std(propensity_logit[common_support]) * 0.25
     
-    print('\nCaliper (radius) is: {:.4f}\n'.format(caliper))#Caliper (radius) is: 0.0579
+    print('\nCaliper (radius) is: {:.4f}\n'.format(caliper))#radius is 1,1450
+    
+    # knn = NearestNeighbors(n_neighbors=2 , p = 2, radius=caliper,n_jobs=-1)
+    # knn.fit(propensity_logit.reshape(-1, 1))
     
     
-    knn = NearestNeighbors(n_neighbors=2 , p = 2, radius=caliper,n_jobs=-1)
-    knn.fit(propensity_logit.reshape(-1, 1))
-    
-    
-    X.index=range(len(X))
-    distances , indexes = knn.kneighbors(
-        X.propensity_score_logit.to_numpy().reshape(-1, 1), \
-        n_neighbors=2)
+    # X.index=range(len(X))
+    # distances , indexes = knn.kneighbors(
+    #     X.propensity_score_logit.to_numpy().reshape(-1, 1), \
+    #     n_neighbors=2)
         
-    pairs=get_matching_pairs(X.loc[X.FEMALE==1].propensity_score_logit.to_numpy().reshape(-1, 1),
-                             X.loc[X.FEMALE==0].propensity_score_logit.to_numpy().reshape(-1, 1),
+    pairs=get_matching_pairs(X.loc[X.FEMALE==1][list(original_columns)+['propensity_score','propensity_score_logit']],
+                             X.loc[X.FEMALE==0][list(original_columns)+['propensity_score','propensity_score_logit']],
                              caliper)
     
-    print('For item 0, the 4 closest distances are (first item is self):')
-    for ds in distances[0,0:4]:
-        print('Element distance: {:4f}'.format(ds))
-    print('...')
+    # print('For item 0, the 4 closest distances are (first item is self):')
+    # for ds in distances[0,0:4]:
+    #     print('Element distance: {:4f}'.format(ds))
+    # print('...')
    
    
-    X['matched_element'] = X.reset_index().apply(perfom_matching_v2, axis = 1, args = (indexes, X))
+    # X['matched_element'] = X.reset_index().apply(perfom_matching_v2, axis = 1, args = (indexes, X))
     
-    females=X.loc[~X.matched_element.isna()]
-    males=X.loc[X.index.isin(X.matched_element)]
+    # females=X.loc[~X.matched_element.isna()]
+    # males=X.loc[X.index.isin(X.matched_element)]
 
-    pairs=pd.concat([males, females])
+    # pairs=pd.concat([males, females])
 
     pairs.to_csv(filename, index=False)
-    print('Saved ',os.path.join(config.DATAPATH,'pairs.csv'))
+    print('Saved ',filename)
 else:
-    pairs=pd.read_csv(filename)
+    pairs=load_pairs(filename)
 #%%
 
-if no_duplicates:
-    females_=pairs.loc[pairs.FEMALE==1]#.drop_duplicates('matched_element')
-    males_=pairs.loc[pairs.FEMALE==0]
-    pairs=pd.concat([males_, females_]).sample(frac=1)# to shuffle the data
-    pairs.index=range(len(pairs))
+# if no_duplicates:
+#     females_=pairs.loc[pairs.FEMALE==1]#.drop_duplicates('matched_element')
+#     males_=pairs.loc[pairs.FEMALE==0]
+#     pairs=pd.concat([males_, females_]).sample(frac=1)# to shuffle the data
+#     pairs.index=range(len(pairs))
 
 pairs['outcome']=pd.merge(pairs[['PATIENT_ID']],y,on='PATIENT_ID')[config.COLUMNS]
 #%%
-threshold= 0 if config.ALGORITHM=='logistic' else y[config.COLUMNS].mean()
+threshold= 0 if config.ALGORITHM=='logistic' else y[config.COLUMNS].mean().values[0]
 X['binary_outcome']=(y[config.COLUMNS]>threshold)
-pairs['binary_outcome']=(pairs.outcome>threshold.values[0])
+pairs['binary_outcome']=(pairs.outcome>threshold)
 if evaluate_matching:
+    print('Evaluating matches...')
     if plot:
+        import seaborn as sns
         sns.set(rc={'figure.figsize':(16,10)}, font_scale=1.3)
         # Density distribution of propensity score (logic) broken down by treatment status
         fig, ax = plt.subplots(1,1)
-        fig.suptitle('Density distribution plots for propensity score and logit(propensity score).')
-        sns.kdeplot(x = pairs.propensity_score, hue = pairs.FEMALE , ax = ax)
+        fig.suptitle('Density distribution plots for propensity score.')
+        sns.kdeplot(x = pairs.propensity_score.values, hue = pairs.FEMALE.values , ax = ax)
         ax.set_title('Propensity Score')  
         plt.savefig(os.path.join(config.FIGUREPATH,'two_propensity_densities_after.png'))
         plt.show()
@@ -190,10 +217,8 @@ if evaluate_matching:
             d = ( treated_metric.mean() - untreated_metric.mean() ) / np.sqrt(((treated_metric.count()-1)*treated_metric.std()**2 + (untreated_metric.count()-1)*untreated_metric.std()**2) / (treated_metric.count() + untreated_metric.count()-2))
             return d
         data = []
-        cols = original_columns
+        cols = [c for c in original_columns if not (c=='FEMALE') or (c=='PATIENT_ID')]
         for cl in cols:
-            if cl in np.array(data).ravel()[::3]:
-                continue
             data.append([cl,'before', cohenD(X,cl)])
             data.append([cl,'after', cohenD(pairs,cl)])
         
@@ -202,6 +227,12 @@ if evaluate_matching:
         sn_plot = sns.barplot(data = res, y = 'variable', x = 'effect_size', hue = 'matching', orient='h')
         sn_plot.set(title='Standardised Mean differences accross covariates before and after matching')
         sn_plot.figure.savefig(os.path.join(config.FIGUREPATH,"two_all_standardised_mean_differences.png"))
+        
+        
+        sns.set(rc={'figure.figsize':(10,60)}, font_scale=1.0)
+        sn_plot = sns.barplot(data = res, y = 'variable', x = res.effect_size.abs(), hue = 'matching', orient='h')
+        sn_plot.set(title='Absolute value of standardised mean differences accross covariates before and after matching')
+        sn_plot.figure.savefig(os.path.join(config.FIGUREPATH,"two_all_abs_standardised_mean_differences.png"))
     
     #%%
     # Evaluate the decrease in AUC
