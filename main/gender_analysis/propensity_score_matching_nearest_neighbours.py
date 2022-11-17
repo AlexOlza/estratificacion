@@ -58,6 +58,7 @@ def get_matching_pairs(treated_df, non_treated_df, caliper):
 
     nbrs = NearestNeighbors(n_neighbors=1,n_jobs=-1, radius=caliper).fit(non_treated_x)
     distances, indices = nbrs.kneighbors(treated_x) #who are the males closest to these females?
+    #since we find the closest male for each female, some males are selected more than once
     # print(distances)
     # print(indices)
     indices = indices.reshape(indices.shape[0]) #these are the indexes of the males
@@ -176,11 +177,11 @@ else:
     pairs=load_pairs(filename)
 #%%
 
-# if no_duplicates:
-#     females_=pairs.loc[pairs.FEMALE==1]#.drop_duplicates('matched_element')
-#     males_=pairs.loc[pairs.FEMALE==0]
-#     pairs=pd.concat([males_, females_]).sample(frac=1)# to shuffle the data
-#     pairs.index=range(len(pairs))
+if no_duplicates:
+    females_=pairs.loc[pairs.FEMALE==1].drop_duplicates('counterfactual')
+    males_=pairs.loc[pairs.FEMALE==0].drop_duplicates(original_columns)
+    pairs=pd.concat([males_, females_]).sample(frac=1)# to shuffle the data
+    pairs.index=range(len(pairs))
 
 pairs['outcome']=pd.merge(pairs[['PATIENT_ID']],y,on='PATIENT_ID')[config.COLUMNS]
 #%%
@@ -191,6 +192,7 @@ if evaluate_matching:
     print('Evaluating matches...')
     if plot:
         import seaborn as sns
+        from matplotlib import pyplot as plt
         sns.set(rc={'figure.figsize':(16,10)}, font_scale=1.3)
         # Density distribution of propensity score (logic) broken down by treatment status
         fig, ax = plt.subplots(1,1)
@@ -236,8 +238,8 @@ if evaluate_matching:
     
     #%%
     # Evaluate the decrease in AUC
-    logistic=LogisticRegression(penalty='none',max_iter=500,verbose=2,n_jobs=-1)
-    newfit=logistic.fit(pairs[original_columns].drop(['FEMALE','PATIENT_ID'], axis=1), pairs.FEMALE)
+    logistic=LogisticRegression(penalty='none',max_iter=300,verbose=2,n_jobs=-1)
+    newfit=logistic.fit(pairs[original_columns].drop(['FEMALE','PATIENT_ID'], axis=1), pairs.FEMALE.values.reshape(-1,1))
     new_propensity_scores=newfit.predict_proba(pairs[original_columns].drop(['FEMALE','PATIENT_ID'], axis=1))[:,1]
     new_AUC=roc_auc_score(pairs.FEMALE, new_propensity_scores)
     #%%
@@ -245,22 +247,33 @@ if evaluate_matching:
     print('After matching, AUC for new propensity scores: ', new_AUC)
 #%%
 overview = pairs[['outcome','FEMALE']].groupby(by = ['FEMALE']).aggregate([np.mean, np.var, np.std, 'count'])
-print(overview.to_markdown())
+print(overview)
 
 treated_outcome = overview['outcome']['mean'][1]
 treated_counterfactual_outcome = overview['outcome']['mean'][0]
 att = treated_outcome - treated_counterfactual_outcome
-print('The Average Treatment Effect is (ATE): {:.4f}'.format(att))
+print('The Average Treatment Effect in females is (ATT): {:.6f}'.format(att))
 #Vemos que, en una muestra de mujeres y hombres con las mismas 
 #características clínicas, las mujeres ingresan menos (ATT<0)
 #%%
+#%%
 overview2 = pairs[['binary_outcome','FEMALE']].groupby(by = ['FEMALE']).aggregate([np.mean, np.var, np.std, 'count'])
-print(overview2.to_markdown())
+print(overview2)
 treated_outcome = overview2['binary_outcome']['mean'][1]
 treated_counterfactual_outcome = overview2['binary_outcome']['mean'][0]
 att2 = treated_outcome - treated_counterfactual_outcome
 print('For presence/absence of outcome, the Average Treatment Effect in females is (ATT): {:.4f}'.format(att2))
 
+#%%
+""" same thing, same results, different code """
+pairs_restricted=pairs[['PATIENT_ID','FEMALE', 'counterfactual','outcome','binary_outcome']]
+counterfactual_df=pd.merge(pairs_restricted.loc[pairs_restricted.FEMALE==1],pairs_restricted.loc[pairs_restricted.FEMALE==0], right_on='PATIENT_ID', left_on='counterfactual',suffixes=('_f','_m'))
+assert all(counterfactual_df['PATIENT_ID_m']==counterfactual_df['counterfactual_f'])
+""" source: https://economics.stackexchange.com/questions/45335/what-is-the-difference-between-ate-and-att"""
+for binary, outtype in zip(['','binary_'], [counterfactual_df.outcome_f.dtype, int]):
+    counterfactual_df[f'{binary}tau']=counterfactual_df[f'{binary}outcome_f'].astype(outtype)-counterfactual_df[f'{binary}outcome_m'].astype(outtype)
+    ATT=counterfactual_df[f'{binary}tau'].mean()
+    print(binary, ATT)
 #%%
 ypairs=pairs.outcome
 x=pairs[original_columns].drop(['PATIENT_ID'],axis=1)
@@ -270,18 +283,8 @@ ypairs=ypairs.ravel()
 #%%
 if config.ALGORITHM=='logistic':
     estimator=LogisticRegression(penalty='none',max_iter=1000,verbose=0,n_jobs=-1)
-    predict=estimator.predict_proba
-    score=roc_auc_score
-    score2=average_precision_score
-    kwargs_score2={}
-    score_name,score2_name='AUC','AP'
 elif config.ALGORITHM=='linear':
-    estimator=LinearRegression(n_jobs=-1)
-    predict=estimator.predict
-    score=r2_score
-    score2=mean_squared_error
-    kwargs_score2={'squared':False}
-    score_name,score2_name='R2','RMSE'  
+    estimator=LinearRegression(n_jobs=-1)  
 if not Path(os.path.join(config.MODELPATH,f'{config.ALGORITHM}_psm.joblib')).is_file():    
     print('fitting ...')
     t0=time()
@@ -290,7 +293,18 @@ if not Path(os.path.join(config.MODELPATH,f'{config.ALGORITHM}_psm.joblib')).is_
     util.savemodel(config, fit,name=f'{config.ALGORITHM}_psm')
 else:
     fit=job.load(os.path.join(config.MODELPATH,f'{config.ALGORITHM}_psm.joblib'))
-
+if config.ALGORITHM=='logistic':
+    predict=fit.predict_proba
+    score=roc_auc_score
+    score2=average_precision_score
+    kwargs_score2={}
+    score_name,score2_name='AUC','AP'
+elif config.ALGORITHM=='linear':
+    predict=fit.predict
+    score=r2_score
+    score2=mean_squared_error
+    kwargs_score2={'squared':False}
+    score_name,score2_name='R2','RMSE' 
 #%%
 from sklearn.metrics import precision_recall_curve, PrecisionRecallDisplay
 def plot_pr(precision, recall, groupname,  y , pred):
@@ -305,9 +319,9 @@ if config.ALGORITHM=='logistic':
 else:
     yMale=pairs.loc[pairs.FEMALE==0].outcome
     yFemale=pairs.loc[pairs.FEMALE==1].outcome
-predsMale=fit.predict(x.loc[x.FEMALE==0])
-predsFemale=fit.predict(x.loc[x.FEMALE==1])
-
+predsMale=predict(x.loc[x.FEMALE==0])
+predsFemale=predict(x.loc[x.FEMALE==1])
+#%%
 fig, ax = plt.subplots(1,1)
 plot={}
 for sex, yy, preds in zip(['Male', 'Female'], [yMale, yFemale], [predsMale, predsFemale]):
@@ -325,4 +339,9 @@ for sex, yy, preds in zip(['Male', 'Female'], [yMale, yFemale], [predsMale, pred
 #%%
 if config.ALGORITHM=='logistic':
     for sex in ['Male', 'Female']:
+        sns.set(rc={'figure.figsize':(16,10)}, font_scale=1.3)
         plot[sex].plot(ax)
+        
+#%%
+betas={k:v for k,v in zip(fit.feature_names_in_,fit.coef_[0])}
+print('Coefficient for females: ',betas['FEMALE'])
