@@ -81,12 +81,18 @@ def generateCCSData(yr,  X,
     def needsManualRevision(failure, dictionary, appendix='',
                          diags=None,
                          exclude={}):      
-        already_there=pd.DataFrame({'CODE':[],'N':[]})
+        fname=f'gma_needs_manual_revision{appendix}.csv'
+        if Path(fname).is_file():
+            print('Reading ',fname)
+            already_there=pd.read_csv(fname)
+        else:
+            already_there=pd.DataFrame({'CODE':[],'N':[]})
         keys_to_revise=list(failure)
         
-        fname=f'gma_needs_manual_revision{appendix}.csv'
+        
+        
         if not all([k in already_there.CODE.values for k in keys_to_revise]):
-            # if mode=='w': writer.writerow(['CODE','N'])
+            
             new_codes={}
             for i,key in enumerate(keys_to_revise):
                 print(i)
@@ -146,7 +152,7 @@ def generateCCSData(yr,  X,
     #%%
     revision_9=needsManualRevision(missing_in_icd9, icd9, appendix='_icd9', diags=diags)
     #%%
-    revision_10=needsManualRevision(list(missing_in_icd10cm)[:10], icd10cm, appendix='_icd10', diags=diags)
+    revision_10=needsManualRevision(missing_in_icd10cm, icd10cm, appendix='_icd10', diags=diags)
 #%%
 if __name__=='__main__':
     import sys
