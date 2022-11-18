@@ -85,9 +85,9 @@ def load_pairs(filename,directory=config.DATAPATH):
     return(pairs)
 #%%
 np.random.seed(config.SEED)
-no_duplicates=False#eval(input('Drop duplicates? (True/False) '))
-plot=False#eval(input('Make plots? (True/False) '))
-evaluate_matching=True#eval(input('Evaluate matching? (True/False) '))
+no_duplicates=eval(input('Drop duplicates? (True/False) '))
+plot=eval(input('Make plots? (True/False) '))
+evaluate_matching=eval(input('Evaluate matching? (True/False) '))
 #%%
 X,y=getData(2016)
 original_columns=X.columns
@@ -252,7 +252,7 @@ print(overview)
 treated_outcome = overview['outcome']['mean'][1]
 treated_counterfactual_outcome = overview['outcome']['mean'][0]
 att = treated_outcome - treated_counterfactual_outcome
-print('The Average Treatment Effect in females is (ATT): {:.6f}'.format(att))
+print('The Average Treatment Effect in females is (ATT): {:.4f}'.format(att))
 #Vemos que, en una muestra de mujeres y hombres con las mismas 
 #características clínicas, las mujeres ingresan menos (ATT<0)
 #%%
@@ -322,8 +322,8 @@ else:
 predsMale=predict(x.loc[x.FEMALE==0])
 predsFemale=predict(x.loc[x.FEMALE==1])
 #%%
-fig, ax = plt.subplots(1,1)
-plot={}
+from matplotlib import pyplot as plt
+recall, PPV= {}, {}
 for sex, yy, preds in zip(['Male', 'Female'], [yMale, yFemale], [predsMale, predsFemale]):
     if config.ALGORITHM=='logistic':
         preds=preds[:,1]
@@ -334,14 +334,37 @@ for sex, yy, preds in zip(['Male', 'Female'], [yMale, yFemale], [predsMale, pred
     print(f'PPV_20000 {sex}= ', ppv)
     print(' ')
     if config.ALGORITHM=='logistic':
+        fig, ax = plt.subplots(1,1)
+        plot={}
         prec, rec, thre = precision_recall_curve(yy, preds)
         plot[sex]=plot_pr(prec, rec, sex, yy, preds).plot(ax)
+    if config.ALGORITHM=='linear':
+        recall[sex], PPV[sex]=[],[]
+        for K in range(1000,len(preds), 10000):
+            rec, ppv, _, _=performance(yy, preds, K=K)
+            recall[sex].append(rec) ; PPV[sex].append(ppv)
 #%%
 if config.ALGORITHM=='logistic':
     for sex in ['Male', 'Female']:
         sns.set(rc={'figure.figsize':(16,10)}, font_scale=1.3)
         plot[sex].plot(ax)
-        
+if config.ALGORITHM=='linear':
+    fig, (ax1, ax2) = plt.subplots(1,2)
+    # for sex in ['Male', 'Female']:  
+    ax1.plot(recall['Male'], recall['Female'])
+    ax1.set_ylabel('Male') ; ax1.set_xlabel('Female') ; ax1.set_title('Recall')
+    ax2.plot(PPV['Male'], PPV['Female']) ; ax2.set_title('PPV')
+    
+    for ax in (ax1,ax2):
+        lims = [
+        np.min([ax.get_xlim(), ax.get_ylim()]),  # min of both axes
+        np.max([ax.get_xlim(), ax.get_ylim()]),  # max of both axes
+    ]
+
+        # now plot both limits against eachother
+        ax.plot(lims, lims, 'k--', alpha=0.75, zorder=0)
+    plt.tight_layout()
 #%%
-betas={k:v for k,v in zip(fit.feature_names_in_,fit.coef_[0])}
+coefs=fit.coef_[0] if config.ALGORITHM=='logistic' else fit.coef_
+betas={k:v for k,v in zip(fit.feature_names_in_,coefs)}
 print('Coefficient for females: ',betas['FEMALE'])
