@@ -27,6 +27,9 @@ from dataManipulation.generarTablasIngresos import createYearlyDataFrames, loadI
 from dataManipulation.generarTablasVariables import prepare,resourceUsageDataFrames,load, create_fullacgfiles
 
 #%%
+fname1='gma_needs_manual_revision_icd9.csv'
+fname2='gma_needs_manual_revision_icd10.csv'
+#%%
 """ FUNCTIONS """
 def text_preprocessing(df, columns, mode):
     allowed=['icd9','icd10cm','diags']
@@ -69,7 +72,7 @@ def missingDX(dic,diags):
     diagsCodes=set(diags.CODE)
     dictCodes=set(dic.CODE)
     return(diagsCodes-dictCodes)
-def needsManualRevision(failure, dictionary, appendix='',
+def needsManualRevision(failure, dictionary, appendix='', 
                      diags=None,
                      exclude={}):      
     fname=f'gma_needs_manual_revision{appendix}.csv'
@@ -96,52 +99,68 @@ def needsManualRevision(failure, dictionary, appendix='',
         already_there.to_csv(fname, index=False)
     return(already_there)
 #%%
-""" READ EVERYTHING """ 
-icd10cm=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,config.ICDTOCCSFILES['ICD10CM']),
-                    dtype=str,)
-icd9=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,config.ICDTOCCSFILES['ICD9']), dtype=str,
-                 usecols=['ICD-9-CM CODE','CCS LVL 1 LABEL','CCS LVL 2 LABEL',
-                          'CCS LVL 3 LABEL','CCS LVL 4 LABEL'])
-diags=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,config.ICDFILES[2016]),
-                  usecols=['PATIENT_ID','CIE_VERSION','CIE_CODE'],
-                  index_col=False)
-diags2=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,config.ICDFILES[2017]),
-                  usecols=['PATIENT_ID','CIE_VERSION','CIE_CODE'],
-                  index_col=False)
-#%%
-""" TEXT PREPROCESSING """
-icd10cm=text_preprocessing(icd10cm,
-                           [c for c in icd10cm if ((not 'DESCRIPTION' in c) and (not 'LABEL' in c))],
-                           mode='icd10cm')
-icd9=text_preprocessing(icd9, [c for c in icd9 if (not 'LABEL' in c)],mode='icd9')
-diags=text_preprocessing(diags, ['CIE_VERSION','CIE_CODE'],mode='diags')
-diags2=text_preprocessing(diags2, ['CIE_VERSION','CIE_CODE'],mode='diags')
-#%%
-diags=pd.concat([diags, diags2])
-#%%
-""" ICD 10 CM ASSERTIONS"""
-#Check no null values at reading time
-assert all(icd10cm.isnull().sum()==0), f'Null values encountered when reading {config.ICDTOCCSFILES["ICD10CM"]}'
-assert icd10cm.CCS.isnull().sum()==0, 'Some codes in the ICD10CM dictionary have not been assigned a CCS :('
+if (not Path(fname1).is_file()) or (not Path(fname1).is_file()):
+    """ READ EVERYTHING """ 
+    icd10cm=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,config.ICDTOCCSFILES['ICD10CM']),
+                        dtype=str,)
+    icd9=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,config.ICDTOCCSFILES['ICD9']), dtype=str,
+                     usecols=['ICD-9-CM CODE','CCS LVL 1 LABEL','CCS LVL 2 LABEL',
+                              'CCS LVL 3 LABEL','CCS LVL 4 LABEL'])
+    diags=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,config.ICDFILES[2016]),
+                      usecols=['PATIENT_ID','CIE_VERSION','CIE_CODE'],
+                      index_col=False)
+    diags2=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,config.ICDFILES[2017]),
+                      usecols=['PATIENT_ID','CIE_VERSION','CIE_CODE'],
+                      index_col=False)
+    #%%
+    """ TEXT PREPROCESSING """
+    icd10cm=text_preprocessing(icd10cm,
+                               [c for c in icd10cm if ((not 'DESCRIPTION' in c) and (not 'LABEL' in c))],
+                               mode='icd10cm')
+    icd9=text_preprocessing(icd9, [c for c in icd9 if (not 'LABEL' in c)],mode='icd9')
+    diags=text_preprocessing(diags, ['CIE_VERSION','CIE_CODE'],mode='diags')
+    diags2=text_preprocessing(diags2, ['CIE_VERSION','CIE_CODE'],mode='diags')
+    #%%
+    diags=pd.concat([diags, diags2])
+    #%%
+    """ ICD 10 CM ASSERTIONS"""
+    #Check no null values at reading time
+    assert all(icd10cm.isnull().sum()==0), f'Null values encountered when reading {config.ICDTOCCSFILES["ICD10CM"]}'
+    assert icd10cm.CCS.isnull().sum()==0, 'Some codes in the ICD10CM dictionary have not been assigned a CCS :('
+    
+    """ ICD 9 ASSERTIONS"""
+    #Check no null values at reading time
+    assert all(icd9.isnull().sum()==0), f'Null values encountered when reading {config.ICDTOCCSFILES["ICD9"]}' 
+    assert icd9.CCS.describe().isnull().sum()==0, 'Some codes in the ICD9 dictionary have not been assigned a CCS :('
+    
+    """ DIAGNOSES ASSERTIONS""" 
+    #Check null values
+    assert all(diags.isnull().sum()==0), 'Null values encountered after cleaning up config.ICDFILES'
+    
+    #%%
+    """ PERFORM MANUAL REVISION ON MISSING CODES """
+    missing_in_icd9=missingDX(icd9,diags.loc[diags.CIE_VERSION.astype(str).str.startswith('9')])
+    missing_in_icd10cm=missingDX(icd10cm,diags.loc[diags.CIE_VERSION.astype(str).str.startswith('10')])
+    print('Missing quantity ICD9: ', len(missing_in_icd9))
+    print('Missing quantity ICD10: ', len(missing_in_icd10cm))
 
-""" ICD 9 ASSERTIONS"""
-#Check no null values at reading time
-assert all(icd9.isnull().sum()==0), f'Null values encountered when reading {config.ICDTOCCSFILES["ICD9"]}' 
-assert icd9.CCS.describe().isnull().sum()==0, 'Some codes in the ICD9 dictionary have not been assigned a CCS :('
+    #%%
+    revision_9=needsManualRevision(missing_in_icd9, icd9, appendix='_icd9', diags=diags)
+    #%%
+    revision_10=needsManualRevision(missing_in_icd10cm, icd10cm, appendix='_icd10', diags=diags)
 
-""" DIAGNOSES ASSERTIONS""" 
-#Check null values
-assert all(diags.isnull().sum()==0), f'Null values encountered after cleaning up {config.ICDFILES[yr]}'
-
+else:
+    revision_9=pd.read_csv(fname1)
+    revision_10=pd.read_csv(fname2)
 #%%
-""" PERFORM MANUAL REVISION ON MISSING CODES """
-missing_in_icd9=missingDX(icd9,diags.loc[diags.CIE_VERSION.astype(str).str.startswith('9')])
-missing_in_icd10cm=missingDX(icd10cm,diags.loc[diags.CIE_VERSION.astype(str).str.startswith('10')])
-print('Missing quantity ICD9: ', len(missing_in_icd9))
-print('Missing quantity ICD10: ', len(missing_in_icd10cm))
+f10=os.path.join(config.INDISPENSABLEDATAPATH,f'ccs/manually_revised_icd10.csv')
+f9=os.path.join(config.INDISPENSABLEDATAPATH,f'ccs/manually_revised_icd9.csv')
+manual_revision_ccs_9=pd.read_csv(f9, usecols=['CODE','NEW_CODE'])
+manual_revision_ccs_10=pd.read_csv(f10, usecols=['CODE','NEW_CODE'])
 
-#%%
-revision_9=needsManualRevision(missing_in_icd9, icd9, appendix='_icd9', diags=diags)
-#%%
-revision_10=needsManualRevision(missing_in_icd10cm, icd10cm, appendix='_icd10', diags=diags)
 
+revision_9=pd.merge(revision_9,manual_revision_ccs_9,on='CODE', how='left').drop_duplicates('CODE')
+revision_10=pd.merge(revision_10,manual_revision_ccs_10,on='CODE', how='left').drop_duplicates('CODE')
+
+print(f'ICD 9: {revision_9.NEW_CODE.isna().sum()} codes to revise')
+print(f'ICD 10: {revision_10.NEW_CODE.isna().sum()} codes to revise')
