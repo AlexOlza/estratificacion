@@ -341,7 +341,7 @@ for sex, yy, preds in zip(['Male', 'Female'], [yMale, yFemale], [predsMale, pred
     if config.ALGORITHM=='linear':
         recall[sex], PPV[sex]=[],[]
         for K in range(1000,len(preds), 10000):
-            rec, ppv, _, _=performance(yy, preds, K=K)
+            rec, ppv, _, _=performance(yy, preds, K=K, verbose=False)
             recall[sex].append(rec) ; PPV[sex].append(ppv)
 #%%
 if config.ALGORITHM=='logistic':
