@@ -164,3 +164,7 @@ revision_10=pd.merge(revision_10,manual_revision_ccs_10,on='CODE', how='left').d
 
 print(f'ICD 9: {revision_9.NEW_CODE.isna().sum()} codes to revise')
 print(f'ICD 10: {revision_10.NEW_CODE.isna().sum()} codes to revise')
+
+#%%
+revision_9[['N','CODE','NEW_CODE']].to_csv(fname1, index=False)
+revision_10[['N','CODE','NEW_CODE']].to_csv(fname2, index=False)
