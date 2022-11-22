@@ -98,14 +98,60 @@ def needsManualRevision(failure, dictionary, appendix='',
         already_there=already_there.sort_values('N',ascending=False)
         already_there.to_csv(fname, index=False)
     return(already_there)
+
+def guessingCCS(missingDX, dictionary):
+    success, failure={},{}
+    for dx in missingDX.CODE:
+        print(dx)
+        if not isinstance(dx,str):
+            continue
+        if dx=='ONCOLO':
+            continue
+        i=0
+        options=list(dictionary.loc[dictionary.CODE.str.startswith(dx.upper())].CCS.unique())
+        code=dx
+        while (len(options)==0) and (i<=len(dx)):
+            i+=1
+            code=dx[:-i]
+            options=list(dictionary.loc[dictionary.CODE.str.startswith(code)].CCS.unique())
+
+        if '259' in options and len(options)>=2: options.remove('259') #CCS 259 is for residual unclassified codes
+        if len(options)==1:
+            success[(dx, code)]=options[0]
+        else:
+            failure[(dx, code)]=options
+        # break
+    print(failure)
+    return(success, failure)
+def assign_success(success, dic):
+    if len(success.keys())>0:
+        assign_success={'CODE':[k[0] for k in success.keys()], 'CCS':[v for v in success.values()]}
+        assign_success['CODE'].append('ONCOLO')
+        assign_success['CCS'].append('ONCOLO')
+        dic= pd.concat([dic, pd.DataFrame(assign_success)],ignore_index=True)
+    return dic
+def suggestCCS(revisiondf, success):   
+    success_v2={k[0]:v for k,v in success.items()}
+    revisiondf['CCS_suggestion']=np.nan
+    for code in revisiondf.CODE:
+        if code in success_v2.keys():
+            revisiondf.loc[revisiondf.CODE==code,'CCS_suggestion']=success_v2[code]
+    return revisiondf
+            
+#%%
+icd10cm=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,config.ICDTOCCSFILES['ICD10CM']),
+                    dtype=str,)
+icd9=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,config.ICDTOCCSFILES['ICD9']), dtype=str,
+                 usecols=['ICD-9-CM CODE','CCS LVL 1 LABEL','CCS LVL 2 LABEL',
+                          'CCS LVL 3 LABEL','CCS LVL 4 LABEL'])
+icd10cm=text_preprocessing(icd10cm,
+                           [c for c in icd10cm if ((not 'DESCRIPTION' in c) and (not 'LABEL' in c))],
+                           mode='icd10cm')
+icd9=text_preprocessing(icd9, [c for c in icd9 if (not 'LABEL' in c)],mode='icd9')
 #%%
 if (not Path(fname1).is_file()) or (not Path(fname1).is_file()):
     """ READ EVERYTHING """ 
-    icd10cm=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,config.ICDTOCCSFILES['ICD10CM']),
-                        dtype=str,)
-    icd9=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,config.ICDTOCCSFILES['ICD9']), dtype=str,
-                     usecols=['ICD-9-CM CODE','CCS LVL 1 LABEL','CCS LVL 2 LABEL',
-                              'CCS LVL 3 LABEL','CCS LVL 4 LABEL'])
+    
     diags=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,config.ICDFILES[2016]),
                       usecols=['PATIENT_ID','CIE_VERSION','CIE_CODE'],
                       index_col=False)
@@ -114,10 +160,7 @@ if (not Path(fname1).is_file()) or (not Path(fname1).is_file()):
                       index_col=False)
     #%%
     """ TEXT PREPROCESSING """
-    icd10cm=text_preprocessing(icd10cm,
-                               [c for c in icd10cm if ((not 'DESCRIPTION' in c) and (not 'LABEL' in c))],
-                               mode='icd10cm')
-    icd9=text_preprocessing(icd9, [c for c in icd9 if (not 'LABEL' in c)],mode='icd9')
+    
     diags=text_preprocessing(diags, ['CIE_VERSION','CIE_CODE'],mode='diags')
     diags2=text_preprocessing(diags2, ['CIE_VERSION','CIE_CODE'],mode='diags')
     #%%
@@ -148,23 +191,36 @@ if (not Path(fname1).is_file()) or (not Path(fname1).is_file()):
     revision_9=needsManualRevision(missing_in_icd9, icd9, appendix='_icd9', diags=diags)
     #%%
     revision_10=needsManualRevision(missing_in_icd10cm, icd10cm, appendix='_icd10', diags=diags)
+    f10=os.path.join(config.INDISPENSABLEDATAPATH,f'ccs/manually_revised_icd10.csv')
+    f9=os.path.join(config.INDISPENSABLEDATAPATH,f'ccs/manually_revised_icd9.csv')
+    manual_revision_ccs_9=pd.read_csv(f9, usecols=['CODE','NEW_CODE'])
+    manual_revision_ccs_10=pd.read_csv(f10, usecols=['CODE','NEW_CODE'])
 
+
+    revision_9=pd.merge(revision_9,manual_revision_ccs_9,on='CODE', how='left').drop_duplicates('CODE')
+    revision_10=pd.merge(revision_10,manual_revision_ccs_10,on='CODE', how='left').drop_duplicates('CODE')
+
+    print(f'ICD 9: {revision_9.NEW_CODE.isna().sum()} codes to revise')
+    print(f'ICD 10: {revision_10.NEW_CODE.isna().sum()} codes to revise')
+
+    #%%
+    revision_9[['N','CODE','NEW_CODE']].to_csv(fname1, index=False)
+    revision_10[['N','CODE','NEW_CODE']].to_csv(fname2, index=False)
 else:
     revision_9=pd.read_csv(fname1)
     revision_10=pd.read_csv(fname2)
 #%%
-f10=os.path.join(config.INDISPENSABLEDATAPATH,f'ccs/manually_revised_icd10.csv')
-f9=os.path.join(config.INDISPENSABLEDATAPATH,f'ccs/manually_revised_icd9.csv')
-manual_revision_ccs_9=pd.read_csv(f9, usecols=['CODE','NEW_CODE'])
-manual_revision_ccs_10=pd.read_csv(f10, usecols=['CODE','NEW_CODE'])
 
-
-revision_9=pd.merge(revision_9,manual_revision_ccs_9,on='CODE', how='left').drop_duplicates('CODE')
-revision_10=pd.merge(revision_10,manual_revision_ccs_10,on='CODE', how='left').drop_duplicates('CODE')
-
-print(f'ICD 9: {revision_9.NEW_CODE.isna().sum()} codes to revise')
-print(f'ICD 10: {revision_10.NEW_CODE.isna().sum()} codes to revise')
-
+success9, failure9=guessingCCS(revision_9,icd9)
+icd9=assign_success(success9,icd9)
+revision_9_bis=suggestCCS(revision_9, success9)
+df=revision_9_bis.loc[(revision_9_bis.NEW_CODE.isna())].loc[(revision_9_bis.CCS_suggestion.isna())]
+print(f'Lacking CCS suggestions for {len(df)} codes')
+revision_9_bis.to_csv('revision_9_with_ccs_suggestions.csv', index=False)
 #%%
-revision_9[['N','CODE','NEW_CODE']].to_csv(fname1, index=False)
-revision_10[['N','CODE','NEW_CODE']].to_csv(fname2, index=False)
+success10, failure10=guessingCCS(revision_10,icd10cm)
+icd10=assign_success(success10,icd10cm)
+revision_10_bis=suggestCCS(revision_10, success10)
+df=revision_10_bis.loc[(revision_10_bis.NEW_CODE.isna())].loc[(revision_10_bis.CCS_suggestion.isna())]
+print(f'Lacking CCS suggestions for {len(df)} codes')
+revision_10_bis.to_csv('revision_10_with_ccs_suggestions.csv', index=False)
