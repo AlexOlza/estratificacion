@@ -97,7 +97,7 @@ def build_model(hp):
   
     # Tune the learning rate for the optimizer
     # Choose an optimal value from 0.01, 0.001, or 0.0001
-    hp_learning_rate = hp.Choice('learning_rate', values=[1e-2, 1e-3, 1e-4])
+    hp_learning_rate = hp.Choice('learning_rate', values=[1e-5, 1e-3, 1e-4])
 
     #hidden layers
     for i in range(1,n_hidden+1):

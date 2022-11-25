@@ -156,7 +156,7 @@ import numpy as np
 from sklearn.metrics import confusion_matrix
 
 
-def performance(obs, pred, K, computemetrics=True):
+def performance(obs, pred, K, computemetrics=True, verbose=True):
     orderedPred = sorted(pred, reverse=True)
     orderedObs = sorted(obs, reverse=True)
     cutoff = orderedPred[K - 1]
@@ -169,15 +169,15 @@ def performance(obs, pred, K, computemetrics=True):
     else:
         newobs = np.where(obs >= 1, 1, 0)  # Whether the patient had ANY admission
     c = confusion_matrix(y_true=newobs, y_pred=newpred)
-    print(c)
+    if verbose: print(c)
     tn, fp, fn, tp = c.ravel()
     if not computemetrics:
         return (tn, fp, fn, tp)
-    print(' tn, fp, fn, tp =', tn, fp, fn, tp)
+    if verbose: print(' tn, fp, fn, tp =', tn, fp, fn, tp)
     recall = c[1][1] / (c[1][0] + c[1][1])
     ppv = c[1][1] / (c[0][1] + c[1][1])
     specificity = tn / (tn + fp)
-    print('Recall, PPV, Spec = ', recall, ppv, specificity)
+    if verbose: print('Recall, PPV, Spec = ', recall, ppv, specificity)
     return (recall, ppv, specificity, newpred)
 
 
