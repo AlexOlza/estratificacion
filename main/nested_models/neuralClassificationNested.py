@@ -80,7 +80,7 @@ if (not 'ACG' in config.PREDICTORREGEX):
 else: 
     CCSPHARMA=None
 
-variables={'Demo':'PATIENT_ID|FEMALE|AGE_[0-9]+$',
+variables={#'Demo':'PATIENT_ID|FEMALE|AGE_[0-9]+$',
            'DemoDiag':'PATIENT_ID|FEMALE|AGE_[0-9]+$|EDC_' if 'ACG' in config.PREDICTORREGEX else 'PATIENT_ID|FEMALE|AGE_[0-9]+$|CCS',
            'DemoDiagPharmaBinary': CCSPHARMA,
            'DemoDiagPharma':'PATIENT_ID|FEMALE|AGE_[0-9]+$|EDC_|RXMG_' if 'ACG' in config.PREDICTORREGEX else CCSPHARMA,
