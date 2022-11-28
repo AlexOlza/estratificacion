@@ -203,10 +203,6 @@ def generateCCSData(yr,  X,
         Xx=pd.merge(X, Xccs, on=cols_to_merge, how='outer')
         if PHARMACY:
             Xx=generatePharmacyData(yr,  Xx,binarize=binarize **kwargs)
-        # if binarize:
-        #     predictors=[c for c in Xx if not c=='PATIENT_ID']
-        #     print('Binarizing CCS')
-        #     Xx[predictors]=(Xx[predictors]>0).astype(int)
         return Xx
     #%%
     """ FUNCTIONS """

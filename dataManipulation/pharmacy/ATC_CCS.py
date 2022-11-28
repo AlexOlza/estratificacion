@@ -28,7 +28,7 @@ def ATC_drug_group_descriptive(rx_with_drug_group, yr):
     df=pd.merge(unique_rx_with_group,number_of_cases,on='CODE').sort_values('N', ascending=False)
     df.to_excel(f'{config.ROOTPATH}dataManipulation/pharmacy/pharmacy_descriptive_{yr}.xlsx')
 
-def generatePharmacyData(yr,  X, binarize=False,
+def generatePharmacyData(yr,  X,
             **kwargs):
     
     """ CHECK IF THE MATRIX IS ALREADY ON DISK """
@@ -43,11 +43,7 @@ def generatePharmacyData(yr,  X, binarize=False,
         assert 'PATIENT_ID' in X.columns
         assert 'PATIENT_ID' in Xatc.columns
         cols_to_merge=['PATIENT_ID']
-        # if binarize:
-        #     predictors=[c for c in Xatc if not c=='PATIENT_ID']
-        #     print('Binarizing pharmacy...')
-        #     Xatc[predictors]=(Xatc[predictors]>0).astype(int)
-        #     print('binarized')
+
         Xx=pd.merge(X, Xatc, on=cols_to_merge, how='inner')
         return Xx
 
