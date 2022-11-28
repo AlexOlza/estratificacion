@@ -210,17 +210,43 @@ else:
     revision_9=pd.read_csv(fname1)
     revision_10=pd.read_csv(fname2)
 #%%
-
-success9, failure9=guessingCCS(revision_9,icd9)
-icd9=assign_success(success9,icd9)
-revision_9_bis=suggestCCS(revision_9, success9)
-df=revision_9_bis.loc[(revision_9_bis.NEW_CODE.isna())].loc[(revision_9_bis.CCS_suggestion.isna())]
-print(f'Lacking CCS suggestions for {len(df)} codes')
-revision_9_bis.to_csv('revision_9_with_ccs_suggestions.csv', index=False)
+rev9fname='revision_9_with_ccs_suggestions.csv'
+rev10fname='revision_10_with_ccs_suggestions.csv'
 #%%
-success10, failure10=guessingCCS(revision_10,icd10cm)
-icd10=assign_success(success10,icd10cm)
-revision_10_bis=suggestCCS(revision_10, success10)
-df=revision_10_bis.loc[(revision_10_bis.NEW_CODE.isna())].loc[(revision_10_bis.CCS_suggestion.isna())]
-print(f'Lacking CCS suggestions for {len(df)} codes')
-revision_10_bis.to_csv('revision_10_with_ccs_suggestions.csv', index=False)
+if not Path(rev9fname).is_file():
+    success9, failure9=guessingCCS(revision_9,icd9)
+    icd9=assign_success(success9,icd9)
+    revision_9_bis=suggestCCS(revision_9, success9)
+    df=revision_9_bis.loc[(revision_9_bis.NEW_CODE.isna())].loc[(revision_9_bis.CCS_suggestion.isna())]
+    print(f'Lacking CCS suggestions for {len(df)} codes')
+    revision_9_bis.to_csv(rev9fname, index=False)
+else:
+    revision_9_bis=pd.read_csv(rev9fname)
+#%%
+if not Path(rev10fname).is_file():
+    success10, failure10=guessingCCS(revision_10,icd10cm)
+    icd10=assign_success(success10,icd10cm)
+    revision_10_bis=suggestCCS(revision_10, success10)
+    df=revision_10_bis.loc[(revision_10_bis.NEW_CODE.isna())].loc[(revision_10_bis.CCS_suggestion.isna())]
+    print(f'Lacking CCS suggestions for {len(df)} codes')
+    revision_10_bis.to_csv('revision_10_with_ccs_suggestions.csv', index=False)
+else:
+    revision_10_bis=pd.read_csv(rev10fname)
+    
+
+#%%
+last_revision_9=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,'ccs','diccionario_cie9_previo_GMA.csv'))
+last_revision_9['CODE']=last_revision_9.cie9
+revision_9_bis=pd.merge(revision_9_bis, last_revision_9, on='CODE', how='left')
+#%%
+revision_9_bis['CODE_Edu']=np.where(revision_9_bis.newcie9.isna(),revision_9_bis.CODE,revision_9_bis.newcie9)
+#%%
+revision_9_bis=revision_9_bis[['N','CODE_Edu','CCS_suggestion']]
+revision_9_bis=revision_9_bis.rename(columns={'CODE_Edu':'CODE'})
+missing9=missingDX(icd9, revision_9_bis)
+#%%
+revision_9_bis_withccs=pd.merge(revision_9_bis,icd9[['CODE','CCS']],on='CODE', how='left')
+#%%
+lo_que_cuelga=revision_9_bis_withccs.loc[~revision_9_bis_withccs.CCS_suggestion.isna()]
+no_coincide=lo_que_cuelga.loc[lo_que_cuelga.CCS_suggestion.astype(float)!=lo_que_cuelga.CCS.astype(float)].dropna(subset=['CCS','CCS_suggestion'])
+no_coincide.to_csv('no_coincide_ccd_cie9.csv', index=False)
