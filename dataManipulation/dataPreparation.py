@@ -158,7 +158,10 @@ def getData(yr,columns=config.COLUMNS,
     print('getData time: ',time.time()-t0)
     finalcols=listIntersection(data.columns,pred16.columns)
     X,y=data[finalcols].reindex(sorted(data[finalcols].columns), axis=1),data[cols]
-       
+    if binarize_ccs:    
+        predictors=[c for c in X if not c=='PATIENT_ID']
+        print('Binarizing')
+        X[predictors]=(X[predictors]>0).astype(np.int8)
     return(X[finalcols].reindex(sorted(data[finalcols].columns), axis=1),y[cols])
 
 def generateCCSData(yr,  X,
@@ -200,10 +203,10 @@ def generateCCSData(yr,  X,
         Xx=pd.merge(X, Xccs, on=cols_to_merge, how='outer')
         if PHARMACY:
             Xx=generatePharmacyData(yr,  Xx,binarize=binarize **kwargs)
-        if binarize:
-            predictors=[c for c in Xx if not c=='PATIENT_ID']
-            print('Binarizing CCS')
-            Xx[predictors]=(Xx[predictors]>0).astype(int)
+        # if binarize:
+        #     predictors=[c for c in Xx if not c=='PATIENT_ID']
+        #     print('Binarizing CCS')
+        #     Xx[predictors]=(Xx[predictors]>0).astype(int)
         return Xx
     #%%
     """ FUNCTIONS """
