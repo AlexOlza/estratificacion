@@ -44,7 +44,9 @@ def generatePharmacyData(yr,  X, binarize=False,
         assert 'PATIENT_ID' in Xatc.columns
         cols_to_merge=['PATIENT_ID']
         if binarize:
-            Xatc=(Xatc>0).astype(int)
+            predictors=[c for c in Xatc if not c=='PATIENT_ID']
+            print('Binarizing pharmacy...')
+            Xatc[predictors]=(Xatc[predictors]>0).astype(int)
         Xx=pd.merge(X, Xatc, on=cols_to_merge, how='inner')
         return Xx
 
