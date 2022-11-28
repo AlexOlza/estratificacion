@@ -235,13 +235,14 @@ else:
     
 
 #%%
-last_revision_9=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,'ccs','diccionario_cie9_previo_GMA.csv'))
+last_revision_9=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,'ccs','diccionario_cie9_previo_GMA_V2.csv'))
 last_revision_9['CODE']=last_revision_9.cie9
 revision_9_bis=pd.merge(revision_9_bis, last_revision_9, on='CODE', how='left')
 #%%
 revision_9_bis['CODE_Edu']=np.where(revision_9_bis.newcie9.isna(),revision_9_bis.CODE,revision_9_bis.newcie9)
+revision_9_bis['CODE_original']=revision_9_bis.CODE
 #%%
-revision_9_bis=revision_9_bis[['N','CODE_Edu','CCS_suggestion']]
+revision_9_bis=revision_9_bis[['N', 'CODE_original','CODE_Edu','CCS_suggestion']]
 revision_9_bis=revision_9_bis.rename(columns={'CODE_Edu':'CODE'})
 missing9=missingDX(icd9, revision_9_bis)
 #%%
@@ -249,4 +250,4 @@ revision_9_bis_withccs=pd.merge(revision_9_bis,icd9[['CODE','CCS']],on='CODE', h
 #%%
 lo_que_cuelga=revision_9_bis_withccs.loc[~revision_9_bis_withccs.CCS_suggestion.isna()]
 no_coincide=lo_que_cuelga.loc[lo_que_cuelga.CCS_suggestion.astype(float)!=lo_que_cuelga.CCS.astype(float)].dropna(subset=['CCS','CCS_suggestion'])
-no_coincide.to_csv('no_coincide_ccd_cie9.csv', index=False)
+no_coincide.to_csv('no_coincide_ccs_cie9.csv', index=False)
