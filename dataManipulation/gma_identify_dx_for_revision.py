@@ -248,7 +248,7 @@ lo_que_cuelga=revision_9_bis_withccs.loc[~revision_9_bis_withccs.CCS_suggestion.
 no_coincide=lo_que_cuelga.loc[lo_que_cuelga.CCS_suggestion.astype(float)!=lo_que_cuelga.CCS.astype(float)].dropna(subset=['CCS','CCS_suggestion'])
 no_coincide.to_csv('no_coincide_ccs_cie9.csv', index=False)
 #%%
-last_revision_10=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,'ccs','diccionario_cie10_previo_GMA.csv'))
+last_revision_10=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,'ccs','diccionario_cie10_previo_GMA_V2.csv'))
 last_revision_10['CODE']=last_revision_10.cie10
 revision_10_bis=pd.merge(revision_10_bis, last_revision_10, on='CODE', how='left')
 #%%
@@ -264,3 +264,44 @@ revision_10_bis_withccs=pd.merge(revision_10_bis,icd10cm[['CODE','CCS']],on='COD
 lo_que_cuelga=revision_10_bis_withccs.loc[~revision_10_bis_withccs.CCS_suggestion.isna()]
 no_coincide=lo_que_cuelga.loc[lo_que_cuelga.CCS_suggestion.astype(float)!=lo_que_cuelga.CCS.astype(float)].dropna(subset=['CCS','CCS_suggestion'])
 no_coincide.to_csv('no_coincide_ccs_cie10.csv', index=False)
+
+#%%
+"""
+CHANGE THE BIG DIAGNOSIS DATAFRAME, 
+MODIFYING CODES PRESENT IN CODE_original WITH THE
+CORRESPONDING MANUALLY REVISED NEW CODE
+"""
+
+# step 1: read and preprocess diagnoses
+diags=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,config.ICDFILES[2016]),
+                  usecols=['PATIENT_ID','CIE_VERSION','CIE_CODE'],
+                  index_col=False)
+diags2=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,config.ICDFILES[2017]),
+                  usecols=['PATIENT_ID','CIE_VERSION','CIE_CODE'],
+                  index_col=False)
+#%%
+""" TEXT PREPROCESSING """
+
+diags=text_preprocessing(diags, ['CIE_VERSION','CIE_CODE'],mode='diags')
+diags2=text_preprocessing(diags2, ['CIE_VERSION','CIE_CODE'],mode='diags')
+#%%
+correct_diags_2016,correct_diags_2017=pd.DataFrame(),pd.DataFrame()
+for cie_version in ['9','10']:
+    cie92016=diags.loc[diags.CIE_VERSION==cie_version]
+    
+    cie92016=pd.merge(cie92016,revision_9_bis, left_on='CODE',right_on='CODE_original',how='left')
+    
+    cie92016['CODE']=np.where(cie92016.CODE_y.isna(),cie92016.CODE_x,cie92016.CODE_y)
+    cie92016=cie92016[['PATIENT_ID', 'CIE_VERSION', 'CODE']]
+    correct_diags_2016=pd.concat([correct_diags_2016,cie92016])
+#%%
+for cie_version in ['9','10']:
+    cie92017=diags2.loc[diags2.CIE_VERSION==cie_version]
+    
+    cie92017=pd.merge(cie92017,revision_10_bis, left_on='CODE',right_on='CODE_original',how='left')
+    
+    cie92017['CODE']=np.where(cie92017.CODE_y.isna(),cie92017.CODE_x,cie92017.CODE_y)
+    cie92017=cie92017[['PATIENT_ID', 'CIE_VERSION', 'CODE']]
+    correct_diags_2017=pd.concat([correct_diags_2017,cie92017])
+    
+#%%
