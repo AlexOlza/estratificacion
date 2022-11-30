@@ -66,8 +66,8 @@ name= args.model_name if hasattr(args,'model_name') else config.ALGORITHM
 epochs=args.epochs if hasattr(args, 'epochs') else 500
 tuner=args.tuner if hasattr(args, 'tuner') else 'bayesian'
 #%%
-print(kt.__version__)
-assert False
+print('KerasTuner version: ', kt.__version__)
+
 """ BEGGINNING """
 
 X,y=getData(2016)
@@ -83,12 +83,22 @@ if (not 'ACG' in config.PREDICTORREGEX):
 else: 
     CCSPHARMA=None
 
-variables={#'Demo':'PATIENT_ID|FEMALE|AGE_[0-9]+$',
-           'DemoDiag':'PATIENT_ID|FEMALE|AGE_[0-9]+$|EDC_' if 'ACG' in config.PREDICTORREGEX else 'PATIENT_ID|FEMALE|AGE_[0-9]+$|CCS',
-           #'DemoDiagPharmaBinary': CCSPHARMA,
-           'DemoDiagPharma':'PATIENT_ID|FEMALE|AGE_[0-9]+$|EDC_|RXMG_' if 'ACG' in config.PREDICTORREGEX else CCSPHARMA,
-           'DemoDiagPharmaIsomorb':'PATIENT_ID|FEMALE|AGE_[0-9]+$|EDC_(?!NUR11|RES10)|RXMG_(?!ZZZX000)|ACG_' if 'ACG' in config.PREDICTORREGEX else None
-           }
+binarize= False if not config.hasattr('BINARIZE_CCS') else config.BINARIZE_CCS
+
+if binarize:
+    variables={'Demo':None,
+               'DemoDiag':'PATIENT_ID|FEMALE|AGE_[0-9]+$|EDC_' if 'ACG' in config.PREDICTORREGEX else 'PATIENT_ID|FEMALE|AGE_[0-9]+$|CCS',
+               'DemoDiagPharmaBinary': None,
+               'DemoDiagPharma':'PATIENT_ID|FEMALE|AGE_[0-9]+$|EDC_|RXMG_' if 'ACG' in config.PREDICTORREGEX else CCSPHARMA,
+               'DemoDiagPharmaIsomorb':'PATIENT_ID|FEMALE|AGE_[0-9]+$|EDC_(?!NUR11|RES10)|RXMG_(?!ZZZX000)|ACG_' if 'ACG' in config.PREDICTORREGEX else None
+               }
+else:
+    variables={'Demo':'PATIENT_ID|FEMALE|AGE_[0-9]+$',
+               'DemoDiag':'PATIENT_ID|FEMALE|AGE_[0-9]+$|EDC_' if 'ACG' in config.PREDICTORREGEX else 'PATIENT_ID|FEMALE|AGE_[0-9]+$|CCS',
+               'DemoDiagPharmaBinary': CCSPHARMA,
+               'DemoDiagPharma':'PATIENT_ID|FEMALE|AGE_[0-9]+$|EDC_|RXMG_' if 'ACG' in config.PREDICTORREGEX else CCSPHARMA,
+               'DemoDiagPharmaIsomorb':'PATIENT_ID|FEMALE|AGE_[0-9]+$|EDC_(?!NUR11|RES10)|RXMG_(?!ZZZX000)|ACG_' if 'ACG' in config.PREDICTORREGEX else None
+               }
 
 assert len(config.COLUMNS)==1, 'This model is built for a single response variable! Modify config.COLUMNS'
 
