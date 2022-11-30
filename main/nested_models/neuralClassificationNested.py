@@ -42,7 +42,8 @@ parser.add_argument('chosen_config', type=str,
                     help='The name of the config file (without .py), which must be located in configurations/cluster.')
 parser.add_argument('experiment',
                     help='The name of the experiment config file (without .py), which must be located in configurations.')
-
+parser.add_argument('--tuner', metavar='tuner',type=int, default=argparse.SUPPRESS,
+                    help='Type of tuner (pass an int for random, omit for bayesian)')
 
 args, unknown_args = parser.parse_known_args()
 
