@@ -149,7 +149,7 @@ icd10cm=text_preprocessing(icd10cm,
                            mode='icd10cm')
 icd9=text_preprocessing(icd9, [c for c in icd9 if (not 'LABEL' in c)],mode='icd9')
 #%%
-if (not Path(fname1).is_file()) or (not Path(fname1).is_file()):
+if (not Path(fname1).is_file()) or (not Path(fname2).is_file()):
     """ READ EVERYTHING """ 
     
     diags=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,config.ICDFILES[2016]),
@@ -210,17 +210,139 @@ else:
     revision_9=pd.read_csv(fname1)
     revision_10=pd.read_csv(fname2)
 #%%
-
-success9, failure9=guessingCCS(revision_9,icd9)
-icd9=assign_success(success9,icd9)
-revision_9_bis=suggestCCS(revision_9, success9)
-df=revision_9_bis.loc[(revision_9_bis.NEW_CODE.isna())].loc[(revision_9_bis.CCS_suggestion.isna())]
-print(f'Lacking CCS suggestions for {len(df)} codes')
-revision_9_bis.to_csv('revision_9_with_ccs_suggestions.csv', index=False)
+rev9fname='revision_9_with_ccs_suggestions.csv'
+rev10fname='revision_10_with_ccs_suggestions.csv'
 #%%
-success10, failure10=guessingCCS(revision_10,icd10cm)
-icd10=assign_success(success10,icd10cm)
-revision_10_bis=suggestCCS(revision_10, success10)
-df=revision_10_bis.loc[(revision_10_bis.NEW_CODE.isna())].loc[(revision_10_bis.CCS_suggestion.isna())]
-print(f'Lacking CCS suggestions for {len(df)} codes')
-revision_10_bis.to_csv('revision_10_with_ccs_suggestions.csv', index=False)
+if not Path(rev9fname).is_file():
+    success9, failure9=guessingCCS(revision_9,icd9)
+    icd9=assign_success(success9,icd9)
+    revision_9_bis=suggestCCS(revision_9, success9)
+    df=revision_9_bis.loc[(revision_9_bis.NEW_CODE.isna())].loc[(revision_9_bis.CCS_suggestion.isna())]
+    print(f'Lacking CCS suggestions for {len(df)} codes')
+    revision_9_bis.to_csv(rev9fname, index=False)
+else:
+    revision_9_bis=pd.read_csv(rev9fname)
+#%%
+if not Path(rev10fname).is_file():
+    success10, failure10=guessingCCS(revision_10,icd10cm)
+    icd10=assign_success(success10,icd10cm)
+    revision_10_bis=suggestCCS(revision_10, success10)
+    df=revision_10_bis.loc[(revision_10_bis.NEW_CODE.isna())].loc[(revision_10_bis.CCS_suggestion.isna())]
+    print(f'Lacking CCS suggestions for {len(df)} codes')
+    revision_10_bis.to_csv('revision_10_with_ccs_suggestions.csv', index=False)
+else:
+    revision_10_bis=pd.read_csv(rev10fname)
+    
+
+#%%
+last_revision_9=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,'ccs','diccionario_cie9_previo_GMA_V3.csv'))
+last_revision_9['CODE']=last_revision_9.cie9
+revision_9_bis=pd.merge(revision_9_bis, last_revision_9, on='CODE', how='left')
+revision_9_bis['CODE_Edu']=np.where(revision_9_bis.newcie9.isna(),revision_9_bis.CODE,revision_9_bis.newcie9)
+revision_9_bis['CODE_original']=revision_9_bis.CODE
+revision_9_bis=revision_9_bis[['N', 'CODE_original','CODE_Edu','CCS_suggestion']]
+revision_9_bis=revision_9_bis.rename(columns={'CODE_Edu':'CODE'})
+missing9=missingDX(icd9, revision_9_bis)
+revision_9_bis_withccs=pd.merge(revision_9_bis,icd9[['CODE','CCS']],on='CODE', how='left')
+lo_que_cuelga=revision_9_bis_withccs.loc[~revision_9_bis_withccs.CCS_suggestion.isna()]
+no_coincide=lo_que_cuelga.loc[lo_que_cuelga.CCS_suggestion.astype(float)!=lo_que_cuelga.CCS.astype(float)].dropna(subset=['CCS','CCS_suggestion'])
+no_coincide.to_csv('no_coincide_ccs_cie9.csv', index=False)
+#%%
+last_revision_10=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,'ccs','diccionario_cie10_previo_GMA_V2.csv'))
+last_revision_10['CODE']=last_revision_10.cie10
+revision_10_bis=pd.merge(revision_10_bis, last_revision_10, on='CODE', how='left')
+#%%
+revision_10_bis['CODE_Edu']=np.where(revision_10_bis.newcie10.isna(),revision_10_bis.CODE,revision_10_bis.newcie10)
+revision_10_bis['CODE_original']=revision_10_bis.CODE
+#%%
+revision_10_bis=revision_10_bis[['N', 'CODE_original','CODE_Edu','CCS_suggestion']]
+revision_10_bis=revision_10_bis.rename(columns={'CODE_Edu':'CODE'})
+missing10=missingDX(icd10cm, revision_10_bis)
+#%%
+revision_10_bis_withccs=pd.merge(revision_10_bis,icd10cm[['CODE','CCS']],on='CODE', how='left')
+#%%
+lo_que_cuelga=revision_10_bis_withccs.loc[~revision_10_bis_withccs.CCS_suggestion.isna()]
+no_coincide=lo_que_cuelga.loc[lo_que_cuelga.CCS_suggestion.astype(float)!=lo_que_cuelga.CCS.astype(float)].dropna(subset=['CCS','CCS_suggestion'])
+no_coincide.to_csv('no_coincide_ccs_cie10.csv', index=False)
+
+#%%
+"""
+CHANGE THE BIG DIAGNOSIS DATAFRAME, 
+MODIFYING CODES PRESENT IN CODE_original WITH THE
+CORRESPONDING MANUALLY REVISED NEW CODE
+"""
+
+# step 1: read and preprocess diagnoses
+diags=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,config.ICDFILES[2016]),
+                  usecols=['PATIENT_ID','CIE_VERSION','CIE_CODE'],
+                  index_col=False)
+diags2=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,config.ICDFILES[2017]),
+                  usecols=['PATIENT_ID','CIE_VERSION','CIE_CODE'],
+                  index_col=False)
+#%%
+""" TEXT PREPROCESSING """
+
+diags=text_preprocessing(diags, ['CIE_VERSION','CIE_CODE'],mode='diags')
+diags2=text_preprocessing(diags2, ['CIE_VERSION','CIE_CODE'],mode='diags')
+#%%
+correct_diags_2016,correct_diags_2017=pd.DataFrame(),pd.DataFrame()
+fullrevision=pd.concat([revision_9_bis,revision_10_bis])
+fullrevision.loc[fullrevision.CODE=='no pongo nada','CODE']=np.nan
+fullrevision.loc[fullrevision.CODE=='NO HAGO NADA','CODE']=np.nan
+#%%
+""" USE THE MANUAL REVISION TO CHANGE DIAGNOSTIC CODES WHEN NECESSARY """
+correct_diags_2016_fname=os.path.join(config.INDISPENSABLEDATAPATH,'ccs/gma_dx_in_2016.txt')
+if not Path(correct_diags_2016_fname).is_file():
+    correct_diags_2016=diags.copy()
+    #Those with no NEW_CODE specified are lost -> discard rows with NAs
+    L0=len(correct_diags_2016)
+    for code, new in zip(fullrevision.CODE_original, fullrevision.CODE):
+        correct_diags_2016.loc[correct_diags_2016.CODE==code, 'CODE']=new
+    correct_diags_2016=correct_diags_2016.dropna(subset=['CODE'])
+    L=len(correct_diags_2016)
+    print(f'We have lost {L0-L} diagnoses that still have no CCS')
+    correct_diags_2016.to_csv(correct_diags_2016_fname,index=False)
+else:
+    correct_diags_2016=pd.read_csv(correct_diags_2016_fname)
+#%%
+correct_diags_2017_fname=os.path.join(config.INDISPENSABLEDATAPATH,'ccs/gma_dx_in_2017.txt')
+if not Path(correct_diags_2017_fname).is_file():
+    correct_diags_2017=diags2.copy()
+    #Those with no NEW_CODE specified are lost -> discard rows with NAs
+    L0=len(correct_diags_2017)
+    for code, new in zip(fullrevision.CODE_original, fullrevision.CODE):
+        correct_diags_2017.loc[correct_diags_2017.CODE==code, 'CODE']=new
+    correct_diags_2017=correct_diags_2017.dropna(subset=['CODE'])
+    L=len(correct_diags_2017)
+    print(f'We have lost {L0-L} diagnoses that still have no CCS ({(L0-L)*100/L0} %)')
+    correct_diags_2017.to_csv(correct_diags_2017_fname,index=False)
+else:
+    correct_diags_2017=pd.read_csv(correct_diags_2017_fname)
+
+#%%
+""" CHECK CCS ASSIGNMENT """
+""" ASSIGN CCS CATEGORIES TO DIAGNOSTIC CODES """
+dict9=icd9[['CODE', 'CCS', 'DESCRIPTION', 'CIE_VERSION']]
+dict10=icd10cm[['CODE', 'CCS', 'DESCRIPTION', 'CIE_VERSION']]
+dict10=pd.concat([dict10, 
+                  pd.DataFrame.from_dict({'CODE':['ONCOLO'], 'CCS':['ONCOLO'], 
+                                          'DESCRIPTION': ['Undetermined oncology code'],
+                                          'CIE_VERSION':['10']})])
+fulldict=pd.concat([dict9,dict10]).drop_duplicates()
+fulldict.CIE_VERSION=fulldict.CIE_VERSION.astype(int)
+#%%
+#Drop codes that were not diagnosed to any patient in the current year
+diags_with_ccs_2016=pd.DataFrame({'PATIENT_ID':[],'CODE':[],'CCS':[], 'DESCRIPTION':[]})
+# df=diags.copy()
+diags_with_ccs_2016=pd.merge(correct_diags_2016, fulldict, on=['CODE','CIE_VERSION'], how='inner')#[['PATIENT_ID','CODE','CCS']]
+check2016=pd.merge(diags_with_ccs_2016, fullrevision, on='CODE', how='inner')
+check2016=check2016.loc[~check2016.CCS_suggestion.isna()][['CCS','CCS_suggestion']]
+print(check2016.loc[check2016.CCS.astype(float)!=check2016.CCS_suggestion].drop_duplicates())
+#%%
+correct_diags_2017.CIE_VERSION=correct_diags_2017.CIE_VERSION.astype(int)
+diags_with_ccs_2017=pd.DataFrame({'PATIENT_ID':[],'CODE':[],'CCS':[], 'DESCRIPTION':[]})
+diags_with_ccs_2017=pd.merge(correct_diags_2017, fulldict, on=['CODE','CIE_VERSION'], how='inner')#[['PATIENT_ID','CODE','CCS']]
+#%%
+check2017=pd.merge(diags_with_ccs_2017, fullrevision, on='CODE', how='inner')
+check2017=check2017.loc[~check2017.CCS_suggestion.isna()][['CCS','CCS_suggestion']]
+print(check2017.loc[check2017.CCS.astype(float)!=check2017.CCS_suggestion].drop_duplicates())
