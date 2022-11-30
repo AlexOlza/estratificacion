@@ -306,7 +306,7 @@ else:
     correct_diags_2016=pd.read_csv(correct_diags_2016_fname)
 #%%
 correct_diags_2017_fname=os.path.join(config.INDISPENSABLEDATAPATH,'ccs/gma_dx_in_2017.txt')
-if not Path(correct_diags_2016_fname).is_file():
+if not Path(correct_diags_2017_fname).is_file():
     correct_diags_2017=diags2.copy()
     #Those with no NEW_CODE specified are lost -> discard rows with NAs
     L0=len(correct_diags_2017)
@@ -314,11 +314,11 @@ if not Path(correct_diags_2016_fname).is_file():
         correct_diags_2017.loc[correct_diags_2017.CODE==code, 'CODE']=new
     correct_diags_2017=correct_diags_2017.dropna(subset=['CODE'])
     L=len(correct_diags_2017)
-    print(f'We have lost {L0-L} diagnoses that still have no CCS')
+    print(f'We have lost {L0-L} diagnoses that still have no CCS ({(L0-L)*100/L0} %)')
     correct_diags_2017.to_csv(correct_diags_2017_fname,index=False)
 else:
     correct_diags_2017=pd.read_csv(correct_diags_2017_fname)
-assert False
+
 #%%
 """ CHECK CCS ASSIGNMENT """
 """ ASSIGN CCS CATEGORIES TO DIAGNOSTIC CODES """
@@ -329,7 +329,20 @@ dict10=pd.concat([dict10,
                                           'DESCRIPTION': ['Undetermined oncology code'],
                                           'CIE_VERSION':['10']})])
 fulldict=pd.concat([dict9,dict10]).drop_duplicates()
+fulldict.CIE_VERSION=fulldict.CIE_VERSION.astype(int)
+#%%
 #Drop codes that were not diagnosed to any patient in the current year
 diags_with_ccs_2016=pd.DataFrame({'PATIENT_ID':[],'CODE':[],'CCS':[], 'DESCRIPTION':[]})
 # df=diags.copy()
 diags_with_ccs_2016=pd.merge(correct_diags_2016, fulldict, on=['CODE','CIE_VERSION'], how='inner')#[['PATIENT_ID','CODE','CCS']]
+check2016=pd.merge(diags_with_ccs_2016, fullrevision, on='CODE', how='inner')
+check2016=check2016.loc[~check2016.CCS_suggestion.isna()][['CCS','CCS_suggestion']]
+print(check2016.loc[check2016.CCS.astype(float)!=check2016.CCS_suggestion].drop_duplicates())
+#%%
+correct_diags_2017.CIE_VERSION=correct_diags_2017.CIE_VERSION.astype(int)
+diags_with_ccs_2017=pd.DataFrame({'PATIENT_ID':[],'CODE':[],'CCS':[], 'DESCRIPTION':[]})
+diags_with_ccs_2017=pd.merge(correct_diags_2017, fulldict, on=['CODE','CIE_VERSION'], how='inner')#[['PATIENT_ID','CODE','CCS']]
+#%%
+check2017=pd.merge(diags_with_ccs_2017, fullrevision, on='CODE', how='inner')
+check2017=check2017.loc[~check2017.CCS_suggestion.isna()][['CCS','CCS_suggestion']]
+print(check2017.loc[check2017.CCS.astype(float)!=check2017.CCS_suggestion].drop_duplicates())
