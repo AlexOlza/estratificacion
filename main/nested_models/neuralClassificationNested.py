@@ -63,8 +63,11 @@ util.makeAllPaths()
 seed_sampling= args.seed_sampling if hasattr(args, 'seed_sampling') else config.SEED #imported from default configuration
 seed_hparam= args.seed_hparam if hasattr(args, 'seed_hparam') else config.SEED
 name= args.model_name if hasattr(args,'model_name') else config.ALGORITHM
-epochs=args.seed_hparam if hasattr(args, 'epochs') else 500
+epochs=args.epochs if hasattr(args, 'epochs') else 500
+tuner=args.tuner if hasattr(args, 'tuner') else 'bayesian'
 #%%
+print(kt.__version__)
+assert False
 """ BEGGINNING """
 
 X,y=getData(2016)
@@ -145,16 +148,27 @@ for key, val in variables.items():
     
     model_name=config.MODELPATH+key
 
-    print('Tuner: Bayesian')
-    tuner= kt.BayesianOptimization(config.build_model,
-                         objective=kt.Objective("val_loss", direction="min"),
-                          max_trials=10,
-                          overwrite=False,
-                          num_initial_points=4,
-                         directory=model_name+'_search',
-                         project_name=key,   
-                         
-                         )
+    if tuner=='bayesian':
+        print('Tuner: Bayesian')
+        tuner= kt.BayesianOptimization(config.build_model,
+                             objective=kt.Objective("val_loss", direction="min"),
+                              max_trials=10,
+                              overwrite=False,
+                              num_initial_points=4,
+                             directory=model_name+'_search',
+                             project_name=key,   
+                             
+                             )
+    else:
+        print('Tuner: Random')
+        tuner= kt.RandomSearch(config.build_model,
+                             objective=kt.Objective("val_loss", direction="min"),
+                              max_trials=10,
+                              overwrite=False,
+                             directory=model_name+'_search',
+                             project_name=key,   
+                             
+                             )
     
     stop_early = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=5)
     
