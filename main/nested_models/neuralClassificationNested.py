@@ -83,7 +83,7 @@ if (not 'ACG' in config.PREDICTORREGEX):
 else: 
     CCSPHARMA=None
 
-binarize= False if not config.hasattr('BINARIZE_CCS') else config.BINARIZE_CCS
+binarize= False if not hasattr(config,'BINARIZE_CCS') else config.BINARIZE_CCS
 
 if binarize:
     variables={'Demo':None,
