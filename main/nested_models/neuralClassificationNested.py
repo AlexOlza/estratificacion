@@ -82,7 +82,7 @@ else:
 
 variables={#'Demo':'PATIENT_ID|FEMALE|AGE_[0-9]+$',
            'DemoDiag':'PATIENT_ID|FEMALE|AGE_[0-9]+$|EDC_' if 'ACG' in config.PREDICTORREGEX else 'PATIENT_ID|FEMALE|AGE_[0-9]+$|CCS',
-           'DemoDiagPharmaBinary': CCSPHARMA,
+           #'DemoDiagPharmaBinary': CCSPHARMA,
            'DemoDiagPharma':'PATIENT_ID|FEMALE|AGE_[0-9]+$|EDC_|RXMG_' if 'ACG' in config.PREDICTORREGEX else CCSPHARMA,
            'DemoDiagPharmaIsomorb':'PATIENT_ID|FEMALE|AGE_[0-9]+$|EDC_(?!NUR11|RES10)|RXMG_(?!ZZZX000)|ACG_' if 'ACG' in config.PREDICTORREGEX else None
            }
@@ -158,7 +158,7 @@ for key, val in variables.items():
     
     stop_early = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=5)
     
-    tuner.search(X_train, y_train,epochs=30, validation_split=0.2,callbacks=[stop_early],
+    tuner.search(X_train, y_train,epochs=3, validation_split=0.2,callbacks=[stop_early],
                   )
     print('---------------------------------------------------'*5)
     print('SEARCH SPACE SUMMARY:')
