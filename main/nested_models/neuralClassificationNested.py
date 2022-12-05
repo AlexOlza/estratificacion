@@ -42,7 +42,8 @@ parser.add_argument('chosen_config', type=str,
                     help='The name of the config file (without .py), which must be located in configurations/cluster.')
 parser.add_argument('experiment',
                     help='The name of the experiment config file (without .py), which must be located in configurations.')
-
+parser.add_argument('--tuner', metavar='tuner',type=int, default=argparse.SUPPRESS,
+                    help='Type of tuner (pass an int for random, omit for bayesian)')
 
 args, unknown_args = parser.parse_known_args()
 
@@ -63,8 +64,11 @@ util.makeAllPaths()
 seed_sampling= args.seed_sampling if hasattr(args, 'seed_sampling') else config.SEED #imported from default configuration
 seed_hparam= args.seed_hparam if hasattr(args, 'seed_hparam') else config.SEED
 name= args.model_name if hasattr(args,'model_name') else config.ALGORITHM
-epochs=args.seed_hparam if hasattr(args, 'epochs') else 500
+epochs=args.epochs if hasattr(args, 'epochs') else 500
+tuner=args.tuner if hasattr(args, 'tuner') else 'bayesian'
 #%%
+print('KerasTuner version: ', kt.__version__)
+
 """ BEGGINNING """
 
 X,y=getData(2016)
@@ -80,12 +84,22 @@ if (not 'ACG' in config.PREDICTORREGEX):
 else: 
     CCSPHARMA=None
 
-variables={'Demo':'PATIENT_ID|FEMALE|AGE_[0-9]+$',
-           'DemoDiag':'PATIENT_ID|FEMALE|AGE_[0-9]+$|EDC_' if 'ACG' in config.PREDICTORREGEX else 'PATIENT_ID|FEMALE|AGE_[0-9]+$|CCS',
-           'DemoDiagPharmaBinary': CCSPHARMA,
-           'DemoDiagPharma':'PATIENT_ID|FEMALE|AGE_[0-9]+$|EDC_|RXMG_' if 'ACG' in config.PREDICTORREGEX else CCSPHARMA,
-           'DemoDiagPharmaIsomorb':'PATIENT_ID|FEMALE|AGE_[0-9]+$|EDC_(?!NUR11|RES10)|RXMG_(?!ZZZX000)|ACG_' if 'ACG' in config.PREDICTORREGEX else None
-           }
+binarize= False if not hasattr(config,'BINARIZE_CCS') else config.BINARIZE_CCS
+
+if binarize:
+    variables={'Demo':None,
+               'DemoDiag':'PATIENT_ID|FEMALE|AGE_[0-9]+$|EDC_' if 'ACG' in config.PREDICTORREGEX else 'PATIENT_ID|FEMALE|AGE_[0-9]+$|CCS',
+               'DemoDiagPharmaBinary': None,
+               'DemoDiagPharma':'PATIENT_ID|FEMALE|AGE_[0-9]+$|EDC_|RXMG_' if 'ACG' in config.PREDICTORREGEX else CCSPHARMA,
+               'DemoDiagPharmaIsomorb':'PATIENT_ID|FEMALE|AGE_[0-9]+$|EDC_(?!NUR11|RES10)|RXMG_(?!ZZZX000)|ACG_' if 'ACG' in config.PREDICTORREGEX else None
+               }
+else:
+    variables={'Demo':'PATIENT_ID|FEMALE|AGE_[0-9]+$',
+               'DemoDiag':'PATIENT_ID|FEMALE|AGE_[0-9]+$|EDC_' if 'ACG' in config.PREDICTORREGEX else 'PATIENT_ID|FEMALE|AGE_[0-9]+$|CCS',
+               'DemoDiagPharmaBinary': CCSPHARMA,
+               'DemoDiagPharma':'PATIENT_ID|FEMALE|AGE_[0-9]+$|EDC_|RXMG_' if 'ACG' in config.PREDICTORREGEX else CCSPHARMA,
+               'DemoDiagPharmaIsomorb':'PATIENT_ID|FEMALE|AGE_[0-9]+$|EDC_(?!NUR11|RES10)|RXMG_(?!ZZZX000)|ACG_' if 'ACG' in config.PREDICTORREGEX else None
+               }
 
 assert len(config.COLUMNS)==1, 'This model is built for a single response variable! Modify config.COLUMNS'
 
@@ -145,20 +159,31 @@ for key, val in variables.items():
     
     model_name=config.MODELPATH+key
 
-    print('Tuner: Bayesian')
-    tuner= kt.BayesianOptimization(config.build_model,
-                         objective=kt.Objective("val_loss", direction="min"),
-                          max_trials=10,
-                          overwrite=False,
-                          num_initial_points=4,
-                         directory=model_name+'_search',
-                         project_name=key,   
-                         
-                         )
+    if tuner=='bayesian':
+        print('Tuner: Bayesian')
+        tuner= kt.BayesianOptimization(config.build_model,
+                             objective=kt.Objective("val_loss", direction="min"),
+                              max_trials=10,
+                              overwrite=False,
+                              num_initial_points=4,
+                             directory=model_name+'_search',
+                             project_name=key,   
+                             
+                             )
+    else:
+        print('Tuner: Random')
+        tuner= kt.RandomSearch(config.build_model,
+                             objective=kt.Objective("val_loss", direction="min"),
+                              max_trials=10,
+                              overwrite=False,
+                             directory=model_name+'_search',
+                             project_name=key,   
+                             
+                             )
     
     stop_early = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=5)
     
-    tuner.search(X_train, y_train,epochs=30, validation_split=0.2,callbacks=[stop_early],
+    tuner.search(X_train, y_train,epochs=3, validation_split=0.2,callbacks=[stop_early],
                   )
     print('---------------------------------------------------'*5)
     print('SEARCH SPACE SUMMARY:')

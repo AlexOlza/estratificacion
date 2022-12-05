@@ -56,9 +56,10 @@ def getData(yr,columns=config.COLUMNS,
         PHARMACY = False    
         
     try:
-        binarize = kwargs.get('BINARIZEPHARMA', config.BINARIZEPHARMA)
+        binarize_ccs = kwargs.get('BINARIZE_CCS', config.BINARIZE_CCS)
     except AttributeError:
-        binarize = False    
+        binarize_ccs = False    
+   
     
     if ('DEATH_1YEAR' in columns) :
         alldead=pd.read_csv(config.DECEASEDFILE)
@@ -77,9 +78,9 @@ def getData(yr,columns=config.COLUMNS,
         elif CCS:
             Xprovisional=load(filename=config.ACGFILES[yr],predictors=predictors)
     
-            full16=generateCCSData(yr,  Xprovisional, predictors=predictors, **kwargs)
+            full16=generateCCSData(yr,  Xprovisional, predictors=predictors, binarize=binarize_ccs, **kwargs)
             if PHARMACY:
-                full16=generatePharmacyData(yr, full16,binarize=binarize, **kwargs)
+                full16=generatePharmacyData(yr, full16,binarize=binarize_ccs, **kwargs)
             dead_or_alive=full16.PATIENT_ID.to_frame()
             dead_or_alive['DEATH_1YEAR']=np.where(dead_or_alive.PATIENT_ID.isin(dead.PATIENT_ID),1,0)
             print(f'Number of deaths in {yr+1}: ',dead_or_alive['DEATH_1YEAR'].sum())
@@ -102,9 +103,9 @@ def getData(yr,columns=config.COLUMNS,
         elif CCS:
             Xprovisional=load(filename=config.ACGFILES[yr],predictors=predictors)
 
-            full16=generateCCSData(yr,  Xprovisional, predictors=predictors, **kwargs)
+            full16=generateCCSData(yr,  Xprovisional, predictors=predictors, binarize=binarize_ccs, **kwargs)
             if PHARMACY:
-                full16=generatePharmacyData(yr, full16,binarize=binarize, **kwargs)
+                full16=generatePharmacyData(yr, full16,binarize=binarize_ccs, **kwargs)
             data=pd.merge(full16, coste, on='PATIENT_ID')
             return(data[full16.columns].reindex(sorted(full16.columns), axis=1),data[coste.columns])
 
@@ -139,9 +140,9 @@ def getData(yr,columns=config.COLUMNS,
                     predictors=predictors)
     elif CCS:
         Xprovisional=load(filename=config.ACGFILES[yr],predictors=predictors)
-        full16=generateCCSData(yr,  Xprovisional, predictors=predictors, **kwargs)
+        full16=generateCCSData(yr,  Xprovisional, predictors=predictors, binarize=binarize_ccs , **kwargs)
         if PHARMACY:
-            full16=generatePharmacyData(yr, full16, binarize=binarize, **kwargs)
+            full16=generatePharmacyData(yr, full16, binarize=binarize_ccs, **kwargs)
         del Xprovisional
     else:
         full16=load(filename=config.ACGFILES[yr],predictors=predictors)
@@ -157,7 +158,10 @@ def getData(yr,columns=config.COLUMNS,
     print('getData time: ',time.time()-t0)
     finalcols=listIntersection(data.columns,pred16.columns)
     X,y=data[finalcols].reindex(sorted(data[finalcols].columns), axis=1),data[cols]
-       
+    if binarize_ccs:    
+        predictors=[c for c in X if not c=='PATIENT_ID']
+        print('Binarizing')
+        X[predictors]=(X[predictors]>0).astype(np.int8)
     return(X[finalcols].reindex(sorted(data[finalcols].columns), axis=1),y[cols])
 
 def generateCCSData(yr,  X,
@@ -185,6 +189,7 @@ def generateCCSData(yr,  X,
     """ CHECK IF THE MATRIX IS ALREADY ON DISK """
     predictors=kwargs.get('predictors',None)
     PHARMACY=kwargs.get('PHARMACY', False)
+    binarize=kwargs.get('binarize', False)
     
     filename=os.path.join(config.DATAPATH,config.CCSFILES[yr])
     if Path(filename).is_file():
@@ -197,7 +202,7 @@ def generateCCSData(yr,  X,
         cols_to_merge=['PATIENT_ID']+[c for c in X if (('AGE' in c) or ('FEMALE' in c))]
         Xx=pd.merge(X, Xccs, on=cols_to_merge, how='outer')
         if PHARMACY:
-            Xx=generatePharmacyData(yr,  Xx, **kwargs)
+            Xx=generatePharmacyData(yr,  Xx,binarize=binarize **kwargs)
         return Xx
     #%%
     """ FUNCTIONS """

@@ -93,10 +93,10 @@ def info(modelfilename,**kwargs):
 
 """VERBOSITY"""
 #TODO private
-def tracefunc(frame, event, arg, indent=[0]):
+def tracefunc(frame, event, arg, indent=[0], project='estratificacion'):
           script=frame.f_code.co_filename
           fname=frame.f_code.co_name
-          if config.PROJECT in script and (('>' or '<') not in fname):#naive way to ignore lambdas, etc
+          if project in script and (('>' or '<') not in fname):#naive way to ignore lambdas, etc
               if event == "call":
                   indent[0] += 2
                   print("-" * indent[0] + "> call function", fname)
