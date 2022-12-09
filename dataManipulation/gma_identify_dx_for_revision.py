@@ -236,19 +236,59 @@ else:
     
 
 #%%
-last_revision_9=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,'ccs','diccionario_cie9_previo_GMA_V2.csv'))
+last_revision_9=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,'ccs','diccionario_cie9_previo_GMA_V3.csv'))
 last_revision_9['CODE']=last_revision_9.cie9
 revision_9_bis=pd.merge(revision_9_bis, last_revision_9, on='CODE', how='left')
-#%%
 revision_9_bis['CODE_Edu']=np.where(revision_9_bis.newcie9.isna(),revision_9_bis.CODE,revision_9_bis.newcie9)
 revision_9_bis['CODE_original']=revision_9_bis.CODE
-#%%
 revision_9_bis=revision_9_bis[['N', 'CODE_original','CODE_Edu','CCS_suggestion']]
 revision_9_bis=revision_9_bis.rename(columns={'CODE_Edu':'CODE'})
 missing9=missingDX(icd9, revision_9_bis)
-#%%
 revision_9_bis_withccs=pd.merge(revision_9_bis,icd9[['CODE','CCS']],on='CODE', how='left')
-#%%
 lo_que_cuelga=revision_9_bis_withccs.loc[~revision_9_bis_withccs.CCS_suggestion.isna()]
 no_coincide=lo_que_cuelga.loc[lo_que_cuelga.CCS_suggestion.astype(float)!=lo_que_cuelga.CCS.astype(float)].dropna(subset=['CCS','CCS_suggestion'])
 no_coincide.to_csv('no_coincide_ccs_cie9.csv', index=False)
+
+#%%
+last_revision_10=pd.read_csv(os.path.join(config.INDISPENSABLEDATAPATH,'ccs','diccionario_cie10_previo_GMA_V2.csv'))
+last_revision_10['CODE']=last_revision_10.cie10
+revision_10_bis=pd.merge(revision_10_bis, last_revision_10, on='CODE', how='left')
+revision_10_bis['CODE_Edu']=np.where(revision_10_bis.newcie10.isna(),revision_10_bis.CODE,revision_10_bis.newcie10)
+revision_10_bis['CODE_original']=revision_10_bis.CODE
+revision_10_bis=revision_10_bis[['N', 'CODE_original','CODE_Edu','CCS_suggestion']]
+revision_10_bis=revision_10_bis.rename(columns={'CODE_Edu':'CODE'})
+missing9=missingDX(icd9, revision_10_bis)
+revision_10_bis_withccs=pd.merge(revision_10_bis,icd9[['CODE','CCS']],on='CODE', how='left')
+lo_que_cuelga=revision_10_bis_withccs.loc[~revision_10_bis_withccs.CCS_suggestion.isna()]
+no_coincide=lo_que_cuelga.loc[lo_que_cuelga.CCS_suggestion.astype(float)!=lo_que_cuelga.CCS.astype(float)].dropna(subset=['CCS','CCS_suggestion'])
+no_coincide.to_csv('no_coincide_ccs_cie10.csv', index=False)
+
+#%%
+fullrevision=pd.concat([revision_9_bis,revision_10_bis])
+fullrevision.loc[fullrevision.CODE=='no pongo nada','CODE']=np.nan
+fullrevision.loc[fullrevision.CODE=='NO HAGO NADA','CODE']=np.nan
+
+#%%
+correct_diags_2016=diags.copy()
+L0=len(diags)
+i=0
+for code, new in zip(fullrevision.CODE_original, fullrevision.CODE):
+    i+=1
+    print(i,code,new)
+    correct_diags_2016.loc[correct_diags_2016.CODE==code, 'CODE']=new
+correct_diags_2016=correct_diags_2016.dropna(subset=['CODE'])
+L=len(correct_diags_2016)
+print(f'We have lost {L0-L} diagnoses that still have no CCS ({(L0-L)*100/L0} %)')
+correct_diags_2016.to_csv(os.path.join(config.INDISPENSABLEDATAPATH,'ccs/gma_dx_in_2016.txt'),index=False)
+#%%
+correct_diags_2017=diags2.copy()
+L0=len(diags2)
+i=0
+for code, new in zip(fullrevision.CODE_original, fullrevision.CODE):
+    i+=1
+    print(i,code,new)
+    correct_diags_2017.loc[correct_diags_2017.CODE==code, 'CODE']=new
+correct_diags_2017=correct_diags_2017.dropna(subset=['CODE'])
+L=len(correct_diags_2017)
+print(f'We have lost {L0-L} diagnoses that still have no CCS ({(L0-L)*100/L0} %)')
+correct_diags_2017.to_csv(os.path.join(config.INDISPENSABLEDATAPATH,'ccs/gma_dx_in_2017.txt'),index=False)
