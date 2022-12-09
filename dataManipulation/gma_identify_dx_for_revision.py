@@ -59,8 +59,8 @@ def text_preprocessing(df, columns, mode):
         df.loc[(df.CIE_VERSION.astype(str).str.startswith('10') & df.CIE_CODE.str.match('^[0-9]')),'CIE_CODE']='ONCOLOGY' 
         #ICD10CM and ICD9 only allow for 6 and 5 characters respectively
         df.loc[df.CIE_VERSION.str.startswith('9'),'CIE_VERSION']='9'
-        df.loc[df.CIE_VERSION.str.startswith('10'),'CIE_VERSION']='10'
-        df.loc[df.CIE_VERSION=='10','CIE_CODE']=df.loc[df.CIE_VERSION=='10','CIE_CODE'].str.slice(0,6)
+        # df.loc[df.CIE_VERSION.str.startswith('10'),'CIE_VERSION']='10'
+        df.loc[df.CIE_VERSION.str.startswith('10'),'CIE_CODE']=df.loc[df.CIE_VERSION.str.startswith('10'),'CIE_CODE'].str.slice(0,6)
         df.loc[df.CIE_VERSION=='9','CIE_CODE']=df.loc[df.CIE_VERSION=='9','CIE_CODE'].str.slice(0,5)
         print('Dropping NULL codes:')
         print(df.loc[df.CIE_CODE.isnull()])
@@ -191,6 +191,7 @@ if (not Path(fname1).is_file()) or (not Path(fname1).is_file()):
     revision_9=needsManualRevision(missing_in_icd9, icd9, appendix='_icd9', diags=diags)
     #%%
     revision_10=needsManualRevision(missing_in_icd10cm, icd10cm, appendix='_icd10', diags=diags)
+    #%%
     f10=os.path.join(config.INDISPENSABLEDATAPATH,f'ccs/manually_revised_icd10.csv')
     f9=os.path.join(config.INDISPENSABLEDATAPATH,f'ccs/manually_revised_icd9.csv')
     manual_revision_ccs_9=pd.read_csv(f9, usecols=['CODE','NEW_CODE'])
