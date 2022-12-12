@@ -1,6 +1,6 @@
 
 ##201612
-i<-1 #Para 2017 poner 2 en lugar de 1
+i<-2 #Para 2017 poner 2 en lugar de 1
 datapath<-"/home/aolza/Desktop/estratificacionDatos"
 indispensabledatapath<-paste(datapath,'indispensable',sep='/')
 outpath <- '/home/aolza/GMA_SNS_v30112022/dat'
@@ -46,7 +46,7 @@ names(gma2016)[1]<-"id"
 gma2016<-gma2016 %>% filter(id %in% membersyear$id)
 
 
-gma2016<-merge(membersyear,gma2016,by="id") #all=TRUE esto es outer join! aparecen NAs
+gma2016<-merge(membersyear,gma2016,by="id", all=TRUE) #all=TRUE esto es outer join! aparecen NAs
 rm(membersyear)
 summary(gma2016)
 gma2016$CIE_VERSION<-as.factor(gma2016$CIE_VERSION)
