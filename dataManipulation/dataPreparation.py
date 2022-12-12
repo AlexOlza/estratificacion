@@ -31,6 +31,29 @@ def excludeHosp(df,filtros,criterio):
     df['remove']=np.where((anyfiltros & crit),1,0)
 
     df[criterio]=df[criterio]-df['remove']
+    
+def getData_cost(CCS,fullEDCs,predictors,yr,binarize_ccs,PHARMACY,**kwargs):
+    coste=load(filename=config.ACGFILES[yr],predictors=r'PATIENT_ID|COSTE_TOTAL_ANO2')
+    response='COSTE_TOTAL_ANO2'
+    if not CCS: 
+        if fullEDCs:
+            acg=create_fullacgfiles(config.FULLACGFILES[yr],yr,directory=config.DATAPATH,
+                    predictors=predictors)
+            coste=load(filename=config.ACGFILES[yr],predictors=r'PATIENT_ID|COSTE_TOTAL_ANO2')
+            acg=pd.merge(acg,coste,on='PATIENT_ID')
+        else:
+            acg=load(filename=config.ACGFILES[yr],predictors=predictors)
+        print('not opening allhospfile')
+        return(acg.reindex(sorted(acg.columns), axis=1),coste)#Prevents bug #1
+    elif CCS:
+        Xprovisional=load(filename=config.ACGFILES[yr],predictors=predictors)
+
+        full16=generateCCSData(yr,  Xprovisional, predictors=predictors, binarize=binarize_ccs, **kwargs)
+        
+        data=pd.merge(full16, coste, on='PATIENT_ID')
+        
+        return(data[full16.columns].reindex(sorted(full16.columns), axis=1),data[coste.columns])
+
 
 def get_gma_categories(yr,X, dummy_categories=True, additional_columns=[],**kwargs):
     assert hasattr(config, 'GMAOUTFILES'), 'GMAOUTFILES not found in the current configuration'
@@ -72,6 +95,7 @@ def getData(yr,columns=config.COLUMNS,
     binarize_ccs = kwargs.get('BINARIZE_CCS', BINARIZE_CCS)
     GMACATEGORIES = kwargs.get('GMACATEGORIES', GMACATEGORIES)
    
+    assert columns[0] in ['urgcms','DEATH_1YEAR','COSTE_TOTAL_ANO2'], 'This response variable is not implemented in getData. Check config.COLUMNS'
     
     if ('DEATH_1YEAR' in columns) :
         alldead=pd.read_csv(config.DECEASEDFILE)
@@ -100,27 +124,15 @@ def getData(yr,columns=config.COLUMNS,
             return(data[full16.columns].reindex(sorted(full16.columns), axis=1),data[dead_or_alive.columns])
 
     if ('COSTE_TOTAL_ANO2' in columns) :
-        coste=load(filename=config.ACGFILES[yr],predictors=r'PATIENT_ID|COSTE_TOTAL_ANO2')
-        response='COSTE_TOTAL_ANO2'
-        if not CCS: 
-            if fullEDCs:
-                acg=create_fullacgfiles(config.FULLACGFILES[yr],yr,directory=config.DATAPATH,
-                        predictors=predictors)
-                coste=load(filename=config.ACGFILES[yr],predictors=r'PATIENT_ID|COSTE_TOTAL_ANO2')
-                acg=pd.merge(acg,coste,on='PATIENT_ID')
-            else:
-                acg=load(filename=config.ACGFILES[yr],predictors=predictors)
-            print('not opening allhospfile')
-            return(acg.reindex(sorted(acg.columns), axis=1),coste)#Prevents bug #1
-        elif CCS:
-            Xprovisional=load(filename=config.ACGFILES[yr],predictors=predictors)
-
-            full16=generateCCSData(yr,  Xprovisional, predictors=predictors, binarize=binarize_ccs, **kwargs)
-            if PHARMACY:
-                full16=generatePharmacyData(yr, full16,binarize=binarize_ccs, **kwargs)
-            data=pd.merge(full16, coste, on='PATIENT_ID')
-            return(data[full16.columns].reindex(sorted(full16.columns), axis=1),data[coste.columns])
-
+        X,y= getData_cost(CCS,fullEDCs,predictors,yr,binarize_ccs,PHARMACY,**kwargs)
+        print('Length of initial DF: ',len(X))
+        if PHARMACY:
+            X=generatePharmacyData(yr, X,binarize=binarize_ccs, **kwargs)
+            print('Length DF with pharmacy: ',len(X))
+        if GMACATEGORIES:
+            X=get_gma_categories(yr,X,**kwargs)
+            print('Length DF with GMA: ',len(X))
+        return(X,y)
     cols=columns.copy() 
     t0=time.time()
     ing=loadIng(config.ALLHOSPITFILE,config.DATAPATH)
@@ -168,6 +180,7 @@ def getData(yr,columns=config.COLUMNS,
     data=pd.merge(pred16,y17,on='PATIENT_ID')
     print('number of patients in data: ', sum(np.where(data[config.COLUMNS]>=1,1,0)))
     print('getData time: ',time.time()-t0)
+    
     finalcols=listIntersection(data.columns,pred16.columns)
     X,y=data[finalcols].reindex(sorted(data[finalcols].columns), axis=1),data[cols]
     if binarize_ccs:    
@@ -201,7 +214,6 @@ def generateCCSData(yr,  X,
     """ CHECK IF THE MATRIX IS ALREADY ON DISK """
     predictors=kwargs.get('predictors',None)
     PHARMACY=kwargs.get('PHARMACY', False)
-    binarize=kwargs.get('binarize', False)
     
     filename=os.path.join(config.DATAPATH,config.CCSFILES[yr])
     if Path(filename).is_file():
@@ -214,7 +226,7 @@ def generateCCSData(yr,  X,
         cols_to_merge=['PATIENT_ID']+[c for c in X if (('AGE' in c) or ('FEMALE' in c))]
         Xx=pd.merge(X, Xccs, on=cols_to_merge, how='outer')
         if PHARMACY:
-            Xx=generatePharmacyData(yr,  Xx,binarize=binarize **kwargs)
+            Xx=generatePharmacyData(yr,  Xx, **kwargs)
         return Xx
     #%%
     """ FUNCTIONS """
