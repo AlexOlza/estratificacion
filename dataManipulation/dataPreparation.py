@@ -32,9 +32,28 @@ def excludeHosp(df,filtros,criterio):
 
     df[criterio]=df[criterio]-df['remove']
 
+def get_gma_categories(yr,X, dummy_categories=True, additional_columns=[],**kwargs):
+    assert hasattr(config, 'GMAOUTFILES'), 'GMAOUTFILES not found in the current configuration'
+    gma_categories=pd.DataFrame()
+    names=["PATIENT_ID","zbs", "edad", "sexo","gma","num_patol",
+           "num_sist","peso-ip","riesgo-muerte","dm","ic","epoc",
+           "hta","depre","vih","c_isq","acv","irc","cirros","osteopor","artrosis",
+           "artritis","demencia","dolor_cron","etiqueta","version"]
+    columns=['PATIENT_ID']+additional_columns  
+    for file in config.GMAOUTFILES[yr]:
+        df=pd.read_csv(config.DATAPATH+file, delimiter='|', names=names)
+        gma_categories=pd.concat([gma_categories,df])
+    if dummy_categories:
+        gma_dummy=pd.get_dummies(gma_categories.gma)
+        gma_dummy.rename(columns={c:f'GMA_{c}' for c in gma_dummy},inplace=True)
+        
+        gma_categories=pd.concat([gma_categories[[c for c in columns]], gma_dummy], axis=1)
+    else:
+        gma_categories=gma_categories[columns]  
     
+    X=pd.merge(X,gma_categories, on='PATIENT_ID')
+    return X        
 # TODO MOVE ASSERTIONS BEFORE LOADING BIG FILES!!!!
-#OLDBASE IS OBSOLETE
 def getData(yr,columns=config.COLUMNS,
             predictors=config.PREDICTORREGEX,
             exclude=config.EXCLUDE,
