@@ -5,9 +5,8 @@ Created on Fri Sep 23 11:24:08 2022
 
 @author: aolza
 """
-
-EXPERIMENT='highcostCCS_noext'
-CONFIGNAME='highcostCCS_noext.py'
+EXPERIMENT=__name__.split('.')[-1]
+CONFIGNAME=EXPERIMENT+'.py'
 COLUMNS=['COSTE_TOTAL_ANO2']
 TRACEBACK=True
 EXCLUDE=[]
@@ -31,6 +30,7 @@ CCSFILES={2016:'newCCS2016.csv',
           2017: 'newCCS2017.csv'}
 ATCFILES={2016:'pharma2016.csv',
           2017: 'pharma2017.csv'}
+
 
 K=20000
 def target_binarizer(y, K=K, column=COLUMNS):

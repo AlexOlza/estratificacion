@@ -5,8 +5,8 @@ Created on Mon Jan 31 2022
 
 @author: aolza
 """
-
-EXPERIMENT='highcost_ACG'
+EXPERIMENT=__name__.split('.')[-1]
+CONFIGNAME=EXPERIMENT+'.py'
 
 """PREDICTORS: They will be different for each script."""
 PREDICTORREGEX=r'PATIENT_ID|FEMALE|AGE_[0-9]+$|ACG|EDC_(?!NUR11|RES10)|HOSDOM|FRAILTY|RXMG_(?!ZZZX000)|INGRED_14GT'

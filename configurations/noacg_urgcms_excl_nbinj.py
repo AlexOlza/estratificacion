@@ -6,8 +6,8 @@ Created on Wed Mar 23 11:37:21 2022
 @author: aolza
 """
 
-EXPERIMENT='noacg_urgcms_excl_nbinj'
-
+EXPERIMENT=__name__.split('.')[-1]
+# CONFIGNAME=EXPERIMENT+'.py'
 """PREDICTORS: They will be different for each script."""
 PREDICTORREGEX=r'PATIENT_ID|FEMALE|AGE_[0-9]+$|EDC_|FRAILTY|RXMG_'
 INDICEPRIVACION=False

@@ -5,9 +5,8 @@ Created on Fri Sep 23 11:24:08 2022
 
 @author: aolza
 """
-
-EXPERIMENT='costCCS_noext_new'
-CONFIGNAME='costCCS_noext_new.py'
+EXPERIMENT=__name__.split('.')[-1]
+CONFIGNAME=EXPERIMENT+'.py'
 COLUMNS=['COSTE_TOTAL_ANO2']
 TRACEBACK=True
 EXCLUDE=[]

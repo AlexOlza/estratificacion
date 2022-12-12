@@ -5,8 +5,8 @@ Created on Mon Jan 31 2022
 
 @author: aolza
 """
-
-EXPERIMENT='cost_fulledcs'
+EXPERIMENT=__name__.split('.')[-1]
+CONFIGNAME=EXPERIMENT+'.py'
 FULLEDCS=True
 
 """PREDICTORS: They will be different for each script."""
