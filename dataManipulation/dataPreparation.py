@@ -59,25 +59,18 @@ def getData(yr,columns=config.COLUMNS,
             exclude=config.EXCLUDE,
             resourceUsage=config.RESOURCEUSAGE,
             **kwargs):
-    try:
-        fullEDCs = kwargs.get('fullEDCs', config.FULLEDCS)
-    except AttributeError:
-        fullEDCs = False
-        
-    try:
-        CCS = kwargs.get('CCS', config.CCS)
-    except AttributeError:
-        CCS = False
-        
-    try:
-        PHARMACY = kwargs.get('PHARMACY', config.PHARMACY)
-    except AttributeError:
-        PHARMACY = False    
-        
-    try:
-        binarize_ccs = kwargs.get('BINARIZE_CCS', config.BINARIZE_CCS)
-    except AttributeError:
-        binarize_ccs = False    
+    """ DEFINE DEFAULT VALUES FOR KWARGS"""
+    FULLEDCS=config.FULLEDCS if hasattr(config, 'FULLEDCS') else False
+    CCS= config.CCS if hasattr(config, 'CCS') else False
+    PHARMACY= config.PHARMACY if hasattr(config, 'PHARMACY') else False
+    BINARIZE_CCS= config.BINARIZE_CCS if hasattr(config, 'BINARIZE_CCS') else False
+    GMACATEGORIES= config.GMACATEGORIES if hasattr(config, 'GMACATEGORIES') else False
+    """ GET KWARGS VALUES """
+    fullEDCs = kwargs.get('fullEDCs', FULLEDCS)
+    CCS = kwargs.get('CCS', CCS)
+    PHARMACY = kwargs.get('PHARMACY', PHARMACY)
+    binarize_ccs = kwargs.get('BINARIZE_CCS', BINARIZE_CCS)
+    GMACATEGORIES = kwargs.get('GMACATEGORIES', GMACATEGORIES)
    
     
     if ('DEATH_1YEAR' in columns) :
