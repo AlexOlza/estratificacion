@@ -32,7 +32,7 @@ def excludeHosp(df,filtros,criterio):
 
     df[criterio]=df[criterio]-df['remove']
     
-def getData_cost(CCS,fullEDCs,predictors,yr,binarize_ccs,PHARMACY,**kwargs):
+def getData_cost(CCS,fullEDCs,predictors,yr,**kwargs):
     coste=load(filename=config.ACGFILES[yr],predictors=r'PATIENT_ID|COSTE_TOTAL_ANO2')
     response='COSTE_TOTAL_ANO2'
     if not CCS: 
@@ -48,93 +48,32 @@ def getData_cost(CCS,fullEDCs,predictors,yr,binarize_ccs,PHARMACY,**kwargs):
     elif CCS:
         Xprovisional=load(filename=config.ACGFILES[yr],predictors=predictors)
 
-        full16=generateCCSData(yr,  Xprovisional, predictors=predictors, binarize=binarize_ccs, **kwargs)
+        full16=generateCCSData(yr,  Xprovisional, predictors=predictors, **kwargs)
         
         data=pd.merge(full16, coste, on='PATIENT_ID')
         
         return(data[full16.columns].reindex(sorted(full16.columns), axis=1),data[coste.columns])
 
+def getData_death_1year(CCS,fullEDCs,predictors, yr,**kwargs):
+    alldead=pd.read_csv(config.DECEASEDFILE)
+    dead=alldead.loc[alldead.date_of_death.str.startswith(str(yr+1))]
+    if not CCS: 
+        if fullEDCs:
+            full16=create_fullacgfiles(config.FULLACGFILES[yr],yr,directory=config.DATAPATH,
+                    predictors=predictors)
+        else:
+            full16=load(filename=config.ACGFILES[yr],predictors=predictors)
+    elif CCS:
+        Xprovisional=load(filename=config.ACGFILES[yr],predictors=predictors)
+        full16=generateCCSData(yr,  Xprovisional, predictors=predictors, **kwargs)
+    dead_or_alive=full16.PATIENT_ID.to_frame()
+    dead_or_alive['DEATH_1YEAR']=np.where(dead_or_alive.PATIENT_ID.isin(dead.PATIENT_ID),1,0)
+    print(f'Number of deaths in {yr+1}: ',dead_or_alive['DEATH_1YEAR'].sum())
+    data=pd.merge(full16, dead_or_alive, on='PATIENT_ID')
+    return(data[full16.columns].reindex(sorted(full16.columns), axis=1),data[dead_or_alive.columns])
 
-def get_gma_categories(yr,X, dummy_categories=True, additional_columns=[],**kwargs):
-    assert hasattr(config, 'GMAOUTFILES'), 'GMAOUTFILES not found in the current configuration'
-    gma_categories=pd.DataFrame()
-    names=["PATIENT_ID","zbs", "edad", "sexo","gma","num_patol",
-           "num_sist","peso-ip","riesgo-muerte","dm","ic","epoc",
-           "hta","depre","vih","c_isq","acv","irc","cirros","osteopor","artrosis",
-           "artritis","demencia","dolor_cron","etiqueta","version"]
-    columns=['PATIENT_ID']+additional_columns  
-    for file in config.GMAOUTFILES[yr]:
-        df=pd.read_csv(config.DATAPATH+file, delimiter='|', names=names)
-        gma_categories=pd.concat([gma_categories,df])
-    if dummy_categories:
-        gma_dummy=pd.get_dummies(gma_categories.gma)
-        gma_dummy.rename(columns={c:f'GMA_{c}' for c in gma_dummy},inplace=True)
-        
-        gma_categories=pd.concat([gma_categories[[c for c in columns]], gma_dummy], axis=1)
-    else:
-        gma_categories=gma_categories[columns]  
-    
-    X=pd.merge(X,gma_categories, on='PATIENT_ID')
-    return X        
-# TODO MOVE ASSERTIONS BEFORE LOADING BIG FILES!!!!
-def getData(yr,columns=config.COLUMNS,
-            predictors=config.PREDICTORREGEX,
-            exclude=config.EXCLUDE,
-            resourceUsage=config.RESOURCEUSAGE,
-            **kwargs):
-    """ DEFINE DEFAULT VALUES FOR KWARGS"""
-    FULLEDCS=config.FULLEDCS if hasattr(config, 'FULLEDCS') else False
-    CCS= config.CCS if hasattr(config, 'CCS') else False
-    PHARMACY= config.PHARMACY if hasattr(config, 'PHARMACY') else False
-    BINARIZE_CCS= config.BINARIZE_CCS if hasattr(config, 'BINARIZE_CCS') else False
-    GMACATEGORIES= config.GMACATEGORIES if hasattr(config, 'GMACATEGORIES') else False
-    """ GET KWARGS VALUES """
-    fullEDCs = kwargs.get('fullEDCs', FULLEDCS)
-    CCS = kwargs.get('CCS', CCS)
-    PHARMACY = kwargs.get('PHARMACY', PHARMACY)
-    binarize_ccs = kwargs.get('BINARIZE_CCS', BINARIZE_CCS)
-    GMACATEGORIES = kwargs.get('GMACATEGORIES', GMACATEGORIES)
-   
-    assert columns[0] in ['urgcms','DEATH_1YEAR','COSTE_TOTAL_ANO2'], 'This response variable is not implemented in getData. Check config.COLUMNS'
-    
-    if ('DEATH_1YEAR' in columns) :
-        alldead=pd.read_csv(config.DECEASEDFILE)
-        dead=alldead.loc[alldead.date_of_death.str.startswith(str(yr+1))]
-        if not CCS: 
-            if fullEDCs:
-                acg=create_fullacgfiles(config.FULLACGFILES[yr],yr,directory=config.DATAPATH,
-                        predictors=predictors)
-            else:
-                acg=load(filename=config.ACGFILES[yr],predictors=predictors)
-            print('not opening allhospfile')
-            dead_or_alive=acg.PATIENT_ID.to_frame()
-            dead_or_alive['DEATH_1YEAR']=np.where(dead_or_alive.PATIENT_ID.isin(dead.PATIENT_ID),1,0)
-            print(f'Number of deaths in {yr+1}: ',dead_or_alive['DEATH_1YEAR'].sum())
-            return(acg.reindex(sorted(acg.columns), axis=1),dead_or_alive)#Prevents bug #1
-        elif CCS:
-            Xprovisional=load(filename=config.ACGFILES[yr],predictors=predictors)
-    
-            full16=generateCCSData(yr,  Xprovisional, predictors=predictors, binarize=binarize_ccs, **kwargs)
-            if PHARMACY:
-                full16=generatePharmacyData(yr, full16,binarize=binarize_ccs, **kwargs)
-            dead_or_alive=full16.PATIENT_ID.to_frame()
-            dead_or_alive['DEATH_1YEAR']=np.where(dead_or_alive.PATIENT_ID.isin(dead.PATIENT_ID),1,0)
-            print(f'Number of deaths in {yr+1}: ',dead_or_alive['DEATH_1YEAR'].sum())
-            data=pd.merge(full16, dead_or_alive, on='PATIENT_ID')
-            return(data[full16.columns].reindex(sorted(full16.columns), axis=1),data[dead_or_alive.columns])
-
-    if ('COSTE_TOTAL_ANO2' in columns) :
-        X,y= getData_cost(CCS,fullEDCs,predictors,yr,binarize_ccs,PHARMACY,**kwargs)
-        print('Length of initial DF: ',len(X))
-        if PHARMACY:
-            X=generatePharmacyData(yr, X,binarize=binarize_ccs, **kwargs)
-            print('Length DF with pharmacy: ',len(X))
-        if GMACATEGORIES:
-            X=get_gma_categories(yr,X,**kwargs)
-            print('Length DF with GMA: ',len(X))
-        return(X,y)
+def getData_hospitalization(columns,exclude,resourceUsage,yr,predictors,fullEDCs,CCS,**kwargs):
     cols=columns.copy() 
-    t0=time.time()
     ing=loadIng(config.ALLHOSPITFILE,config.DATAPATH)
     ingT=createYearlyDataFrames(ing)
     missing_columns=set([yr,yr+1])-set(ingT.keys())
@@ -164,10 +103,7 @@ def getData(yr,columns=config.COLUMNS,
                     predictors=predictors)
     elif CCS:
         Xprovisional=load(filename=config.ACGFILES[yr],predictors=predictors)
-        full16=generateCCSData(yr,  Xprovisional, predictors=predictors, binarize=binarize_ccs , **kwargs)
-        if PHARMACY:
-            full16=generatePharmacyData(yr, full16, binarize=binarize_ccs, **kwargs)
-        del Xprovisional
+        full16=generateCCSData(yr,  Xprovisional, predictors=predictors, **kwargs)
     else:
         full16=load(filename=config.ACGFILES[yr],predictors=predictors)
    
@@ -179,15 +115,76 @@ def getData(yr,columns=config.COLUMNS,
     print('number of patients y17: ', sum(np.where(y17[config.COLUMNS]>=1,1,0)))
     data=pd.merge(pred16,y17,on='PATIENT_ID')
     print('number of patients in data: ', sum(np.where(data[config.COLUMNS]>=1,1,0)))
-    print('getData time: ',time.time()-t0)
-    
+
     finalcols=listIntersection(data.columns,pred16.columns)
-    X,y=data[finalcols].reindex(sorted(data[finalcols].columns), axis=1),data[cols]
+    return(data[finalcols].reindex(sorted(data[finalcols].columns), axis=1),data[cols])
+
+def get_gma_categories(yr,X, dummy_categories=True, additional_columns=[],**kwargs):
+    assert hasattr(config, 'GMAOUTFILES'), 'GMAOUTFILES not found in the current configuration'
+    gma_categories=pd.DataFrame()
+    names=["PATIENT_ID","zbs", "edad", "sexo","gma","num_patol",
+           "num_sist","peso-ip","riesgo-muerte","dm","ic","epoc",
+           "hta","depre","vih","c_isq","acv","irc","cirros","osteopor","artrosis",
+           "artritis","demencia","dolor_cron","etiqueta","version"]
+    columns=['PATIENT_ID']+additional_columns  
+    for file in config.GMAOUTFILES[yr]:
+        df=pd.read_csv(config.DATAPATH+file, delimiter='|', names=names)
+        gma_categories=pd.concat([gma_categories,df])
+    if dummy_categories:
+        gma_dummy=pd.get_dummies(gma_categories.gma)
+        gma_dummy.rename(columns={c:f'GMA_{c}' for c in gma_dummy},inplace=True)
+        
+        gma_categories=pd.concat([gma_categories[[c for c in columns]], gma_dummy], axis=1)
+    else:
+        gma_categories=gma_categories[columns]  
+    
+    X=pd.merge(X,gma_categories, on='PATIENT_ID')
+    return X        
+# TODO MOVE ASSERTIONS BEFORE LOADING BIG FILES!!!!
+def getData(yr,columns=config.COLUMNS,
+            predictors=config.PREDICTORREGEX,
+            exclude=config.EXCLUDE,
+            resourceUsage=config.RESOURCEUSAGE,
+            **kwargs):
+    t0=time.time()
+    """ DEFINE DEFAULT VALUES FOR KWARGS"""
+    FULLEDCS=config.FULLEDCS if hasattr(config, 'FULLEDCS') else False
+    CCS= config.CCS if hasattr(config, 'CCS') else False
+    PHARMACY= config.PHARMACY if hasattr(config, 'PHARMACY') else False
+    BINARIZE_CCS= config.BINARIZE_CCS if hasattr(config, 'BINARIZE_CCS') else False
+    GMACATEGORIES= config.GMACATEGORIES if hasattr(config, 'GMACATEGORIES') else False
+    """ GET KWARGS VALUES """
+    fullEDCs = kwargs.get('fullEDCs', FULLEDCS)
+    CCS = kwargs.get('CCS', CCS)
+    PHARMACY = kwargs.get('PHARMACY', PHARMACY)
+    binarize_ccs = kwargs.get('BINARIZE_CCS', BINARIZE_CCS)
+    GMACATEGORIES = kwargs.get('GMACATEGORIES', GMACATEGORIES)
+
+    if ('DEATH_1YEAR' in columns) :
+        X,y=getData_death_1year(CCS,fullEDCs,predictors, yr,**kwargs)
+
+    elif ('COSTE_TOTAL_ANO2' in columns) :
+        X,y= getData_cost(CCS,fullEDCs,predictors,yr,**kwargs)
+
+    else:
+        X,y=getData_hospitalization(columns,exclude,resourceUsage,yr,predictors,fullEDCs,CCS,**kwargs)
+
+    print('Length of initial DF: ',len(X))
+    if PHARMACY:
+        X=generatePharmacyData(yr, X, **kwargs)
+        print('Length DF with pharmacy: ',len(X))
+    if GMACATEGORIES:
+        X=get_gma_categories(yr,X,**kwargs)
+        print('Length DF with GMA: ',len(X))
     if binarize_ccs:    
         predictors=[c for c in X if not c=='PATIENT_ID']
         print('Binarizing')
         X[predictors]=(X[predictors]>0).astype(np.int8)
-    return(X[finalcols].reindex(sorted(data[finalcols].columns), axis=1),y[cols])
+
+    assert X.isna().sum().sum()==0
+    assert y.isna().sum().sum()==0
+    print('getData time: ',time.time()-t0)
+    return(X.reindex(sorted(X.columns), axis=1),y)
 
 def generateCCSData(yr,  X,
             **kwargs):
