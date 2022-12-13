@@ -39,10 +39,12 @@ for direct in [config.MODELPATH, config.PREDPATH]:
     if not os.path.exists(direct):
         os.makedirs(direct)
         print('new dir ', direct)
+
 #%%
 np.random.seed(config.SEED)
 
-X,y=getData(2016)#new data 
+X,y=getData(2016)#new data
+ 
 #%%
 to_drop=['PATIENT_ID','ingresoUrg']
 for c in to_drop:
@@ -61,16 +63,19 @@ print('Sample size ',len(X), 'positive: ',sum(y))
 
 if (not 'ACG' in config.PREDICTORREGEX):
     if (hasattr(config, 'PHARMACY')):
-        if config.PHARMACY:
-            CCSPHARMA='PATIENT_ID|FEMALE|AGE_[0-9]+$|CCS|PHARMA'
+        CCSPHARMA='PATIENT_ID|FEMALE|AGE_[0-9]+$|CCS|PHARMA' if config.PHARMACY else None
+    else: CCSPHARMA= None
+    if (hasattr(config, 'GMACATEGORIES')):
+        CCSGMA='PATIENT_ID|FEMALE|AGE_[0-9]+$|CCS|PHARMA|GMA' if config.GMACATEGORIES else None
+    else: CCSGMA= None
 else: 
     CCSPHARMA=None
+    CCSGMA=None
 
 variables={'Demo':'PATIENT_ID|FEMALE|AGE_[0-9]+$',
            'DemoDiag':'PATIENT_ID|FEMALE|AGE_[0-9]+$|EDC_' if 'ACG' in config.PREDICTORREGEX else 'PATIENT_ID|FEMALE|AGE_[0-9]+$|CCS',
-           'DemoDiagPharmaBinary': CCSPHARMA,
            'DemoDiagPharma':'PATIENT_ID|FEMALE|AGE_[0-9]+$|EDC_|RXMG_' if 'ACG' in config.PREDICTORREGEX else CCSPHARMA,
-           'DemoDiagPharmaIsomorb':'PATIENT_ID|FEMALE|AGE_[0-9]+$|EDC_(?!NUR11|RES10)|RXMG_(?!ZZZX000)|ACG_' if 'ACG' in config.PREDICTORREGEX else None
+           'DemoDiagPharmaIsomorb':'PATIENT_ID|FEMALE|AGE_[0-9]+$|EDC_(?!NUR11|RES10)|RXMG_(?!ZZZX000)|ACG_' if 'ACG' in config.PREDICTORREGEX else CCSGMA
            }
 #%%
 for key, val in variables.items():

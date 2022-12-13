@@ -5,7 +5,8 @@ Created on Fri Sep 23 11:22:05 2022
 
 @author: aolza
 """
-EXPERIMENT='cost_ACG_onlyedc'
+EXPERIMENT=__name__.split('.')[-1]
+CONFIGNAME=EXPERIMENT+'.py'
 
 """PREDICTORS: They will be different for each script."""
 PREDICTORREGEX=r'PATIENT_ID|FEMALE|AGE_[0-9]+$|EDC_'

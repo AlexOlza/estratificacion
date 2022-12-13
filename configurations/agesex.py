@@ -7,8 +7,8 @@ Created on Tue Apr 19 11:35:59 2022
 """
 
 
-EXPERIMENT='agesex'
-CONFIGNAME='agesex.py'
+EXPERIMENT=__name__.split('.')[-1]
+CONFIGNAME=EXPERIMENT+'.py'
 COLUMNS=['urg']
 TRACEBACK=True
 

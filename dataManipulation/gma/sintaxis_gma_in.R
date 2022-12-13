@@ -1,14 +1,14 @@
 
 ##201612
-i<-1 #Para 2017 poner 2 en lugar de 1
+i<-2 #Para 2017 poner 2 en lugar de 1
 datapath<-"/home/aolza/Desktop/estratificacionDatos"
 indispensabledatapath<-paste(datapath,'indispensable',sep='/')
 outpath <- '/home/aolza/GMA_SNS_v30112022/dat'
 membersfile2016<-paste(indispensabledatapath,"members_201612.txt",sep='/')
 membersfile2017<-paste(indispensabledatapath,"members_201712.txt",sep='/')
 
-dx2016 <- paste(datapath,"gma_dx_in_2016.txt",sep='/')
-dx2017 <- paste(datapath,"gma_dx_in_2017.txt",sep='/')
+dx2016 <- paste(indispensabledatapath,"ccs/gma_dx_in_2016.txt",sep='/')
+dx2017 <- paste(indispensabledatapath,"ccs/gma_dx_in_2017.txt",sep='/')
 
 members<-c(membersfile2016,membersfile2017)
 dxyears <- c(dx2016, dx2017)
@@ -46,7 +46,7 @@ names(gma2016)[1]<-"id"
 gma2016<-gma2016 %>% filter(id %in% membersyear$id)
 
 
-gma2016<-merge(membersyear,gma2016,by="id") #all=TRUE esto es outer join! aparecen NAs
+gma2016<-merge(membersyear,gma2016,by="id", all=TRUE) #all=TRUE esto es outer join! aparecen NAs
 rm(membersyear)
 summary(gma2016)
 gma2016$CIE_VERSION<-as.factor(gma2016$CIE_VERSION)
@@ -61,7 +61,7 @@ levels(gma2016$cie)
 #FORMATO FECHAS (hago que todas las fechas de diagnostico sean de 20161231)
 #gma2016$fecdx<-as.Date(gma2016$fecfin, "%Y-%m-%d")
 #gma2016$fecdx<-format(gma2016$fecdx,"%Y%m%d")
-gma2016$fecdx<-"20161231"
+gma2016$fecdx<-sprintf("%s1231",year)
 gma2016$fecnac<-as.Date(gma2016$fecnac, "%Y-%m-%d")
 gma2016$fecnac<-format(gma2016$fecnac,"%Y%m%d")
 gma2016<-subset(gma2016,select=c(id,cie,CODE,fecdx,sexo,fecnac,uap))
@@ -87,10 +87,22 @@ date.ini = "20000101"
 date.end = sprintf("%s1231",year)
 language = "ES"
 #Parámetros que sí cambian (cambiar _h por _m para las mujeres)
-file.in  = "gma2016_h_in.txt"
+file.in  = sprintf("gma%s_h_in.txt",year)
 file.out = sprintf("outGMA_%s_h.txt",year)
 
-# Llamada
+# Llamada hombres
+Agrupa.GMA(
+  file.in,
+  path.in,
+  file.out,
+  path.out,
+  date.ini,
+  date.end,
+  language) 
+
+# Llamada mujeres
+file.in  = sprintf("gma%s_m_in.txt",year)
+file.out = sprintf("outGMA_%s_m.txt",year)
 Agrupa.GMA(
   file.in,
   path.in,
@@ -101,22 +113,74 @@ Agrupa.GMA(
   language) 
 
 
+#ANÁLISIS DE LOS RESULTADOS PARA LOS HOMBRES
+#Leemos el fichero de códigos no identificados 
+no_ident<-fread(paste(path.out,sprintf('outGMA_%s_h_Miss.txt',year),sep='/'))
+colnames(no_ident)<- c('CIE_VERSION','CODE','FREQUENCY')
+summary(no_ident)
+length(unique(no_ident$CODE))
+#PARA 2016:
+#Hay 718, de 6875378 (0.01%)
+#Vemos que más del 75% de los códigos no identificados corresponden al CIE 10CM. 
+#En general son códigos infrecuentes: el 3er cuantil de la frecuencia es 16.
+#Hay alguno más frecuente, el máximo es 37167
+
+#PARA 2017:
+#Hay 559 de 7303118
+#La mayoría del CIE10CM
+#tercer cuantil de la frecuencia 11, máximo 19324
 
 
+#Ahora analizamos las incongruencias
+incongruencias<-fread(paste(path.out,sprintf('outGMA_%s_h_Inc.txt',year),sep='/'))
+colnames(incongruencias)<-c('id','code','age','sex','inc_edad','inc_sexo')
+summary(incongruencias)
+length(unique(incongruencias$code))
+#PARA 2016:
+# Hay 15429 (603 códigos únicos)
+# PARA 2017: 8954 (458)
+
+#Ahora una pequeña exploración de la agrupación
+agrupacion<-fread(paste(path.out,'outGMA_2016_h.txt',sep='/'))
+colnames(agrupacion)<-c("id","zbs", "edad", "sexo","gma","num_patol","num_sist","peso-ip","riesgo-muerte","dm","ic","epoc","hta","depre","vih","c_isq","acv","irc","cirros","osteopor","artrosis",
+                                  "artritis","demencia","dolor_cron","etiqueta","version")
+summary(agrupacion)
+cor(agrupacion$edad,agrupacion$`peso-ip`) # 0.3508647
+
+library(corrplot)
+corr<-round(cor(subset(agrupacion, select=c("edad","num_patol","num_sist","peso-ip","riesgo-muerte","dm","ic","epoc","hta","depre","vih","c_isq","acv","irc","cirros","osteopor","artrosis",
+                                            "artritis","demencia","dolor_cron"))),2)
+corrplot(corr, method="circle",mar=c(0,0,2,0),title=sprintf('Hombres %s',year))
 
 
+#ANÁLISIS DE LOS RESULTADOS PARA LAS MUJERES
+#Leemos el fichero de códigos no identificados 
+no_ident<-fread(paste(path.out,sprintf('outGMA_%s_m_Miss.txt',year),sep='/'))
+colnames(no_ident)<- c('CIE_VERSION','CODE','FREQUENCY')
+summary(no_ident)
+length(unique(no_ident$CODE))
+#PARA 2016:
+#Hay 590, de 8564133 (0.007%)
+# PARA 2017: 449
+#Vemos que más del 75% de los códigos no identificados corresponden al CIE 10CM. 
+#En general son códigos infrecuentes: el 3er cuantil de la frecuencia es 12 (9 en 2017).
+#Hay alguno más frecuente, el máximo es 31918 (16900 en 2017)
 
+#Ahora analizamos las incongruencias
+incongruencias<-fread(paste(path.out,sprintf('outGMA_%s_m_Inc.txt',year),sep='/'))
+colnames(incongruencias)<-c('id','code','age','sex','inc_edad','inc_sexo')
+summary(incongruencias)
+length(unique(incongruencias$code))
+#PARA 2016:
+# Hay 17939 (526 códigos únicos)
+# PARA 2017: 10243 (440)
+#Ahora una pequeña exploración de la agrupación
+agrupacion<-fread(paste(path.out,'outGMA_2016_m.txt',sep='/'))
+colnames(agrupacion)<-c("id","zbs", "edad", "sexo","gma","num_patol","num_sist","peso-ip","riesgo-muerte","dm","ic","epoc","hta","depre","vih","c_isq","acv","irc","cirros","osteopor","artrosis",
+                        "artritis","demencia","dolor_cron","etiqueta","version")
+summary(agrupacion)
+cor(agrupacion$edad,agrupacion$`peso-ip`) # 0.3721145
 
-
-
-
-
-
-
-
-
-
-
-
-
-##
+corr<-round(cor(subset(agrupacion, select=c("edad","num_patol","num_sist","peso-ip","riesgo-muerte","dm","ic","epoc","hta","depre","vih","c_isq","acv","irc","cirros","osteopor","artrosis",
+                                            "artritis","demencia","dolor_cron"))),2)
+corrplot(corr, method="circle",mar=c(0,0,2,0),title=sprintf('Mujeres %s',year))

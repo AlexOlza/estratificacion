@@ -23,7 +23,6 @@ PHARMACY=True
 
 """ CCS"""
 CCS=True
-BINARIZE_CCS=True
 ICDFILES={2016:'ccs/dx_in_2016.txt',
           2017:'ccs/dx_in_2017.txt'}
 ICDTOCCSFILES={'ICD10CM':'ccs/translate_icd10cm_ccs_2018.csv',
@@ -32,6 +31,10 @@ CCSFILES={2016:'newCCS2016.csv',
           2017: 'newCCS2017.csv'}
 ATCFILES={2016:'pharma2016.csv',
           2017: 'pharma2017.csv'}
+""" GMA """
+GMACATEGORIES=True
+GMAOUTFILES={2016: ['gma/outGMA_2016_h.txt','gma/outGMA_2016_m.txt'],
+             2017: ['gma/outGMA_2017_h.txt','gma/outGMA_2017_m.txt']}
 
 K=20000
 def target_binarizer(y, K=K, column=COLUMNS):

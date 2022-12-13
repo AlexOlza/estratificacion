@@ -5,7 +5,6 @@ Created on Fri Sep 23 11:24:08 2022
 
 @author: aolza
 """
-
 EXPERIMENT=__name__.split('.')[-1]
 CONFIGNAME=EXPERIMENT+'.py'
 COLUMNS=['COSTE_TOTAL_ANO2']
@@ -19,24 +18,19 @@ INDICEPRIVACION=False
 EXCLUDEOSI=['OS16','OS22'] 
 RESOURCEUSAGE=False
 PHARMACY=True
+""" GMA """
+GMAOUTFILES={2016: ['gma/outGMA_2016_h.txt','gma/outGMA_2016_m.txt'],
+             2017: ['gma/outGMA_2017_h.txt','gma/outGMA_2017_m.txt']}
 
-
+GMACATEGORIES=True
 """ CCS"""
 CCS=True
-BINARIZE_CCS=True
 ICDFILES={2016:'ccs/dx_in_2016.txt',
           2017:'ccs/dx_in_2017.txt'}
 ICDTOCCSFILES={'ICD10CM':'ccs/translate_icd10cm_ccs_2018.csv',
                'ICD9':'ccs/translate_icd9_ccs_2015.csv'}
 CCSFILES={2016:'newCCS2016.csv',
           2017: 'newCCS2017.csv'}
+
 ATCFILES={2016:'pharma2016.csv',
           2017: 'pharma2017.csv'}
-
-K=20000
-def target_binarizer(y, K=K, column=COLUMNS):
-    import pandas as pd
-    import numpy as np
-    cutoff_value=y[column].nlargest(K,columns=column).min()
-    y[column[0]]=np.where(y[column]>=cutoff_value,1,0).ravel()
-    return y

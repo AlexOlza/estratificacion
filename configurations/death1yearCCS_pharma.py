@@ -6,8 +6,8 @@ Created on Mon May  9 15:55:10 2022
 @author: aolza
 """
 
-EXPERIMENT='death1yearCCS_pharma'
-CONFIGNAME='death1yearCCS_pharma.py'
+EXPERIMENT=__name__.split('.')[-1]
+CONFIGNAME=EXPERIMENT+'.py'
 COLUMNS=['DEATH_1YEAR']
 TRACEBACK=True
 

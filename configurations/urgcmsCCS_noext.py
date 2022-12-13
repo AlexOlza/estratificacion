@@ -6,8 +6,8 @@ Created on Mon May  9 15:55:10 2022
 @author: aolza
 """
 
-EXPERIMENT='urgcmsCCS_noext'
-CONFIGNAME='urgcmsCCS_noext.py'
+EXPERIMENT=__name__.split('.')[-1]
+CONFIGNAME=EXPERIMENT+'.py'
 COLUMNS=['urgcms']
 TRACEBACK=False
 

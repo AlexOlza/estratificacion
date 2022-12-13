@@ -5,8 +5,8 @@ Created on Fri May 27 10:03:27 2022
 
 @author: aolza
 """
-EXPERIMENT='urgcmsCCS_previousHosp'
-CONFIGNAME='urgcmsCCS_previousHosp.py'
+EXPERIMENT=__name__.split('.')[-1]
+CONFIGNAME=EXPERIMENT+'.py'
 COLUMNS=['urgcms']
 TRACEBACK=True
 
