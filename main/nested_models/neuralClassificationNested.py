@@ -183,7 +183,7 @@ for key, val in variables.items():
     
     stop_early = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=5)
     
-    tuner.search(X_train, y_train,epochs=3, validation_split=0.2,callbacks=[stop_early],
+    tuner.search(X_train, y_train,epochs=30, validation_split=0.2,callbacks=[stop_early],
                   )
     print('---------------------------------------------------'*5)
     print('SEARCH SPACE SUMMARY:')
