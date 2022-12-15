@@ -21,7 +21,7 @@ import configurations.utility as util
 util.makeAllPaths()
 import pandas as pd
 from modelEvaluation.predict import predict
-from sklearn.metrics import roc_auc_score, brier_score_loss, average_precision_score
+from sklearn.metrics import mean_squared_error
 from modelEvaluation.compare import performance
 from dataManipulation.dataPreparation import getData
 import numpy as np
@@ -73,3 +73,23 @@ for predictors_,CCS_,GMACATEGORIES_ in zip(predictors,CCS,GMACATEGORIES):
     preds=re.sub('[^a-zA-Z]|PATIENT_ID','',predictors_)
     model=joblib.load(os.path.join(config.MODELPATH,f'linear_{preds}.joblib' ))
     predictions[preds]=predict(f'linear_{preds}',config.EXPERIMENT,2018,X=X,y=y)
+
+#%%
+table=pd.DataFrame()
+for model, predictions_ in predictions.items():
+    preds=predictions_[0]
+    R2=predictions_[1]
+    recall, ppv, _, _ = performance(obs=preds.OBS, pred=preds.PRED, K=20000)
+    rmse=mean_squared_error(preds.OBS,preds.PRED, squared=False)
+    table=pd.concat([table,
+                     pd.DataFrame.from_dict({'Model':[model], 'R2':[ R2], 'RMSE':[rmse],
+                      'R@20k': [recall], 'PPV@20K':[ppv]})])
+    
+#%%
+print(table.to_markdown(index=False))
+"""
+| Model        |       R2 |    RMSE |   R@20k |   PPV@20K |
+|:-------------|---------:|--------:|--------:|----------:|
+| FEMALEAGEACG | 0.140944 | 3739.57 | 0.14565 |  0.1416   |
+| FEMALEAGEGMA | 0.140171 | 3741.25 | 0.1642  |  0.162655 |
+"""
