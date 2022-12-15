@@ -44,7 +44,7 @@ for direct in [config.MODELPATH, config.PREDPATH]:
 np.random.seed(config.SEED)
 
 X,y=getData(2016)#new data
- 
+
 #%%
 to_drop=['PATIENT_ID','ingresoUrg']
 for c in to_drop:
