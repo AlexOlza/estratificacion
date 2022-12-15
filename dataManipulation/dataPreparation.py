@@ -32,11 +32,10 @@ def excludeHosp(df,filtros,criterio):
 
     df[criterio]=df[criterio]-df['remove']
     
-def getData_cost(CCS,fullEDCs,predictors,yr,**kwargs):
+def getData_cost(CCS_,fullEDCs_,predictors,yr,**kwargs):#underscores are necessary, issue 
     coste=load(filename=config.ACGFILES[yr],predictors=r'PATIENT_ID|COSTE_TOTAL_ANO2')
-    response='COSTE_TOTAL_ANO2'
-    if not CCS: 
-        if fullEDCs:
+    if not CCS_: 
+        if fullEDCs_:
             acg=create_fullacgfiles(config.FULLACGFILES[yr],yr,directory=config.DATAPATH,
                     predictors=predictors)
             coste=load(filename=config.ACGFILES[yr],predictors=r'PATIENT_ID|COSTE_TOTAL_ANO2')
@@ -45,7 +44,7 @@ def getData_cost(CCS,fullEDCs,predictors,yr,**kwargs):
             acg=load(filename=config.ACGFILES[yr],predictors=predictors)
         print('not opening allhospfile')
         return(acg.reindex(sorted(acg.columns), axis=1),coste)#Prevents bug #1
-    elif CCS:
+    elif CCS_:
         Xprovisional=load(filename=config.ACGFILES[yr],predictors=predictors)
 
         full16=generateCCSData(yr,  Xprovisional, predictors=predictors, **kwargs)
@@ -54,16 +53,16 @@ def getData_cost(CCS,fullEDCs,predictors,yr,**kwargs):
         
         return(data[full16.columns].reindex(sorted(full16.columns), axis=1),data[coste.columns])
 
-def getData_death_1year(CCS,fullEDCs,predictors, yr,**kwargs):
+def getData_death_1year(CCS_,fullEDCs_,predictors, yr,**kwargs):
     alldead=pd.read_csv(config.DECEASEDFILE)
     dead=alldead.loc[alldead.date_of_death.str.startswith(str(yr+1))]
-    if not CCS: 
-        if fullEDCs:
+    if not CCS_: 
+        if fullEDCs_:
             full16=create_fullacgfiles(config.FULLACGFILES[yr],yr,directory=config.DATAPATH,
                     predictors=predictors)
         else:
             full16=load(filename=config.ACGFILES[yr],predictors=predictors)
-    elif CCS:
+    elif CCS_:
         Xprovisional=load(filename=config.ACGFILES[yr],predictors=predictors)
         full16=generateCCSData(yr,  Xprovisional, predictors=predictors, **kwargs)
     dead_or_alive=full16.PATIENT_ID.to_frame()
@@ -72,7 +71,7 @@ def getData_death_1year(CCS,fullEDCs,predictors, yr,**kwargs):
     data=pd.merge(full16, dead_or_alive, on='PATIENT_ID')
     return(data[full16.columns].reindex(sorted(full16.columns), axis=1),data[dead_or_alive.columns])
 
-def getData_hospitalization(columns,exclude,resourceUsage,yr,predictors,fullEDCs,CCS,**kwargs):
+def getData_hospitalization(columns,exclude,resourceUsage,yr,predictors,fullEDCs_,CCS_,**kwargs):
     cols=columns.copy() 
     ing=loadIng(config.ALLHOSPITFILE,config.DATAPATH)
     ingT=createYearlyDataFrames(ing)
@@ -98,10 +97,10 @@ def getData_hospitalization(columns,exclude,resourceUsage,yr,predictors,fullEDCs
         df16=resourceUsageDataFrames(yr)[yr]
         full16=prepare(df16,indicePrivacion=config.INDICEPRIVACION,yr=yr,verbose=config.VERBOSE,predictors=predictors)
         del df16
-    elif fullEDCs:
+    elif fullEDCs_:
         full16=create_fullacgfiles(config.FULLACGFILES[yr],yr,directory=config.DATAPATH,
                     predictors=predictors)
-    elif CCS:
+    elif CCS_:
         Xprovisional=load(filename=config.ACGFILES[yr],predictors=predictors)
         full16=generateCCSData(yr,  Xprovisional, predictors=predictors, **kwargs)
     else:
@@ -148,35 +147,35 @@ def getData(yr,columns=config.COLUMNS,
             **kwargs):
     t0=time.time()
     """ DEFINE DEFAULT VALUES FOR KWARGS"""
-    FULLEDCS=config.FULLEDCS if hasattr(config, 'FULLEDCS') else False
-    CCS= config.CCS if hasattr(config, 'CCS') else False
-    PHARMACY= config.PHARMACY if hasattr(config, 'PHARMACY') else False
-    BINARIZE_CCS= config.BINARIZE_CCS if hasattr(config, 'BINARIZE_CCS') else False
-    GMACATEGORIES= config.GMACATEGORIES if hasattr(config, 'GMACATEGORIES') else False
+    FULLEDCS_def=config.FULLEDCS if hasattr(config, 'FULLEDCS') else False
+    CCS_def= config.CCS if hasattr(config, 'CCS') else False
+    PHARMACY_def= config.PHARMACY if hasattr(config, 'PHARMACY') else False
+    BINARIZE_CCS_def= config.BINARIZE_CCS if hasattr(config, 'BINARIZE_CCS') else False
+    GMACATEGORIES_def= config.GMACATEGORIES if hasattr(config, 'GMACATEGORIES') else False
     """ GET KWARGS VALUES """
-    fullEDCs = kwargs.get('fullEDCs', FULLEDCS)
-    CCS = kwargs.get('CCS', CCS)
-    PHARMACY = kwargs.get('PHARMACY', PHARMACY)
-    binarize_ccs = kwargs.get('BINARIZE_CCS', BINARIZE_CCS)
-    GMACATEGORIES = kwargs.get('GMACATEGORIES', GMACATEGORIES)
+    fullEDCs_ = kwargs.get('fullEDCs', FULLEDCS_def)
+    CCS_ = kwargs.get('CCS', CCS_def)
+    PHARMACY_ = kwargs.get('PHARMACY', PHARMACY_def)
+    binarize_ccs_ = kwargs.get('BINARIZE_CCS', BINARIZE_CCS_def)
+    GMACATEGORIES_ = kwargs.get('GMACATEGORIES', GMACATEGORIES_def)
 
     if ('DEATH_1YEAR' in columns) :
-        X,y=getData_death_1year(CCS,fullEDCs,predictors, yr,**kwargs)
+        X,y=getData_death_1year(CCS_,fullEDCs_,predictors, yr,**kwargs)
 
     elif ('COSTE_TOTAL_ANO2' in columns) :
-        X,y= getData_cost(CCS,fullEDCs,predictors,yr,**kwargs)
+        X,y= getData_cost(CCS_,fullEDCs_,predictors,yr,**kwargs)
 
     else:
-        X,y=getData_hospitalization(columns,exclude,resourceUsage,yr,predictors,fullEDCs,CCS,**kwargs)
+        X,y=getData_hospitalization(columns,exclude,resourceUsage,yr,predictors,fullEDCs_,CCS_,**kwargs)
 
     print('Length of initial DF: ',len(X))
-    if PHARMACY:
+    if PHARMACY_:
         X=generatePharmacyData(yr, X, **kwargs)
         print('Length DF with pharmacy: ',len(X))
-    if GMACATEGORIES:
+    if GMACATEGORIES_:
         X=get_gma_categories(yr,X,**kwargs)
         print('Length DF with GMA: ',len(X))
-    if binarize_ccs:    
+    if binarize_ccs_:    
         predictors=[c for c in X if not c=='PATIENT_ID']
         print('Binarizing')
         X[predictors]=(X[predictors]>0).astype(np.int8)
