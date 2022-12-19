@@ -256,7 +256,6 @@ print('The Average Treatment Effect in females is (ATT): {:.4f}'.format(att))
 #Vemos que, en una muestra de mujeres y hombres con las mismas 
 #características clínicas, las mujeres ingresan menos (ATT<0)
 #%%
-#%%
 overview2 = pairs[['binary_outcome','FEMALE']].groupby(by = ['FEMALE']).aggregate([np.mean, np.var, np.std, 'count'])
 print(overview2)
 treated_outcome = overview2['binary_outcome']['mean'][1]
@@ -265,15 +264,16 @@ att2 = treated_outcome - treated_counterfactual_outcome
 print('For presence/absence of outcome, the Average Treatment Effect in females is (ATT): {:.4f}'.format(att2))
 
 #%%
-""" same thing, same results, different code """
+""" same thing, same results, different code 
 pairs_restricted=pairs[['PATIENT_ID','FEMALE', 'counterfactual','outcome','binary_outcome']]
 counterfactual_df=pd.merge(pairs_restricted.loc[pairs_restricted.FEMALE==1],pairs_restricted.loc[pairs_restricted.FEMALE==0], right_on='PATIENT_ID', left_on='counterfactual',suffixes=('_f','_m'))
 assert all(counterfactual_df['PATIENT_ID_m']==counterfactual_df['counterfactual_f'])
-""" source: https://economics.stackexchange.com/questions/45335/what-is-the-difference-between-ate-and-att"""
+ source: https://economics.stackexchange.com/questions/45335/what-is-the-difference-between-ate-and-att
 for binary, outtype in zip(['','binary_'], [counterfactual_df.outcome_f.dtype, int]):
     counterfactual_df[f'{binary}tau']=counterfactual_df[f'{binary}outcome_f'].astype(outtype)-counterfactual_df[f'{binary}outcome_m'].astype(outtype)
     ATT=counterfactual_df[f'{binary}tau'].mean()
     print(binary, ATT)
+"""
 #%%
 ypairs=pairs.outcome
 x=pairs[original_columns].drop(['PATIENT_ID'],axis=1)
@@ -324,6 +324,8 @@ predsFemale=predict(x.loc[x.FEMALE==1])
 #%%
 from matplotlib import pyplot as plt
 recall, PPV= {}, {}
+plot={}
+fig, ax = plt.subplots(1,1)
 for sex, yy, preds in zip(['Male', 'Female'], [yMale, yFemale], [predsMale, predsFemale]):
     if config.ALGORITHM=='logistic':
         preds=preds[:,1]
@@ -334,8 +336,8 @@ for sex, yy, preds in zip(['Male', 'Female'], [yMale, yFemale], [predsMale, pred
     print(f'PPV_20000 {sex}= ', ppv)
     print(' ')
     if config.ALGORITHM=='logistic':
-        fig, ax = plt.subplots(1,1)
-        plot={}
+        
+        # 
         prec, rec, thre = precision_recall_curve(yy, preds)
         plot[sex]=plot_pr(prec, rec, sex, yy, preds).plot(ax)
     if config.ALGORITHM=='linear':
@@ -344,11 +346,13 @@ for sex, yy, preds in zip(['Male', 'Female'], [yMale, yFemale], [predsMale, pred
             rec, ppv, _, _=performance(yy, preds, K=K, verbose=False)
             recall[sex].append(rec) ; PPV[sex].append(ppv)
 #%%
+import seaborn as sns
 if config.ALGORITHM=='logistic':
     for sex in ['Male', 'Female']:
         sns.set(rc={'figure.figsize':(16,10)}, font_scale=1.3)
         plot[sex].plot(ax)
 if config.ALGORITHM=='linear':
+    import seaborn as sns
     fig, (ax1, ax2) = plt.subplots(1,2)
     # for sex in ['Male', 'Female']:  
     ax1.plot(recall['Male'], recall['Female'])
@@ -368,3 +372,33 @@ if config.ALGORITHM=='linear':
 coefs=fit.coef_[0] if config.ALGORITHM=='logistic' else fit.coef_
 betas={k:v for k,v in zip(fit.feature_names_in_,coefs)}
 print('Coefficient for females: ',betas['FEMALE'])
+print('Intercept: ',fit.intercept_)
+#%%
+""" ASSESSING SIGNIFICANCE OF BETA FOR FEMALES 
+With all the predictors we have a non-invertible matrix, and the variance 
+of the coefficients is inflated because we are computing a pseudoinverse.
+
+Luckily, after matching, we have removed most of the association between 
+sex and the rest of the predictors. Thus, if we fit a univariate model with
+sex as the independent variable, we will obtain a similar beta coefficient,
+and we will be able to estimate its variance and statistical significance.
+
+If the coefficient for sex is statistically significant, so is the size 
+of the effect.
+"""
+import statsmodels.api as sm
+independent = sm.add_constant(x['FEMALE'], prepend=False)
+if config.ALGORITHM=='linear':
+    mod = sm.OLS(ypairs, independent)
+else:
+    mod = sm.Logit(ypairs, independent)
+res = mod.fit()
+print(res.summary())
+#COST
+#               coef    std err          t      P>|t|      [0.025      0.975]
+#FEMALE       -87.5416     11.386     -7.689      0.000    -109.857     -65.226
+# HOSPIT
+#==============================================================================
+                 # coef    std err          z      P>|z|      [0.025      0.975]
+# FEMALE        -0.1966      0.011    -17.461      0.000      -0.219      -0.175
+
