@@ -118,13 +118,15 @@ def getData_hospitalization(columns,exclude,resourceUsage,yr,predictors,fullEDCs
     finalcols=listIntersection(data.columns,pred16.columns)
     return(data[finalcols].reindex(sorted(data[finalcols].columns), axis=1),data[cols])
 
-def get_gma_categories(yr,X, dummy_categories=True, additional_columns=[],complexity=True,**kwargs):
+def get_gma_categories(yr,X, dummy_categories,complexity, additional_columns=[],**kwargs):
     assert hasattr(config, 'GMAOUTFILES'), 'GMAOUTFILES not found in the current configuration'
+    assert dummy_categories>=complexity, 'Can not retrieve gma complexity without dummy categories'
     gma_categories=pd.DataFrame()
-    names=["PATIENT_ID","zbs", "edad", "sexo","gma","num_patol",
-           "num_sist","peso-ip","riesgo-muerte","dm","ic","epoc",
-           "hta","depre","vih","c_isq","acv","irc","cirros","osteopor","artrosis",
-           "artritis","demencia","dolor_cron","etiqueta","version"]
+    names=["PATIENT_ID","GMA_zbs", "GMA_edad", "sexo","gma","GMA_num_patol",
+           "GMA_num_sist","GMA_peso-ip","GMA_riesgo-muerte","GMA_dm","GMA_ic","GMA_epoc",
+           "GMA_hta","GMA_depre","GMA_vih","GMA_c_isq","GMA_acv","GMA_irc","GMA_cirros",
+           "GMA_osteopor","GMA_artrosis",
+           "GMA_artritis","GMA_demencia","GMA_dolor_cron","GMA_etiqueta","GMA_version"]
     columns=['PATIENT_ID']+additional_columns  
     for file in config.GMAOUTFILES[yr]:
         df=pd.read_csv(config.DATAPATH+file, delimiter='|', names=names)
@@ -153,6 +155,7 @@ def getData(yr,columns=config.COLUMNS,
     CCS_def= config.CCS if hasattr(config, 'CCS') else False
     PHARMACY_def= config.PHARMACY if hasattr(config, 'PHARMACY') else False
     BINARIZE_CCS_def= config.BINARIZE_CCS if hasattr(config, 'BINARIZE_CCS') else False
+    GMA_def= config.GMA if hasattr(config, 'GMA') else False
     GMACATEGORIES_def= config.GMACATEGORIES if hasattr(config, 'GMACATEGORIES') else False
     GMACOMPLEXITY_def= config.GMACOMPLEXITY if hasattr(config, 'GMACOMPLEXITY') else False
     """ GET KWARGS VALUES """
@@ -160,6 +163,7 @@ def getData(yr,columns=config.COLUMNS,
     CCS_ = kwargs.get('CCS', CCS_def)
     PHARMACY_ = kwargs.get('PHARMACY', PHARMACY_def)
     binarize_ccs_ = kwargs.get('BINARIZE_CCS', BINARIZE_CCS_def)
+    GMA_ = kwargs.get('GMA', GMA_def)
     GMACATEGORIES_ = kwargs.get('GMACATEGORIES', GMACATEGORIES_def)
     GMACOMPLEXITY_ = kwargs.get('GMACOMPLEXITY', GMACOMPLEXITY_def)
 
@@ -176,8 +180,8 @@ def getData(yr,columns=config.COLUMNS,
     if PHARMACY_:
         X=generatePharmacyData(yr, X, **kwargs)
         print('Length DF with pharmacy: ',len(X))
-    if GMACATEGORIES_:
-        X=get_gma_categories(yr,X,complexity=GMACOMPLEXITY_,**kwargs)
+    if GMA_:
+        X=get_gma_categories(yr,X,dummy_categories=GMACATEGORIES_,complexity=GMACOMPLEXITY_,**kwargs)
         print('Length DF with GMA: ',len(X))
     if binarize_ccs_:    
         predictors=[c for c in X if not c=='PATIENT_ID']
