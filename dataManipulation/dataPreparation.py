@@ -118,9 +118,9 @@ def getData_hospitalization(columns,exclude,resourceUsage,yr,predictors,fullEDCs
     finalcols=listIntersection(data.columns,pred16.columns)
     return(data[finalcols].reindex(sorted(data[finalcols].columns), axis=1),data[cols])
 
-def get_gma_categories(yr,X, dummy_categories,complexity, additional_columns=[],**kwargs):
+def get_gma_categories(yr,X, dummy_categories,drop_digits, additional_columns=[],**kwargs):
     assert hasattr(config, 'GMAOUTFILES'), 'GMAOUTFILES not found in the current configuration'
-    assert dummy_categories>=complexity, 'Can not retrieve gma complexity without dummy categories'
+    assert dummy_categories>=bool(drop_digits), 'Can not retrieve gma complexity without dummy categories'
     gma_categories=pd.DataFrame()
     names=["PATIENT_ID","GMA_zbs", "GMA_edad", "sexo","gma","GMA_num_patol",
            "GMA_num_sist","GMA_peso-ip","GMA_riesgo-muerte","GMA_dm","GMA_ic","GMA_epoc",
@@ -131,8 +131,8 @@ def get_gma_categories(yr,X, dummy_categories,complexity, additional_columns=[],
     for file in config.GMAOUTFILES[yr]:
         df=pd.read_csv(config.DATAPATH+file, delimiter='|', names=names)
         gma_categories=pd.concat([gma_categories,df])
-    if not complexity:
-        gma_categories.gma=gma_categories.gma.astype(str).str.slice(0,2)
+    if drop_digits:
+        gma_categories.gma=gma_categories.gma.astype(str).str.slice(0,3-drop_digits)
     if dummy_categories:
         gma_dummy=pd.get_dummies(gma_categories.gma)
         gma_dummy.rename(columns={c:f'GMA_{c}' for c in gma_dummy},inplace=True)
@@ -157,7 +157,7 @@ def getData(yr,columns=config.COLUMNS,
     BINARIZE_CCS_def= config.BINARIZE_CCS if hasattr(config, 'BINARIZE_CCS') else False
     GMA_def= config.GMA if hasattr(config, 'GMA') else False
     GMACATEGORIES_def= config.GMACATEGORIES if hasattr(config, 'GMACATEGORIES') else False
-    GMACOMPLEXITY_def= config.GMACOMPLEXITY if hasattr(config, 'GMACOMPLEXITY') else False
+    GMA_DROP_DIGITS_def= config.GMA_DROP_DIGITS if hasattr(config, 'GMA_DROP_DIGITS') else 0
     """ GET KWARGS VALUES """
     fullEDCs_ = kwargs.get('fullEDCs', FULLEDCS_def)
     CCS_ = kwargs.get('CCS', CCS_def)
@@ -165,7 +165,7 @@ def getData(yr,columns=config.COLUMNS,
     binarize_ccs_ = kwargs.get('BINARIZE_CCS', BINARIZE_CCS_def)
     GMA_ = kwargs.get('GMA', GMA_def)
     GMACATEGORIES_ = kwargs.get('GMACATEGORIES', GMACATEGORIES_def)
-    GMACOMPLEXITY_ = kwargs.get('GMACOMPLEXITY', GMACOMPLEXITY_def)
+    GMA_DROP_DIGITS_ = kwargs.get('GMA_DROP_DIGITS', GMA_DROP_DIGITS_def)
 
     if ('DEATH_1YEAR' in columns) :
         X,y=getData_death_1year(CCS_,fullEDCs_,predictors, yr,**kwargs)
@@ -181,11 +181,11 @@ def getData(yr,columns=config.COLUMNS,
         X=generatePharmacyData(yr, X, **kwargs)
         print('Length DF with pharmacy: ',len(X))
     if GMA_:
-        X=get_gma_categories(yr,X,dummy_categories=GMACATEGORIES_,complexity=GMACOMPLEXITY_,**kwargs)
+        X=get_gma_categories(yr,X,dummy_categories=GMACATEGORIES_,drop_digits=GMA_DROP_DIGITS_,**kwargs)
         print('Length DF with GMA: ',len(X))
     if binarize_ccs_:    
-        predictors=[c for c in X if not c=='PATIENT_ID']
         print('Binarizing')
+        predictors=[c for c in X if (all(X[c].astype(int)==X[c]) and (not c in ['PATIENT_ID','GMA_num_patol' , 'GMA_num_sist']))]
         X[predictors]=(X[predictors]>0).astype(np.int8)
 
     assert X.isna().sum().sum()==0
