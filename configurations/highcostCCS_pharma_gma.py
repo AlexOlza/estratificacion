@@ -32,6 +32,7 @@ CCSFILES={2016:'newCCS2016.csv',
 ATCFILES={2016:'pharma2016.csv',
           2017: 'pharma2017.csv'}
 """ GMA """
+GMA=True
 GMACATEGORIES=True
 GMAOUTFILES={2016: ['gma/outGMA_2016_h.txt','gma/outGMA_2016_m.txt'],
              2017: ['gma/outGMA_2017_h.txt','gma/outGMA_2017_m.txt']}

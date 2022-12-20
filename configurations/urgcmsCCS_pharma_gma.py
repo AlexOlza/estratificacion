@@ -22,6 +22,7 @@ EXCLUDEOSI=['OS16','OS22']
 RESOURCEUSAGE=False
 PHARMACY=True
 """ GMA """
+GMA=True
 GMACATEGORIES=True
 GMAOUTFILES={2016: ['gma/outGMA_2016_h.txt','gma/outGMA_2016_m.txt'],
              2017: ['gma/outGMA_2017_h.txt','gma/outGMA_2017_m.txt']}
