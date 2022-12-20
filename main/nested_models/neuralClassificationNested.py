@@ -82,8 +82,8 @@ if (not 'ACG' in config.PREDICTORREGEX):
     if (hasattr(config, 'PHARMACY')):
         CCSPHARMA='PATIENT_ID|FEMALE|AGE_[0-9]+$|CCS|PHARMA' if config.PHARMACY else None
     else: CCSPHARMA= None
-    if (hasattr(config, 'GMACATEGORIES')):
-        CCSGMA='PATIENT_ID|FEMALE|AGE_[0-9]+$|CCS|PHARMA|GMA' if config.GMACATEGORIES else None
+    if (hasattr(config, 'GMA')):
+        CCSGMA='PATIENT_ID|FEMALE|AGE_[0-9]+$|CCS|PHARMA|GMA' if config.GMA else None
     else: CCSGMA= None
 else: 
     CCSPHARMA=None

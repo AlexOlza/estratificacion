@@ -44,7 +44,7 @@ for direct in [config.MODELPATH, config.PREDPATH]:
 np.random.seed(config.SEED)
 
 X,y=getData(2016)#new data
-
+assert False
 #%%
 to_drop=['PATIENT_ID','ingresoUrg']
 for c in to_drop:
@@ -65,8 +65,8 @@ if (not 'ACG' in config.PREDICTORREGEX):
     if (hasattr(config, 'PHARMACY')):
         CCSPHARMA='PATIENT_ID|FEMALE|AGE_[0-9]+$|CCS|PHARMA' if config.PHARMACY else None
     else: CCSPHARMA= None
-    if (hasattr(config, 'GMACATEGORIES')):
-        CCSGMA='PATIENT_ID|FEMALE|AGE_[0-9]+$|CCS|PHARMA|GMA' if config.GMACATEGORIES else None
+    if (hasattr(config, 'GMA')):
+        CCSGMA='PATIENT_ID|FEMALE|AGE_[0-9]+$|CCS|PHARMA|GMA' if config.GMA else None
     else: CCSGMA= None
 else: 
     CCSPHARMA=None
