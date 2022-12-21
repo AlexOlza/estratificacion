@@ -26,6 +26,15 @@ import numpy as np
 from sklearn.linear_model import LogisticRegressionCV
 
 #%%
+indices=["GMA_num_patol",
+       "GMA_num_sist","GMA_peso-ip",
+       "GMA_riesgo-muerte"]
+patologias=["GMA_dm","GMA_ic","GMA_epoc",
+       "GMA_hta","GMA_depre","GMA_vih","GMA_c_isq","GMA_acv",
+       "GMA_irc","GMA_cirros",
+       "GMA_osteopor","GMA_artrosis",
+       "GMA_artritis","GMA_demencia","GMA_dolor_cron"]
+additional_columns=indices+patologias
 np.random.seed(config.SEED)
 X,y=getData(2016,
              CCS=True,
@@ -34,7 +43,7 @@ X,y=getData(2016,
              GMA=True,
              GMACATEGORIES=True,
              GMA_DROP_DIGITS=0,
-             additional_columns=[])
+             additional_columns=additional_columns)
 
 #%%
 
@@ -42,7 +51,7 @@ y=y[config.COLUMNS]
 print('Sample size ',len(X))
 
 #%%
-logistic=LogisticRegressionCV(penalty='l1',n_jobs =-1,solver='liblinear')#lasso
+logistic=LogisticRegressionCV(Cs=5,penalty='l1',n_jobs =-1,solver='liblinear',verbose=1)#lasso
 
 to_drop=['PATIENT_ID','ingresoUrg', 'AGE_85GT']
 for c in to_drop:
@@ -57,7 +66,7 @@ t0=time()
 fit=logistic.fit(X, y)
 print('fitting time: ',time()-t0)
 #%%
-modelname, modelfilename=util.savemodel(config, fit, name='lassologistic', return_=True)
+modelname, modelfilename=util.savemodel(config, fit, name='lassologistic_additional', return_=True)
 print(modelname, modelfilename)
 #%%
 plot=False
