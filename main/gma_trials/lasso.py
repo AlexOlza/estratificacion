@@ -51,7 +51,7 @@ y=y[config.COLUMNS]
 print('Sample size ',len(X))
 
 #%%
-logistic=LogisticRegressionCV(Cs=5,penalty='l1',n_jobs =-1,solver='liblinear',verbose=1)#lasso
+logistic=LogisticRegressionCV(Cs=5,penalty='l1',n_jobs =-1,solver='saga',verbose=1)#lasso
 
 to_drop=['PATIENT_ID','ingresoUrg', 'AGE_85GT']
 for c in to_drop:
