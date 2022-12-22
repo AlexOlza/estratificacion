@@ -21,10 +21,17 @@ assert config.configured
 from dataManipulation.dataPreparation import getData
 #%%
 year=eval(input('Year: '))
-X,y=getData(year)
+X,y=getData(year,columns=['DEATH_1YEAR'],
+            additional_columns=['GMA_peso-ip'])
+_, coste=getData(year,columns=['COSTE_TOTAL_ANO2'])
+_, ingreso=getData(year,columns=['urgcms'])
 X=X[[c for c in X if X[c].max()>0]]
 
-gmas=X.filter(regex='GMA_*').sum().to_frame()
+import numpy as np
+ingreso.urgcms=np.where(ingreso.urgcms>=1,1,0)
+respuestas=pd.merge(pd.merge(y,coste,on='PATIENT_ID'),ingreso,on='PATIENT_ID')
+
+gmas=X.filter(regex='GMA_[0-9]+').sum().to_frame()
 dic={'':'Sano o pat.agudas',
      '10':'Sano o pat.agudas',
      '20':'Embarazos y partos',
@@ -34,11 +41,23 @@ dic={'':'Sano o pat.agudas',
      '40':'neoplasias'}
 
 gmas['Grupo']=[dic[v.split('_')[-1][:-1]] for v in gmas.index]
+
 #%%
-gmas_and_death=pd.merge(X.filter(regex='GMA_*|PATIENT_ID'),y,on='PATIENT_ID').drop('PATIENT_ID',axis=1)
+gmas_and_death=pd.merge(X.filter(regex='GMA_[0-9]+|PATIENT_ID'),respuestas,on='PATIENT_ID').drop('PATIENT_ID',axis=1)
 for value, df in gmas_and_death.groupby('DEATH_1YEAR'):
     gmas[f'dead={value}']=df.sum().drop('DEATH_1YEAR',axis=0)
 gmas['Muerte %']=gmas['dead=1']*100/gmas[0]
+
+for value, df in gmas_and_death.groupby('urgcms'):
+    gmas[f'hosp={value}']=df.sum().drop('urgcms',axis=0)
+gmas['Ing %']=gmas['hosp=1']*100/gmas[0]
+
+gmas_and_death['GMA']=gmas_and_death.filter(regex='GMA_[0-9]+').idxmax(axis=1)
+
+for value, df in gmas_and_death.groupby('GMA'):
+    gmas.loc[value,'coste_medio']=df.COSTE_TOTAL_ANO2.mean()
+
+gmas['count']=gmas[0]
 #%%
 import matplotlib
 import matplotlib.pyplot as plt
@@ -59,9 +78,13 @@ grupos=['Sano o pat.agudas', 'Embarazos y partos',
 for grupo, label in zip(grupos,labels):
     df=gmas.loc[gmas.Grupo==grupo]
     df[0].plot.bar(title=label, ax=ax[i],legend=False,sort_columns=True, use_index=False)
-    t=df['Muerte %']
-    for tt,p in zip(t,ax[i].patches):
-        ax[i].annotate(round(tt,2), (p.get_x() * 1.05, p.get_height() * 1.05))
+    m=df['Muerte %']
+    ing=df['Ing %']
+    c=df['coste_medio']
+    for mm,ii,cc,p in zip(m,ing,c,ax[i].patches):
+        ax[i].annotate(round(mm,2), (p.get_x() * 1.05, p.get_height() * 1.05))
+        ax[i].annotate(round(ii,2), (p.get_x() * 1.05 , p.get_height() * 2.05))
+        ax[i].annotate(round(cc,2), (p.get_x() * 1.05, p.get_height() * 3.05 ))
 
     i+=1
 
@@ -69,4 +92,41 @@ plt.suptitle(f'Número de pacientes con cada GMA en {year}, y porcentaje de muer
 plt.tight_layout(pad=2)
 
 #%%
+#%%
 
+font = {'family' : 'normal',
+        'weight' : 'bold',
+        'size'   : 22}
+
+matplotlib.rc('font', **font)
+i=0
+fig, axes=plt.subplots(3,2,figsize=(15,15), sharey=True)
+ax=axes.ravel()
+labels=['Sano o pat.agudas', 'Embarazos y partos',
+       'pat. crón. 1 sist.', 'pat. crón. 2 o 3 sist.',
+       'pat. cron. +3 sist.', 'neoplasias']
+grupos=['Sano o pat.agudas', 'Embarazos y partos',
+       'pat. crónicas 1 sistema', 'pat. crcónicas 2 o 3 sistemas',
+       'pat. crcónicas +3 sistemas', 'neoplasias']
+for grupo, label in zip(grupos,labels):
+    df=gmas.loc[gmas.Grupo==grupo]
+    df[['coste_medio']].plot(style='.-',title=label, ax=ax[i],sort_columns=True,use_index=False)
+    i+=1
+    
+plt.suptitle(f'Coste medio de los pacientes con cada GMA en {year}')
+plt.tight_layout(pad=2)
+
+#%%
+i=0
+fig, axes=plt.subplots(3,2,figsize=(15,15))
+ax=axes.ravel()
+for grupo, label in zip(grupos,labels):
+    df=gmas.loc[gmas.Grupo==grupo]
+    df[['Muerte %']].plot(style='.-',title=label, ax=ax[i],sort_columns=True,use_index=False)
+    df[['Ing %']].plot(style='.-',title=label, ax=ax[i],sort_columns=True,use_index=False)
+    i+=1
+    
+plt.suptitle(f'Ingresos y muerte de los pacientes con cada GMA en {year}')
+plt.tight_layout(pad=2)
+#%%
+print(gmas[['count','coste_medio','Muerte %', 'Ing %']].round(2).to_markdown())
