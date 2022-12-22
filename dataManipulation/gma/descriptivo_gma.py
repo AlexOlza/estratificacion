@@ -43,7 +43,7 @@ dic={'':'Sano o pat.agudas',
 gmas['Grupo']=[dic[v.split('_')[-1][:-1]] for v in gmas.index]
 
 #%%
-gmas_and_death=pd.merge(X.filter(regex='GMA_[0-9]+|PATIENT_ID'),respuestas,on='PATIENT_ID').drop('PATIENT_ID',axis=1)
+gmas_and_death=pd.merge(X.filter(regex='GMA_[0-9]+|PATIENT_ID'),respuestas,on='PATIENT_ID')
 for value, df in gmas_and_death.groupby('DEATH_1YEAR'):
     gmas[f'dead={value}']=df.sum().drop('DEATH_1YEAR',axis=0)
 gmas['Muerte %']=gmas['dead=1']*100/gmas[0]
@@ -130,3 +130,20 @@ plt.suptitle(f'Ingresos y muerte de los pacientes con cada GMA en {year}')
 plt.tight_layout(pad=2)
 #%%
 print(gmas[['count','coste_medio','Muerte %', 'Ing %']].round(2).to_markdown())
+
+#%%
+"""CATEGORIZE peso-ip"""
+
+gmas_and_death=pd.merge(gmas_and_death,X[['PATIENT_ID','GMA_peso-ip']],on='PATIENT_ID')
+
+quantiles=gmas_and_death['GMA_peso-ip'].quantile([0.5,0.8,0.95,0.99])
+
+gmas_and_death['complejidad']=np.where(gmas_and_death['GMA_peso-ip']>=quantiles[0.50],2,1)
+gmas_and_death['complejidad']=np.where(gmas_and_death['GMA_peso-ip']>=quantiles[0.80],3,gmas_and_death['complejidad'])
+gmas_and_death['complejidad']=np.where(gmas_and_death['GMA_peso-ip']>=quantiles[0.95],4,gmas_and_death['complejidad'])
+gmas_and_death['complejidad']=np.where(gmas_and_death['GMA_peso-ip']>=quantiles[0.99],5,gmas_and_death['complejidad'])
+#%%
+
+gmas_and_death['complejidad_GMA']=gmas_and_death['GMA'].str.slice(-1)
+print('GMA complejidad puntos de corte')
+print(gmas_and_death.groupby('complejidad_GMA')['GMA_peso-ip'].aggregate('max'))
