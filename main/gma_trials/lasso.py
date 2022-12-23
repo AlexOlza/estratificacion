@@ -51,7 +51,7 @@ y=y[config.COLUMNS]
 print('Sample size ',len(X))
 
 #%%
-logistic=LogisticRegressionCV(Cs=5,penalty='l1',n_jobs =-1,solver='saga',verbose=1)#lasso
+logistic=LogisticRegressionCV(Cs=5,cv=3,penalty='l1',n_jobs =-1,solver='saga',max_iter=30,verbose=1)#lasso
 
 to_drop=['PATIENT_ID','ingresoUrg', 'AGE_85GT']
 for c in to_drop:
@@ -66,7 +66,7 @@ t0=time()
 fit=logistic.fit(X, y)
 print('fitting time: ',time()-t0)
 #%%
-modelname, modelfilename=util.savemodel(config, fit, name='lassologistic_additional', return_=True)
+modelname, modelfilename=util.savemodel(config, fit, name='lassologistic_additional_fast', return_=True)
 print(modelname, modelfilename)
 #%%
 plot=False
