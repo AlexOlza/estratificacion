@@ -96,7 +96,7 @@ plt.tight_layout(pad=2)
 
 font = {'family' : 'normal',
         'weight' : 'bold',
-        'size'   : 22}
+        'size'   : 12}
 
 matplotlib.rc('font', **font)
 i=0
@@ -146,4 +146,45 @@ gmas_and_death['complejidad']=np.where(gmas_and_death['GMA_peso-ip']>=quantiles[
 
 gmas_and_death['complejidad_GMA']=gmas_and_death['GMA'].str.slice(-1)
 print('GMA complejidad puntos de corte')
-print(gmas_and_death.groupby('complejidad_GMA')['GMA_peso-ip'].aggregate('max'))
+print(gmas_and_death.groupby('complejidad_GMA')['GMA_peso-ip'].aggregate('max').to_markdown())
+print(quantiles.to_markdown())
+
+#%%
+df=gmas_and_death.groupby(['complejidad_GMA','complejidad']).GMA.size().unstack().fillna(0)
+df.loc['Total']=df.filter(regex='[0-9]').sum(axis=0)
+df['Total']=df.filter(regex='[0-9]').sum(axis=1)
+
+print(df.to_markdown())
+#%%
+gmas_new=pd.get_dummies(gmas_and_death.complejidad).sum().to_frame()
+dff=gmas_and_death.filter(regex='complejidad$|DEATH|COSTE|urgcms|GMA$')
+#%%
+for value, df in dff.groupby('complejidad'):
+    gmas_new.loc[value,'coste_medio']=df.COSTE_TOTAL_ANO2.mean()
+    gmas_new.loc[value,'Muerte %']=100*df.DEATH_1YEAR.sum()/len(df)
+    gmas_new.loc[value,'Ing %']=100*df.urgcms.sum()/len(df)
+
+gmas_new.rename(columns={0:'count'},inplace=True)
+
+print(gmas_new.to_markdown())
+#%%
+dff['Nueva_categoria']=dff.GMA.str.slice(0,-1)+dff.complejidad.astype(str)
+#%%
+gmas_new=dff.Nueva_categoria.value_counts().to_frame()
+for value, df in dff.groupby('Nueva_categoria'):
+    gmas_new.loc[value,'coste_medio']=df.COSTE_TOTAL_ANO2.mean()
+    gmas_new.loc[value,'Muerte %']=100*df.DEATH_1YEAR.sum()/len(df)
+    gmas_new.loc[value,'Ing %']=100*df.urgcms.sum()/len(df)
+
+gmas_new.rename(columns={'Nueva_categoria':'count'},inplace=True)
+gmas_new=gmas_new.sort_index(ascending=True)
+print(gmas_new.round(2).to_markdown())
+#%%
+for col in ['Muerte %','Ing %', 'coste_medio']:
+    fig, ax = plt.subplots()
+    gmas_new[col].groupby(gmas_new.index.str.slice(0,-1)).plot(style='.-', use_index=False)
+    ax.set_xticklabels(['',1,'',2,'',3,'',4,'',5])
+    ax.set_xlabel('Complejidad cuantiles')
+    ax.set_ylabel(col)
+    plt.title(year)
+    plt.legend()
