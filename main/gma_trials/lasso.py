@@ -21,10 +21,12 @@ assert config.configured
 import configurations.utility as util
 util.makeAllPaths()
 
+import joblib
+import os
 from dataManipulation.dataPreparation import getData
 import numpy as np
-from sklearn.linear_model import LogisticRegressionCV
-
+from pathlib import Path
+from sklearn.linear_model import LassoCV
 #%%
 indices=["GMA_num_patol",
        "GMA_num_sist","GMA_peso-ip",
@@ -44,14 +46,43 @@ X,y=getData(2016,
              GMACATEGORIES=True,
              GMA_DROP_DIGITS=0,
              additional_columns=additional_columns)
-
+#%%
+"""
+coefs={}
+for available_lasso in Path(config.MODELPATH).glob('lasso*.joblib'):
+    modelname=str(available_lasso).split('/')[-1]
+    print('loading ',modelname)
+    model=joblib.load(available_lasso)
+    coefs[modelname]={name:coef for name, coef in zip(model.feature_names_in_,model.coef_)}
 #%%
 
 y=y[config.COLUMNS]
 print('Sample size ',len(X))
 
 #%%
-logistic=LogisticRegressionCV(Cs=5,cv=3,penalty='l1',n_jobs =-1,solver='saga',max_iter=30,verbose=1)#lasso
+logistic=LassoCV(n_alphas=30,verbose=1, n_jobs=-1)#lasso
+
+to_drop=['PATIENT_ID','ingresoUrg', 'AGE_85GT']
+for c in to_drop:
+    try:
+        X.drop(c,axis=1,inplace=True)
+        util.vprint('dropping col ',c)
+    except:
+        pass
+        util.vprint('pass')
+from time import time
+t0=time()
+fit=logistic.fit(X.filter(regex='GMA'), y)
+print('fitting time: ',time()-t0)
+
+fitcoefs={name:coef for name, coef in zip(fit.feature_names_in_,fit.coef_)}
+
+#%%
+modelname, modelfilename=util.savemodel(config, fit, name='lasso_only_gma', return_=True)
+print(modelname, modelfilename)
+"""
+#%%
+logistic=LassoCV(n_alphas=30,verbose=1, n_jobs=-1)#lasso
 
 to_drop=['PATIENT_ID','ingresoUrg', 'AGE_85GT']
 for c in to_drop:
@@ -65,8 +96,10 @@ from time import time
 t0=time()
 fit=logistic.fit(X, y)
 print('fitting time: ',time()-t0)
-#%%
-modelname, modelfilename=util.savemodel(config, fit, name='lassologistic_additional_fast', return_=True)
+
+fullcoefs={name:coef for name, coef in zip(fit.feature_names_in_,fit.coef_)}
+
+modelname, modelfilename=util.savemodel(config, fit, name='lasso_full', return_=True)
 print(modelname, modelfilename)
 #%%
 plot=False
