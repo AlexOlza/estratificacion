@@ -32,50 +32,112 @@ import os
 import re
 import joblib
 #%%
+def transform(X):
+    dff=X.copy()
+    quantiles=dff['GMA_peso-ip'].quantile([0.5,0.8,0.95,0.99])
+    dff['complejidad']=np.where(dff['GMA_peso-ip']>=quantiles[0.50],2,1)
+    dff['complejidad']=np.where(dff['GMA_peso-ip']>=quantiles[0.80],3,dff['complejidad'])
+    dff['complejidad']=np.where(dff['GMA_peso-ip']>=quantiles[0.95],4,dff['complejidad'])
+    dff['complejidad']=np.where(dff['GMA_peso-ip']>=quantiles[0.99],5,dff['complejidad'])
+    dff['GMA']=dff.filter(regex='GMA_[0-9]+').idxmax(axis=1)
+    dff['Nueva_categoria']=dff.GMA.str.slice(0,-1)+dff.complejidad.astype(str)
+    dff=dff[[c for c in dff if not (('GMA' in c))]]
+    dff=pd.concat([dff, pd.get_dummies(dff.Nueva_categoria)],axis=1)
+    dff.drop(['complejidad','Nueva_categoria'], axis=1,inplace=True)
+    return dff
+#%%
+table=pd.DataFrame()
 predictors=['PATIENT_ID|FEMALE|AGE_[0-9]+$|ACG_','PATIENT_ID|FEMALE|AGE_[0-9]+$|GMA_']
 CCS=[False, True]
 GMACATEGORIES=[False,True]
 
 for predictors_,CCS_,GMACATEGORIES_ in zip(predictors,CCS,GMACATEGORIES):
-    X,y=getData(2016,columns='COSTE_TOTAL_ANO2',
-            predictors=predictors_,
-            exclude=None,
-            resourceUsage=False,
-            FULLEDCS=False,
-            CCS=CCS_,
-            PHARMACY=False,
-            BINARIZE_CCS=False,
-            GMACATEGORIES=GMACATEGORIES_
-            )
-    y=y.COSTE_TOTAL_ANO2
-
-    linear=LinearRegression(n_jobs=-1)
-    X.drop('PATIENT_ID',axis=1,inplace=True)
-    t0=time()
-    fit=linear.fit(X, y)
-    print('fitting time: ',time()-t0)
     preds=re.sub('[^a-zA-Z]|PATIENT_ID','',predictors_)
-    util.savemodel(config, fit, name=f'linear_{preds}')
+    modelname=os.path.join(config.MODELPATH,f'linear_{preds}.joblib' )
+    if not Path(modelname).is_file():
+        X,y=getData(2016,columns='COSTE_TOTAL_ANO2',
+                predictors=predictors_,
+                exclude=None,
+                resourceUsage=False,
+                FULLEDCS=False,
+                CCS=CCS_,
+                PHARMACY=False,
+                BINARIZE_CCS=False,
+                GMACATEGORIES=GMACATEGORIES_
+                )
+        y=y.COSTE_TOTAL_ANO2
+    
+        linear=LinearRegression(n_jobs=-1)
+        X.drop('PATIENT_ID',axis=1,inplace=True)
+        t0=time()
+        fit=linear.fit(X, y)
+        print('fitting time: ',time()-t0)
+        preds=re.sub('[^a-zA-Z]|PATIENT_ID','',predictors_)
+        util.savemodel(config, fit, name=f'linear_{preds}')
+
 #%%
 predictions={}
 for predictors_,CCS_,GMACATEGORIES_ in zip(predictors,CCS,GMACATEGORIES):
     X,y=getData(2017,columns='COSTE_TOTAL_ANO2',
-            predictors=predictors_,
+            predictors='PATIENT_ID|FEMALE|AGE_[0-9]+$|GMA_',
             exclude=None,
             resourceUsage=False,
             FULLEDCS=False,
-            CCS=CCS_,
+            CCS=True,
             PHARMACY=False,
             BINARIZE_CCS=False,
-            GMACATEGORIES=GMACATEGORIES_
+            GMACATEGORIES=True,
             )
     
     preds=re.sub('[^a-zA-Z]|PATIENT_ID','',predictors_)
     model=joblib.load(os.path.join(config.MODELPATH,f'linear_{preds}.joblib' ))
     predictions[preds]=predict(f'linear_{preds}',config.EXPERIMENT,2018,X=X,y=y)
 
+
 #%%
-table=pd.DataFrame()
+""" BUILD MODEL WITH OUR OWN COMPLEXITY CATEGORIES """
+X,y=getData(2016,columns='COSTE_TOTAL_ANO2',
+        predictors='PATIENT_ID|FEMALE|AGE_[0-9]+$|GMA_',
+        exclude=None,
+        resourceUsage=False,
+        FULLEDCS=False,
+        CCS=True,
+        PHARMACY=False,
+        BINARIZE_CCS=False,
+        GMACATEGORIES=True,
+        additional_columns=['GMA_peso-ip']
+        )
+y=y.COSTE_TOTAL_ANO2
+
+X=transform(X)
+X.drop('PATIENT_ID',axis=1,inplace=True)
+t0=time()
+linear=LinearRegression(n_jobs=-1)
+fit=linear.fit(X, y)
+print('fitting time: ',time()-t0)
+preds=re.sub('[^a-zA-Z]|PATIENT_ID','',predictors_)
+util.savemodel(config, fit, name=f'linear_{preds}_complejidadcuantiles')
+
+#%%PREDICT FOR THIS MODEL
+X,y=getData(2017,columns='COSTE_TOTAL_ANO2',
+        predictors='PATIENT_ID|FEMALE|AGE_[0-9]+$|GMA_',
+        exclude=None,
+        resourceUsage=False,
+        FULLEDCS=False,
+        CCS=True,
+        PHARMACY=False,
+        BINARIZE_CCS=False,
+        GMACATEGORIES=True,
+        additional_columns=['GMA_peso-ip']
+        )
+
+X=transform(X)
+
+model=joblib.load(os.path.join(config.MODELPATH,f'linear_{preds}_complejidadcuantiles.joblib' ))
+predictions[f'{preds}_complejidadcuantiles']=predict(f'linear_{preds}_complejidadcuantiles',config.EXPERIMENT,2018,X=X,y=y)
+
+#%%
+
 for model, predictions_ in predictions.items():
     preds=predictions_[0]
     R2=predictions_[1]
