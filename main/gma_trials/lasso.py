@@ -46,6 +46,8 @@ X,y=getData(2016,
              GMACATEGORIES=True,
              GMA_DROP_DIGITS=0,
              additional_columns=additional_columns)
+y=y[config.COLUMNS]
+print('Sample size ',len(X))
 #%%
 """
 coefs={}
