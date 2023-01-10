@@ -136,7 +136,7 @@ def get_gma_categories(yr,X, dummy_categories,drop_digits, additional_columns=[]
     if dummy_categories:
         gma_dummy=pd.get_dummies(gma_categories.gma)
         gma_dummy.rename(columns={c:f'GMA_{c}' for c in gma_dummy},inplace=True)
-        
+        gma_dummy.drop('GMA_1',axis=1,inplace=True)
         gma_categories=pd.concat([gma_categories[[c for c in columns]], gma_dummy], axis=1)
     else:
         gma_categories=gma_categories[columns]  
