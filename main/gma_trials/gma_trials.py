@@ -69,6 +69,7 @@ additional_columns=indices+patologias
 
 basico='PATIENT_ID|FEMALE|AGE_[0-9]+$|CCS|PHARMA|'
 variables={ 'CCSPHARMA':basico[:-1],
+            'GMA_peso_ip':basico+'GMA_peso-ip',
             'GMA_31cat':basico+'GMA_[0-9]+$',
             'GMA_indices': basico+ '|'.join(indices),
             'GMA_patologias':basico+ '|'.join(patologias),
