@@ -1,24 +1,33 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Fri Sep 23 11:24:08 2022
+Created on Mon May  9 15:55:10 2022
 
 @author: aolza
 """
 
 EXPERIMENT=__name__.split('.')[-1]
 CONFIGNAME=EXPERIMENT+'.py'
-COLUMNS=['COSTE_TOTAL_ANO2']
+COLUMNS=['urgcms']
 TRACEBACK=True
-EXCLUDE=[]
-"""PREDICTORS"""
+
+"""PREDICTORS: They will be different for each script."""
 PREDICTORREGEX=r'PATIENT_ID|AGE_[0-9]+$|FEMALE|CCS(?!2601|2602|2603|2604|2605|2606|2607|2608|2609|2610|2611|2612|2613|2614|2615|2618|2619|2620|2621)[0-9]+|CCSONCOLO'
 INDICEPRIVACION=False
+COLUMNS=['urgcms']#variable respuesta
+EXCLUDE=['nbinj']
 #Exclude patients from Tolosaldea and Errioxa because they receive
 #most of their care outside of Osakidetza.
 EXCLUDEOSI=['OS16','OS22'] 
 RESOURCEUSAGE=False
 PHARMACY=True
+BINARIZE_CCS=True
+""" GMA """
+GMA=True
+GMACATEGORIES=True
+GMACOMPLEXITY=False
+GMAOUTFILES={2016: ['gma/outGMA_2016_h.txt','gma/outGMA_2016_m.txt'],
+             2017: ['gma/outGMA_2017_h.txt','gma/outGMA_2017_m.txt']}
 
 
 """ CCS"""
@@ -29,18 +38,6 @@ ICDTOCCSFILES={'ICD10CM':'ccs/translate_icd10cm_ccs_2018.csv',
                'ICD9':'ccs/translate_icd9_ccs_2015.csv'}
 CCSFILES={2016:'newCCS2016.csv',
           2017: 'newCCS2017.csv'}
-ATCFILES={2016:'pharma2016.csv',
-          2017: 'pharma2017.csv'}
-""" GMA """
-GMA=True
-GMACATEGORIES=True
-GMAOUTFILES={2016: ['gma/outGMA_2016_h.txt','gma/outGMA_2016_m.txt'],
-             2017: ['gma/outGMA_2017_h.txt','gma/outGMA_2017_m.txt']}
 
-K=20000
-def target_binarizer(y, K=K, column=COLUMNS):
-    import pandas as pd
-    import numpy as np
-    cutoff_value=y[column].nlargest(K,columns=column).min()
-    y[column[0]]=np.where(y[column]>=cutoff_value,1,0).ravel()
-    return y
+ATCFILES={2016:'pharma2016.csv',
+                    2017: 'pharma2017.csv'}

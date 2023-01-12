@@ -1,25 +1,31 @@
 
 ##201612
 i<-2 #Para 2017 poner 2 en lugar de 1
+#indicar el camino a la carpeta que contiene los archivos de members y diagnósticos
 datapath<-"/home/aolza/Desktop/estratificacionDatos"
 indispensabledatapath<-paste(datapath,'indispensable',sep='/')
+#indicar dónde guardaremos los archivos inGMA
 outpath <- '/home/aolza/GMA_SNS_v30112022/dat'
+#indicar cómo se llaman los archivos members
 membersfile2016<-paste(indispensabledatapath,"members_201612.txt",sep='/')
 membersfile2017<-paste(indispensabledatapath,"members_201712.txt",sep='/')
-
+#indicar cómo se llaman los archivos de diagnósticos corregidos
 dx2016 <- paste(indispensabledatapath,"ccs/gma_dx_in_2016.txt",sep='/')
 dx2017 <- paste(indispensabledatapath,"ccs/gma_dx_in_2017.txt",sep='/')
 
+#agrupamos los nombres de los archivos en vectores, usaremos unos u otros según el valor de i
 members<-c(membersfile2016,membersfile2017)
 dxyears <- c(dx2016, dx2017)
 years<-c(2016,2017)
 
+#Según el año i elegido, elegimos los archivos de entrada y creamos
+#el nombre de los de salida
 year<-years[i]
 membersfile<- members[i]
 dxyearfile <- dxyears[i]
 outfile_h<-paste(outpath,sprintf("gma%s_h_in.txt", year),sep='/')
 outfile_m<-paste(outpath,sprintf("gma%s_m_in.txt", year),sep='/')
-
+#procesamos el archivo members
 library(data.table)
 membersyear<-fread(membersfile, header = FALSE, sep = ",")
 colnames(membersyear)<-c("id","cupo","uap","osi","edad","sexo","coste","costefarmacia","urgencias","consultas","hosp","dial")
@@ -38,15 +44,15 @@ membersyear<-subset(membersyear,select=-c(nac))
 
 
 library(stringr)
-
+#leemos los diagnósticos y nos quedamos con los id que están en members
 gma2016<-fread(dxyearfile,sep = ",")
 summary(gma2016)
 names(gma2016)[1]<-"id"
 
 gma2016<-gma2016 %>% filter(id %in% membersyear$id)
 
-
-gma2016<-merge(membersyear,gma2016,by="id", all=TRUE) #all=TRUE esto es outer join! aparecen NAs
+#preprocesamos para obtener el formato adecuado para GMA
+gma2016<-merge(membersyear,gma2016,by="id", all=TRUE)
 rm(membersyear)
 summary(gma2016)
 gma2016$CIE_VERSION<-as.factor(gma2016$CIE_VERSION)
@@ -73,7 +79,7 @@ gma2016_m<-subset(gma2016,sexo==2)
 write.table(gma2016_h, outfile_h,na="", sep="|",row.names=FALSE,col.names=FALSE, quote = FALSE)
 write.table(gma2016_m, outfile_m,na="", sep="|",row.names=FALSE,col.names=FALSE, quote = FALSE)
 
-
+#Ahora los archivos de entrada están guardados donde deben
 # CARGAMOS EL WORKSPACE DE GMA
 
 load("/home/aolza/GMA_SNS_v30112022/bin/GMA SNS v11.RData")

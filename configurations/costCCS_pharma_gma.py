@@ -21,7 +21,7 @@ PHARMACY=True
 """ GMA """
 GMAOUTFILES={2016: ['gma/outGMA_2016_h.txt','gma/outGMA_2016_m.txt'],
              2017: ['gma/outGMA_2017_h.txt','gma/outGMA_2017_m.txt']}
-
+GMA=True
 GMACATEGORIES=True
 """ CCS"""
 CCS=True
