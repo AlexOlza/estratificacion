@@ -5,7 +5,7 @@ Created on Tue Dec 20 10:16:18 2022
 
 @author: aolza
 """
-cluster=True
+cluster=False
 import sys
 sys.path.append('/home/aolza/Desktop/estratificacion/')#necessary in cluster
 
@@ -86,32 +86,33 @@ vardict=[variables,variables_7cat,variables_4cat]
 table=pd.DataFrame()
 
 for drop_,vardict_ in zip(drop,vardict):
-    X,y=getData(2016,
-                CCS=True,
-                PHARMACY=True,
-                BINARIZE_CCS=True,
-                GMA=True,
-                GMACATEGORIES=True,
-                GMA_DROP_DIGITS=drop_,
-                additional_columns=additional_columns)
-
-    to_drop=['PATIENT_ID','ingresoUrg']
-    for c in to_drop:
-        try:
-            X.drop(c,axis=1,inplace=True)
-            util.vprint('dropping col ',c)
-        except:
-            pass
-            util.vprint('pass')
+    if cluster:
+        X,y=getData(2016,
+                    CCS=True,
+                    PHARMACY=True,
+                    BINARIZE_CCS=True,
+                    GMA=True,
+                    GMACATEGORIES=True,
+                    GMA_DROP_DIGITS=drop_,
+                    additional_columns=additional_columns)
     
-    y=np.where(y[config.COLUMNS]>=1,1,0)
-    y=y.ravel()
+        to_drop=['PATIENT_ID','ingresoUrg']
+        for c in to_drop:
+            try:
+                X.drop(c,axis=1,inplace=True)
+                util.vprint('dropping col ',c)
+            except:
+                pass
+                util.vprint('pass')
+        
+        y=np.where(y[config.COLUMNS]>=1,1,0)
+        y=y.ravel()
+        
+        
+        print('Sample size ',len(X), 'positive: ',sum(y))
+    #%%
     
-    
-    print('Sample size ',len(X), 'positive: ',sum(y))
-#%%
-
-    fit_models(vardict_, X, y)
+        fit_models(vardict_, X, y)
 
 
 #%%
@@ -157,3 +158,24 @@ for drop_,vardict_ in zip(drop,vardict):
     
     #%%
 print(table.to_markdown(index=False))
+#%%
+if not cluster:
+    from matplotlib import pyplot as plt
+    import joblib
+    for m in ['GMA_31cat_indices_patologias','GMA_7cat_indices_patologias','GMA_4cat_indices_patologias',
+              'GMA_31cat','GMA_7cat','GMA_4cat']:
+        model=joblib.load(config.MODELPATH+f'{m}.joblib')
+        coefs=pd.DataFrame({name:[coef] for name, coef in zip(model.feature_names_in_,model.coef_[0])}).T
+        coefs.rename(columns={0:'beta'}, inplace=True)
+        gmacoefs=coefs.loc[coefs.index.str.startswith('GMA')].sort_index()
+        ccscoefs=coefs.loc[coefs.index.str.startswith('CCS')].nlargest(len(gmacoefs),columns='beta')
+        fig,ax=plt.subplots(figsize=(40,30))
+        gmacoefs.plot(ax=ax, use_index=False, title=m)
+        ccscoefs.plot(ax=ax)
+        x=np.arange(len(gmacoefs))
+        y=gmacoefs.beta.values
+        z=ccscoefs.beta.values
+        for i, txt in enumerate(gmacoefs.index):
+            ax.annotate(txt, (x[i], y[i]),fontsize=36)
+        for i, txt in enumerate(ccscoefs.index):
+            ax.annotate(txt, (x[i], z[i]),fontsize=26,rotation=270)
