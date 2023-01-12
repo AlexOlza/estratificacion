@@ -255,14 +255,35 @@ att = treated_outcome - treated_counterfactual_outcome
 print('The Average Treatment Effect in females is (ATT): {:.4f}'.format(att))
 #Vemos que, en una muestra de mujeres y hombres con las mismas 
 #características clínicas, las mujeres ingresan menos (ATT<0)
+if config.ALGORITHM=='linear':
+    dfWomen=pairs[['outcome','FEMALE']].loc[pairs.FEMALE==1]
+    dfMen=pairs[['outcome','FEMALE']].loc[pairs.FEMALE==0]
+    import statsmodels.stats.api as sms
+    r = sms.CompareMeans(sms.DescrStatsW(dfWomen.outcome),
+                         sms.DescrStatsW(dfMen.outcome))
+    
+   
+    print('Confidence interval for the ATT; ',r.tconfint_diff())
+
 #%%
-overview2 = pairs[['binary_outcome','FEMALE']].groupby(by = ['FEMALE']).aggregate([np.mean, np.var, np.std, 'count'])
+overview2 = pairs[['binary_outcome','FEMALE']].groupby(by = ['FEMALE']).aggregate(['sum',np.mean, np.var, np.std, 'count'])
 print(overview2)
 treated_outcome = overview2['binary_outcome']['mean'][1]
 treated_counterfactual_outcome = overview2['binary_outcome']['mean'][0]
 att2 = treated_outcome - treated_counterfactual_outcome
 print('For presence/absence of outcome, the Average Treatment Effect in females is (ATT): {:.4f}'.format(att2))
+from statsmodels.stats.proportion import proportion_confint 
 
+if config.ALGORITHM=='logistic':
+    confint_prevalence_women=proportion_confint(count=overview2['binary_outcome']['sum'][1],    # Number of "successes"
+                       nobs=len(pairs)/2,    # Number of trials
+                       alpha=(1 - 0.95))
+    
+    confint_prevalence_men=proportion_confint(count=overview2['binary_outcome']['sum'][0],    # Number of "successes"
+                       nobs=len(pairs)/2,    # Number of trials
+                       alpha=(1 - 0.95))
+    
+    print('Confidence interval for the ATT; ',np.array(confint_prevalence_women)-np.array(confint_prevalence_men))
 #%%
 """ same thing, same results, different code 
 pairs_restricted=pairs[['PATIENT_ID','FEMALE', 'counterfactual','outcome','binary_outcome']]
@@ -321,6 +342,18 @@ else:
     yFemale=pairs.loc[pairs.FEMALE==1].outcome
 predsMale=predict(x.loc[x.FEMALE==0])
 predsFemale=predict(x.loc[x.FEMALE==1])
+
+if config.ALGORITHM=='linear':
+    allpreds=pd.concat([pd.DataFrame({'PRED':predsMale,'Sex':[0]*len(predsMale)}),
+                    pd.DataFrame({'PRED':predsFemale,'Sex':[1]*len(predsFemale)})])
+else:
+    allpreds=pd.concat([pd.DataFrame({'PRED':predsMale[:,1],'Sex':[0]*len(predsMale)}),
+                    pd.DataFrame({'PRED':predsFemale[:,1],'Sex':[1]*len(predsFemale)})])
+#%%
+#Number of females in the top 20000 list
+K=20000
+percent=allpreds.nlargest(K,'PRED').Sex.sum()*100/K
+print(f'The percentage of women in the top {K} list is ',percent)
 #%%
 from matplotlib import pyplot as plt
 recall, PPV= {}, {}
@@ -401,4 +434,4 @@ print(res.summary())
 #==============================================================================
                  # coef    std err          z      P>|z|      [0.025      0.975]
 # FEMALE        -0.1966      0.011    -17.461      0.000      -0.219      -0.175
-
+# const         -2.5190      0.008   -330.633      0.000      -2.534      -2.504
