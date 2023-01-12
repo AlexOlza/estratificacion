@@ -59,7 +59,7 @@ if not all([Path(os.path.join(config.MODELPATH,f'{m}.joblib')).is_file() for m i
     y=np.where(y[config.COLUMNS]>=1,1,0)
     print('Sample size ',len(X))
 #%%
-if Path(os.path.join(config.MODELPATH,'l1_only_gma.joblib')).is_file() :
+if not Path(os.path.join(config.MODELPATH,'l1_only_gma.joblib')).is_file() :
     # logistic=LogisticRegressionCV(Cs=10, penalty='l1',solver='saga',verbose=1, n_jobs=-1)#lasso
     logistic=LogisticRegression(penalty='l1', C=1e-3,solver='saga',verbose=1, n_jobs=-1)#lasso
     
@@ -103,9 +103,13 @@ if not Path(os.path.join(config.MODELPATH,'l1_full.joblib')).is_file() :
 #%%
 plot=False
 if plot:
+    import matplotlib.pyplot as plt
+    plt.figure()
+    plt.rcParams.update({'font.size': 32}) # must set in top
     import pandas as pd
     for k,v in coefs.items():
         df=pd.DataFrame(v).T
         df.rename(columns={0:'beta'},inplace=True)
+        df=df.sort_values('beta',ascending=True)
         df.loc[df.beta!=0].plot.bar(title=k, figsize=(50,30))
-       
+        print(df.loc[df.beta!=0].to_markdown())
