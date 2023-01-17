@@ -154,10 +154,14 @@ def reverse_one_hot(X, integers=True):
             X.drop(cols,axis=1,inplace=True)
             X[var.split('_')[0]]=Xx.idxmax(1)
     if integers:
+        cols=[col for col in ['AGE','GMA','ACG'] if col in X]
+        cats=[sorted(X[col].unique()) for col in cols]
         from sklearn.preprocessing import OrdinalEncoder
-        enc = OrdinalEncoder()
-        X=enc.fit_transform(X)
-        X=pd.DataFrame(X,columns=enc.feature_names_in_)
+        enc = OrdinalEncoder(categories=cats,
+                             dtype=np.int8)
+
+        X[cols]=enc.fit_transform(X[cols])
+        # X=pd.DataFrame(X,columns=enc.feature_names_in_)
     return X
 # TODO MOVE ASSERTIONS BEFORE LOADING BIG FILES!!!!
 def getData(yr,columns=config.COLUMNS,
