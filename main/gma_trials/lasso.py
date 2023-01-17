@@ -56,6 +56,8 @@ if not all([Path(os.path.join(config.MODELPATH,f'{m}.joblib')).is_file() for m i
                  GMACATEGORIES=True,
                  GMA_DROP_DIGITS=0,
                  additional_columns=additional_columns)
+    from dataManipulation.dataPreparation import reverse_one_hot
+    X=reverse_one_hot(X)
     y=y[config.COLUMNS]
     print('Sample size ',len(X))
 #%%

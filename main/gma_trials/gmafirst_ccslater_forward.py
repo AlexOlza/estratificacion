@@ -42,16 +42,14 @@ X,y=getData(2016,
 
 # X, y=X.sample(1000,random_state=1), y.sample(1000, random_state=1)
 # y=y[config.COLUMNS]
-X=reverse_one_hot(X, integers=False)
+X=reverse_one_hot(X)
 
-
-enc = OrdinalEncoder(categories=[sorted(X.AGE.unique()),sorted(X.GMA.unique())],
-                     dtype=np.int8)
-
-X[['AGE','GMA']]=enc.fit_transform(X[['AGE','GMA']])
 
 print('Sample size ',len(X))
 
 #%%
 df=pd.merge(X,y,on='PATIENT_ID').drop('PATIENT_ID',axis=1)#.sample(100)
 model=sklearn_forward_regression(df, config.COLUMNS[0])
+#%%
+from configurations import utility as util
+util.savemodel(config, model, name='forward')

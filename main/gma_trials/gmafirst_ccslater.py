@@ -21,11 +21,10 @@ assert config.configured
 import configurations.utility as util
 util.makeAllPaths()
 
-from dataManipulation.dataPreparation import getData
+from dataManipulation.dataPreparation import getData, reverse_one_hot
 import numpy as np
 from sklearn.linear_model import LinearRegression
 from sklearn.feature_selection import RFE
-from dataManipulation.dataPreparation import reverse_one_hot
 from sklearn.preprocessing import OrdinalEncoder
 X,y=getData(2016,
              CCS=True,
@@ -47,7 +46,7 @@ enc = OrdinalEncoder(categories=[sorted(X.AGE.unique()),sorted(X.GMA.unique())],
 X[['AGE','GMA']]=enc.fit_transform(X[['AGE','GMA']])
 
 print('Sample size ',len(X))
-
+X=X.drop('PATIENT_ID',axis=1)
 
 estimator=LinearRegression(n_jobs=-1)
 selector = RFE(estimator, n_features_to_select=50, step=3,verbose=1)

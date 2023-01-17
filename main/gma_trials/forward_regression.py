@@ -44,7 +44,7 @@ def sms_forward_regression(df, y, candidates = ['AGE','GMA','FEMALE']):
     print('elminated variables: ')
     print(set(df.drop(y, axis=1).columns).difference(candidates))
 #%%
-def sklearn_forward_regression(df, y, candidates = ['AGE','GMA','FEMALE']):    
+def sklearn_forward_regression(df, y, candidates = ['AGE','GMA','FEMALE'], tol=1e-4):    
     ar2 = dict()
     last_max = -1
     
@@ -66,7 +66,7 @@ def sklearn_forward_regression(df, y, candidates = ['AGE','GMA','FEMALE']):
         max_ar2 =  max(ar2.values())
         max_ar2_key = max(ar2, key=ar2.get)
         # we check whether any of them has increased performance
-        if max_ar2 > last_max:
+        if max_ar2 > last_max + tol:
             candidates.append(max_ar2_key) #if so, we add the best one
             last_max = max_ar2
     
@@ -75,7 +75,6 @@ def sklearn_forward_regression(df, y, candidates = ['AGE','GMA','FEMALE']):
             print('Adjusted R2: ' + str(max_ar2))
             print('===============')
         else:
-            # print(model.summary())
             break
     
     print('\n\n')
