@@ -51,7 +51,7 @@ enc = OrdinalEncoder(categories=[sorted(X.AGE.unique()),sorted(X.GMA.unique())],
 X[['AGE','GMA']]=enc.fit_transform(X[['AGE','GMA']])
 
 print('Sample size ',len(X))
-assert False
+
 #%%
 df=pd.merge(X,y,on='PATIENT_ID').drop('PATIENT_ID',axis=1)#.sample(100)
 model=sklearn_forward_regression(df, config.COLUMNS[0])
