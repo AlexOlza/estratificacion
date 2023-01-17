@@ -5,42 +5,7 @@ Created on Mon Jan 16 09:53:52 2023
 
 @author: aolza
 """
-import statsmodels.formula.api as sm
-import pandas as pd
 
-def forward_regression(df, y, candidates = ['AGE','GMA','FEMALE']):    
-    ar2 = dict()
-    last_max = -1
-    
-    while(True):
-        for x in df.drop([y] + candidates, axis=1).columns:
-            if len(candidates) == 0:
-                features = x
-            else:
-                features = x + ' + '
-                features += ' + '.join(candidates)
-    
-            model = sm.ols(y + ' ~ ' + features, df).fit()
-            ar2[x] = model.rsquared
-    
-        max_ar2 =  max(ar2.values())
-        max_ar2_key = max(ar2, key=ar2.get)
-    
-        if max_ar2 > last_max:
-            candidates.append(max_ar2_key)
-            last_max = max_ar2
-    
-            print('step: ' + str(len(candidates)))
-            print(candidates)
-            print('Adjusted R2: ' + str(max_ar2))
-            print('===============')
-        else:
-            print(model.summary())
-            break
-    
-    print('\n\n')
-    print('elminated variables: ')
-    print(set(df.drop(y, axis=1).columns).difference(candidates))
 #%%
 import sys
 sys.path.append('/home/aolza/Desktop/estratificacion/')#necessary in cluster
@@ -59,9 +24,13 @@ util.makeAllPaths()
 
 from dataManipulation.dataPreparation import getData, reverse_one_hot
 import numpy as np
+import pandas as pd
 from sklearn.linear_model import LinearRegression
 from sklearn.feature_selection import RFE
 from sklearn.preprocessing import OrdinalEncoder
+
+from main.gma_trials.forward_regression import sklearn_forward_regression
+
 X,y=getData(2016,
              CCS=True,
              PHARMACY=True,
@@ -85,4 +54,4 @@ print('Sample size ',len(X))
 assert False
 #%%
 df=pd.merge(X,y,on='PATIENT_ID').drop('PATIENT_ID',axis=1)#.sample(100)
-forward_regression(df, config.COLUMNS[0])
+model=sklearn_forward_regression(df, config.COLUMNS[0])
