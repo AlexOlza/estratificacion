@@ -47,7 +47,7 @@ X=reverse_one_hot(X)
 print('Sample size ',len(X))
 
 #%%
-df=pd.merge(X,y,on='PATIENT_ID').drop('PATIENT_ID',axis=1).sample(100)
+df=pd.merge(X,y,on='PATIENT_ID').drop('PATIENT_ID',axis=1)#.sample(100)
 model=sklearn_stepwise_regression(df, config.COLUMNS[0])
 #%%
 from configurations import utility as util
