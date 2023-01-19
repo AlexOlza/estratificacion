@@ -51,4 +51,4 @@ df=pd.merge(X,y,on='PATIENT_ID').drop('PATIENT_ID',axis=1)#.sample(100)
 model=sklearn_stepwise_regression(df, config.COLUMNS[0])
 #%%
 from configurations import utility as util
-util.savemodel(config, model, name='stepwise')
+util.savemodel(config, model, name='stepwise_')

@@ -114,7 +114,7 @@ def sklearn_stepwise_regression(df, y, minimal = ['AGE','GMA','FEMALE'], tol=1e-
             print('===============')
         else:
             break
-        
+        print('Testing variables to remove...')
         for x in [c for c in candidates if not c in minimal] :
             features = [c for c in candidates if c!=x]
             # we try building a model with such column and the preexisting ones
