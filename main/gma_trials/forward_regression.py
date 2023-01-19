@@ -82,18 +82,25 @@ def sklearn_forward_regression(df, y, candidates = ['AGE','GMA','FEMALE'], tol=1
     print(set(df.drop(y, axis=1).columns).difference(candidates))
     return model
 #%%
-def sklearn_stepwise_regression(df, y, minimal = ['AGE','GMA','FEMALE'], tol=1e-4):    
+def sklearn_stepwise_regression(df, y, minimal = [], tol=1e-4):    
     ar2 = dict()
     last_max = -1
-    candidates = minimal.copy()
+    candidates = list( minimal.copy())
+    if len(df.drop(list([y])+list(minimal), axis=1).columns)==0:
+        model = LinearRegression(n_jobs=-1).fit(df[minimal],df[y])
+        #we compute adjusted r squared
+        ar2['minimal'] = 1 - (1-model.score(df[minimal],df[y]))*(len(df[y])-1)/(len(df[y])-df[minimal].shape[1]-1)
+        print('Returning minimal model')
+        print('Adjusted R2: ' + str(ar2['minimal']))
+        return model
     while(True):
         # iteration i+1
         # for each column that is not already in the model
-        for x in df.drop([y] + candidates, axis=1).columns:
+        for x in df.drop(list([y]) + list(candidates), axis=1).columns:
             if len(candidates) == 0:
                 features = x
             else:
-                features = [x]+candidates
+                features = [x]+list(candidates)
             # we try building a model with such column and the preexisting ones
             # we now have n_{i+1} columns
             model = LinearRegression(n_jobs=-1).fit(df[features],df[y])
@@ -111,7 +118,7 @@ def sklearn_stepwise_regression(df, y, minimal = ['AGE','GMA','FEMALE'], tol=1e-
             print('forward step: ' + str(len(candidates)))
             print(candidates)
             print('Adjusted R2: ' + str(max_ar2))
-            print('===============')
+            
         else:
             break
         print('Testing variables to remove...')
@@ -123,7 +130,7 @@ def sklearn_stepwise_regression(df, y, minimal = ['AGE','GMA','FEMALE'], tol=1e-
             #we compute adjusted r squared
             ar2[f'-{x}'] = 1 - (1-model.score(df[features],df[y]))*(len(df[y])-1)/(len(df[y])-df[features].shape[1]-1)
         # after trying all potential next columns
-       
+        print('===============')
         max_ar2 =  max(ar2.values())
         max_ar2_key = max(ar2, key=ar2.get)
         # we check whether any of them has increased performance
