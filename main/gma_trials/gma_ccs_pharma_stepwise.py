@@ -27,7 +27,7 @@ import pandas as pd
 from sklearn.linear_model import LinearRegression, LogisticRegression
 
 from main.gma_trials.forward_regression import sklearn_stepwise_regression
-
+#%%
 X,y=getData(2016,
              CCS=True,
              PHARMACY=True,
@@ -46,6 +46,7 @@ from configurations import utility as util
 import re
 ycol=config.COLUMNS[0]
 df=pd.merge(X,y,on='PATIENT_ID').drop('PATIENT_ID',axis=1)#.sample(100)
+#%%
 minimal=list(['FEMALE'])+list([c for c in X if (('AGE' in c) or ('GMA' in c))])
 to_add=['','|CCS','|PHARMA']
 modelnames=['AGE_FEMALE_GMA','AGE_FEMALE_GMA_CCS','AGE_FEMALE_GMA_CCS_PHARMA']
@@ -80,7 +81,7 @@ from modelEvaluation.predict import predict
 descriptions=pd.read_csv(config.DATAPATH+'CCSCategoryNames_FullLabels.csv')
 minimal=list(['FEMALE'])+list([c for c in X if (('AGE' in c) or ('GMA' in c))])
 to_add=['','|CCS','|PHARMA']
-modelnames=['AGE_FEMALE_GMA','AGE_FEMALE_GMA_CCS','AGE_FEMALE_GMA_CCS_PHARMA']
+modelnames=['AGE_FEMALE_GMA','AGE_FEMALE_GMA_CCS','AGE_FEMALE_GMA_CCS_PHARMA','FULL_MODEL']
 predictions={}
 for group, name in zip(to_add,modelnames):
     model=joblib.load(os.path.join(config.MODELPATH,f'stepwise_ordinal_{name}.joblib'))
