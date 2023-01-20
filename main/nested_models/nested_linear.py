@@ -44,7 +44,7 @@ X,y=getData(2016,
              additional_columns=[]) 
 y=y.COSTE_TOTAL_ANO2
 #%%
-linear=LinearRegression(njobs=-1)
+linear=LinearRegression(n_jobs=-1)
 
 to_drop=['PATIENT_ID','ingresoUrg']
 for c in to_drop:
