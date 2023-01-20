@@ -37,7 +37,7 @@ X,y=getData(2016,
              GMA_DROP_DIGITS=0,
              additional_columns=[])
 
-# X=reverse_one_hot(X)
+X=reverse_one_hot(X)
 # assert False
 print('Sample size ',len(X))
 
@@ -61,5 +61,48 @@ for group, name in zip(to_add,modelnames):
     minimal=model.feature_names_in_
     print('----'*10)
     print('\n')
-    util.savemodel(config, model, name=f'stepwise_{name}')
+    util.savemodel(config, model, name=f'stepwise_ordinal_{name}')
 
+#%%
+import joblib
+X,y=getData(2017,
+             CCS=True,
+             PHARMACY=True,
+             BINARIZE_CCS=True,
+             GMA=True,
+             GMACATEGORIES=True,
+             GMA_DROP_DIGITS=0,
+             additional_columns=[])
+X=reverse_one_hot(X)
+#%%
+import os
+from modelEvaluation.predict import predict
+descriptions=pd.read_csv(config.DATAPATH+'CCSCategoryNames_FullLabels.csv')
+minimal=list(['FEMALE'])+list([c for c in X if (('AGE' in c) or ('GMA' in c))])
+to_add=['','|CCS','|PHARMA']
+modelnames=['AGE_FEMALE_GMA','AGE_FEMALE_GMA_CCS','AGE_FEMALE_GMA_CCS_PHARMA']
+predictions={}
+for group, name in zip(to_add,modelnames):
+    model=joblib.load(os.path.join(config.MODELPATH,f'stepwise_ordinal_{name}.joblib'))
+    features=model.feature_names_in_
+    df=pd.DataFrame({'CATEGORIES':features})
+    df=pd.merge(df,descriptions,on='CATEGORIES',how='left')
+    
+    predictions[name]=predict(f'stepwise_ordinal_{name}',config.EXPERIMENT,2018,
+                              X=X[list(model.feature_names_in_)+['PATIENT_ID']],y=y)
+print(df.to_markdown(index=False))
+#%%
+from modelEvaluation.compare import performance
+from sklearn.metrics import mean_squared_error
+table=pd.DataFrame()
+for model, predictions_ in predictions.items():
+    preds=predictions_[0]
+    R2=predictions_[1]
+    recall, ppv, _, _ = performance(obs=preds.OBS, pred=preds.PRED, K=20000)
+    rmse=mean_squared_error(preds.OBS,preds.PRED, squared=False)
+    table=pd.concat([table,
+                     pd.DataFrame.from_dict({'Model':[model], 'R2':[ R2], 'RMSE':[rmse],
+                      'R@20k': [recall], 'PPV@20K':[ppv]})])
+    
+#%%
+print(table.to_markdown(index=False))
