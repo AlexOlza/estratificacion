@@ -24,7 +24,7 @@ config.ALGORITHM='linear'
 import configurations.utility as util
 util.makeAllPaths()
 
-from dataManipulation.dataPreparation import getData
+from dataManipulation.dataPreparation import getData,reverse_one_hot
 import numpy as np
 from sklearn.linear_model import LinearRegression
 from pathlib import Path
@@ -33,7 +33,7 @@ from time import time
 import pandas as pd
 #%%
 np.random.seed(config.SEED)
-
+ordinal=eval(input('Ordinal encoding? '))
 X,y=getData(2016,
              CCS=True,
              PHARMACY=True,
@@ -43,6 +43,9 @@ X,y=getData(2016,
              GMA_DROP_DIGITS=0,
              additional_columns=[]) 
 y=y.COSTE_TOTAL_ANO2
+if ordinal:
+    X=reverse_one_hot(X)
+PATIENT_ID=X.PATIENT_ID
 #%%
 linear=LinearRegression(n_jobs=-1)
 
@@ -66,12 +69,27 @@ if (not 'ACG' in config.PREDICTORREGEX):
 else: 
     CCSPHARMA=None
     CCSGMA=None
-
 variables={'Demo':'PATIENT_ID|FEMALE|AGE_[0-9]+$',
            'DemoDiag':'PATIENT_ID|FEMALE|AGE_[0-9]+$|EDC_' if 'ACG' in config.PREDICTORREGEX else 'PATIENT_ID|FEMALE|AGE_[0-9]+$|CCS',
            'DemoDiagPharma':'PATIENT_ID|FEMALE|AGE_[0-9]+$|EDC_|RXMG_' if 'ACG' in config.PREDICTORREGEX else CCSPHARMA,
            'DemoDiagPharmaIsomorb':'PATIENT_ID|FEMALE|AGE_[0-9]+$|EDC_(?!NUR11|RES10)|RXMG_(?!ZZZX000)|ACG_' if 'ACG' in config.PREDICTORREGEX else CCSGMA
            }
+if ordinal:
+    if (not 'ACG' in config.PREDICTORREGEX):
+        if (hasattr(config, 'PHARMACY')):
+            CCSPHARMA='PATIENT_ID|FEMALE|AGE|CCS|PHARMA' if config.PHARMACY else None
+        else: CCSPHARMA= None
+        if (hasattr(config, 'GMA')):
+            CCSGMA='PATIENT_ID|FEMALE|AGE|CCS|PHARMA|GMA' if config.GMA else None
+        else: CCSGMA= None
+    else: 
+        CCSPHARMA=None
+        CCSGMA=None
+    variables={'Demo_ordinal':'PATIENT_ID|FEMALE|AGE$',
+               'DemoDiag_ordinal':'PATIENT_ID|FEMALE|AGE|EDC_' if 'ACG' in config.PREDICTORREGEX else 'PATIENT_ID|FEMALE|AGE|CCS',
+               'DemoDiagPharma_ordinal':'PATIENT_ID|FEMALE|AGE|EDC_|RXMG_' if 'ACG' in config.PREDICTORREGEX else CCSPHARMA,
+               'DemoDiagPharmaIsomorb_ordinal':'PATIENT_ID|FEMALE|AGE|EDC_(?!NUR11|RES10)|RXMG_(?!ZZZX000)|ACG_' if 'ACG' in config.PREDICTORREGEX else CCSGMA
+               }
 #%%
 
 for key, val in variables.items():
@@ -89,19 +107,49 @@ for key, val in variables.items():
     print('fitting time: ',time()-t0)
 
     util.savemodel(config, fit, name='{0}'.format(key))
+#%%
+import joblib
+from modelEvaluation.predict import predict
+from modelEvaluation.compare import performance
+from sklearn.metrics import mean_squared_error
+print('JOBLIB VERSION',joblib.__version__)
+y=y.to_frame()
+y['PATIENT_ID']=PATIENT_ID
+table=pd.DataFrame()
+for key, val in variables.items():
+    Xx=X.copy()
+    Xx['PATIENT_ID']=PATIENT_ID
+    y['PATIENT_ID']=PATIENT_ID
+    
+    if not val:
+        continue
+    # try:
+    model=joblib.load(config.MODELPATH+key+'.joblib')
+    preds,score=predict(key,experiment_name=config.EXPERIMENT,year=2017,
+                      X=Xx[list(model.feature_names_in_)+list(['PATIENT_ID'])], y=y)
+    recall, ppv, spec, newpred = performance(obs=preds.OBS, pred=preds.PRED, K=20000)
 
+    rmse=mean_squared_error(preds.OBS,preds.PRED, squared=False)
+    table=pd.concat([table,
+                     pd.DataFrame.from_dict({'Model':[key], 'R2':[ score], 'RMSE':[rmse],
+                      'R@20k': [recall], 'PPV@20K':[ppv]})])
+    # except:
+    #     print(key , 'Failed')
 
 #%%
-X, y=getData(2017)
-X=X[[c for c in X if X[c].max()>0]]
-PATIENT_ID=X.PATIENT_ID
-if hasattr(config, 'target_binarizer'):
-    y=config.target_binarizer(y)
-else:
-    y=pd.Series(np.where(y[config.COLUMNS]>0,1,0).ravel(),name=config.COLUMNS[0])
-   
-y=pd.concat([y, PATIENT_ID], axis=1) if not 'PATIENT_ID' in y else y
-
+print(table.to_markdown(index=False))
+#%%
+X,y=getData(2017,
+             CCS=True,
+             PHARMACY=True,
+             BINARIZE_CCS=True,
+             GMA=True,
+             GMACATEGORIES=True,
+             GMA_DROP_DIGITS=0,
+             additional_columns=[])
+# X=X[[c for c in X if X[c].max()>0]]
+if ordinal:
+    X=reverse_one_hot(X)
 #%%
 import joblib
 from modelEvaluation.predict import predict
@@ -113,21 +161,18 @@ for key, val in variables.items():
     Xx=X.copy()
     if not val:
         continue
-    if key=='DemoDiagPharmaBinary':
-        print(Xx.PHARMA_Transplant.describe())
-        Xx[[c for c in Xx if c.startswith('PHARMA')]]=(Xx[[c for c in Xx if c.startswith('PHARMA')]]>0).astype(int)
-        print(Xx.PHARMA_Transplant.describe())
-    try:
-        preds,score=predict(key,experiment_name=config.EXPERIMENT,year=2018,
-                          X=Xx.filter(regex=val, axis=1), y=y)
-        recall, ppv, spec, newpred = performance(obs=preds.OBS, pred=preds.PRED, K=20000)
+    # try:
+    model=joblib.load(config.MODELPATH+key+'.joblib')
+    preds,score=predict(key,experiment_name=config.EXPERIMENT,year=2018,
+                      X=Xx[list(model.feature_names_in_)+list(['PATIENT_ID'])], y=y)
+    recall, ppv, spec, newpred = performance(obs=preds.OBS, pred=preds.PRED, K=20000)
 
-        rmse=mean_squared_error(preds.OBS,preds.PRED, squared=False)
-        table=pd.concat([table,
-                         pd.DataFrame.from_dict({'Model':[key], 'R2':[ score], 'RMSE':[rmse],
-                          'R@20k': [recall], 'PPV@20K':[ppv]})])
-    except:
-        print(key , 'Failed')
+    rmse=mean_squared_error(preds.OBS,preds.PRED, squared=False)
+    table=pd.concat([table,
+                     pd.DataFrame.from_dict({'Model':[key], 'R2':[ score], 'RMSE':[rmse],
+                      'R@20k': [recall], 'PPV@20K':[ppv]})])
+    # except:
+    #     print(key , 'Failed')
 
 #%%
 print(table.to_markdown(index=False))
