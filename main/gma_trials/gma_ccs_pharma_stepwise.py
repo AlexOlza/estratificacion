@@ -5,7 +5,7 @@ Created on Mon Jan 16 09:53:52 2023
 
 @author: aolza
 """
-
+prefix='stepwise_ordinal_RMSE_'
 import sys
 sys.path.append('/home/aolza/Desktop/estratificacion/')#necessary in cluster
 
@@ -58,11 +58,13 @@ for group, name in zip(to_add,modelnames):
     model=sklearn_stepwise_regression(df.filter(regex=cand+f'|{ycol}'),
                                       minimal=minimal,
                                       y=ycol,
-                                      tol=1e-3)
+                                      scoring='rmse',
+                                      tol=1e-3,
+                                      test_set=True)
     minimal=model.feature_names_in_
     print('----'*10)
     print('\n')
-    util.savemodel(config, model, name=f'stepwise_ordinal_{name}')
+    util.savemodel(config, model, name=f'{prefix}{name}')
 
 #%%
 import joblib
@@ -84,12 +86,12 @@ to_add=['','|CCS','|PHARMA']
 modelnames=['AGE_FEMALE_GMA','AGE_FEMALE_GMA_CCS','AGE_FEMALE_GMA_CCS_PHARMA','FULL_MODEL']
 predictions={}
 for group, name in zip(to_add,modelnames):
-    model=joblib.load(os.path.join(config.MODELPATH,f'stepwise_ordinal_{name}.joblib'))
+    model=joblib.load(os.path.join(config.MODELPATH,f'{prefix}{name}.joblib'))
     features=model.feature_names_in_
     df=pd.DataFrame({'CATEGORIES':features})
     df=pd.merge(df,descriptions,on='CATEGORIES',how='left')
     
-    predictions[name]=predict(f'stepwise_ordinal_{name}',config.EXPERIMENT,2018,
+    predictions[name]=predict(f'{prefix}{name}',config.EXPERIMENT,2018,
                               X=X[list(model.feature_names_in_)+['PATIENT_ID']],y=y)
 print(df.to_markdown(index=False))
 #%%
