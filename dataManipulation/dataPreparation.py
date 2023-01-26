@@ -142,7 +142,30 @@ def get_gma_categories(yr,X, dummy_categories,drop_digits, additional_columns=[]
         gma_categories=gma_categories[columns]  
     
     X=pd.merge(X,gma_categories, on='PATIENT_ID')
-    return X        
+    return X      
+
+def reverse_one_hot(X, integers=True):
+    categorical_variables=['AGE_[0-9]+$','GMA_[0-9]+$']
+    for var in categorical_variables:
+        Xx=X.filter(regex=var)
+        cols=Xx.columns
+        Xx[var.split('_')[0]+'_999']=np.where(Xx.sum(axis=1)==0,1,0) #reference category   
+        if len(cols)>0:
+            X.drop(cols,axis=1,inplace=True)
+            X[var.split('_')[0]]=Xx.idxmax(1)
+    if integers:
+        cols=[col for col in ['AGE','GMA'] if col in X]
+        cats_age=sorted(X['AGE'].unique())
+        cats_gma=list(['GMA_999'])+list(sorted(X['GMA'].unique())[:-1])
+        cats=[cats_age,cats_gma] if 'GMA' in X else [cats_age]
+        print('Category levels: ',cats)
+        from sklearn.preprocessing import OrdinalEncoder
+        enc = OrdinalEncoder(categories=cats,
+                             dtype=np.int8)
+
+        X[cols]=enc.fit_transform(X[cols])
+        # X=pd.DataFrame(X,columns=enc.feature_names_in_)
+    return X
 # TODO MOVE ASSERTIONS BEFORE LOADING BIG FILES!!!!
 def getData(yr,columns=config.COLUMNS,
             predictors=config.PREDICTORREGEX,
