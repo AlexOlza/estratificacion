@@ -42,7 +42,7 @@ for direct in [config.MODELPATH, config.PREDPATH]:
 
 #%%
 np.random.seed(config.SEED)
-
+prefix=''
 X,y=getData(2016)#new data
 
 #%%
@@ -72,10 +72,10 @@ else:
     CCSPHARMA=None
     CCSGMA=None
 
-variables={'Demo':'PATIENT_ID|FEMALE|AGE_[0-9]+$',
-           'DemoDiag':'PATIENT_ID|FEMALE|AGE_[0-9]+$|EDC_' if 'ACG' in config.PREDICTORREGEX else 'PATIENT_ID|FEMALE|AGE_[0-9]+$|CCS',
-           'DemoDiagPharma':'PATIENT_ID|FEMALE|AGE_[0-9]+$|EDC_|RXMG_' if 'ACG' in config.PREDICTORREGEX else CCSPHARMA,
-           'DemoDiagPharmaIsomorb':'PATIENT_ID|FEMALE|AGE_[0-9]+$|EDC_(?!NUR11|RES10)|RXMG_(?!ZZZX000)|ACG_' if 'ACG' in config.PREDICTORREGEX else CCSGMA
+variables={f'{prefix}Demo':'PATIENT_ID|FEMALE|AGE_[0-9]+$',
+           f'{prefix}DemoDiag':'PATIENT_ID|FEMALE|AGE_[0-9]+$|EDC_' if 'ACG' in config.PREDICTORREGEX else 'PATIENT_ID|FEMALE|AGE_[0-9]+$|CCS',
+           f'{prefix}DemoDiagPharma':'PATIENT_ID|FEMALE|AGE_[0-9]+$|EDC_|RXMG_' if 'ACG' in config.PREDICTORREGEX else CCSPHARMA,
+           f'{prefix}DemoDiagPharmaIsomorb':'PATIENT_ID|FEMALE|AGE_[0-9]+$|EDC_(?!NUR11|RES10)|RXMG_(?!ZZZX000)|ACG_' if 'ACG' in config.PREDICTORREGEX else CCSGMA
            }
 #%%
 for key, val in variables.items():
@@ -121,30 +121,27 @@ for key, val in variables.items():
     Xx=X.copy()
     if not val:
         continue
-    if key=='DemoDiagPharmaBinary':
-        print(Xx.PHARMA_Transplant.describe())
-        Xx[[c for c in Xx if c.startswith('PHARMA')]]=(Xx[[c for c in Xx if c.startswith('PHARMA')]]>0).astype(int)
-        print(Xx.PHARMA_Transplant.describe())
-    try:
-        probs,_=predict(key,experiment_name=config.EXPERIMENT,year=2018,
-                          X=Xx.filter(regex=val, axis=1), y=y)
-        auc=roc_auc_score(probs.OBS,probs.PRED)
-        recall, ppv, spec, newpred = performance(obs=probs.OBS, pred=probs.PRED, K=20000)
-        
-        brier=brier_score_loss(y_true=probs.OBS, y_prob=probs.PRED)
-        ap=average_precision_score(probs.OBS,probs.PRED)
-        table=pd.concat([table,
-                         pd.DataFrame.from_dict({'Model':[key], 'AUC':[ auc], 'AP':[ap],
-                          'R@20k': [recall], 'PPV@20K':[ppv], 
-                          'Brier':[brier]})])
-        probs['TOP20k']=newpred
+    # try:
+    model=joblib.load(os.path.join(config.MODELPATH,f'{key}.joblib'))
+    probs,_=predict(key,experiment_name=config.EXPERIMENT,year=2018,
+                      X=Xx[list(model.feature_names_in_)+['PATIENT_ID']], y=y)
+    auc=roc_auc_score(probs.OBS,probs.PRED)
+    recall, ppv, spec, newpred = performance(obs=probs.OBS, pred=probs.PRED, K=20000)
+    
+    brier=brier_score_loss(y_true=probs.OBS, y_prob=probs.PRED)
+    ap=average_precision_score(probs.OBS,probs.PRED)
+    table=pd.concat([table,
+                     pd.DataFrame.from_dict({'Model':[key], 'AUC':[ auc], 'AP':[ap],
+                      'R@20k': [recall], 'PPV@20K':[ppv], 
+                      'Brier':[brier]})])
+    probs['TOP20k']=newpred
         # false_positives=probs.loc[(probs.OBS.values==0) ] #are not actually positives!!
         # n_selected=len(false_positives) # this is the length of list, should be K with enough flexibility (not for Demo)
         # false_positives=false_positives.loc[(false_positives.TOP20k.values==1)]
         # almost_true=len(false_positives.loc[false_positives.PATIENT_ID.isin(dead2019)])
         # print(f'Out of {len(false_positives)} false positives, {almost_true} died in 2019 ({round(almost_true*100/len(false_positives),2)}%)')
-    except:
-        print(key , 'Failed')
+    # except:
+    #     print(key , 'Failed')
 
 #%%
 print(table.to_markdown(index=False))
