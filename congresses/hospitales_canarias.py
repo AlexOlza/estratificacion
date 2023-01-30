@@ -53,7 +53,7 @@ future_dead=pd.read_csv(config.FUTUREDECEASEDFILE)
 dead2019=future_dead.loc[future_dead.date_of_death.str.startswith('2019')].PATIENT_ID
 preds['OBS2019']=np.where(preds.PATIENT_ID.isin(dead2019),1,0)
 #%%
-baseline_risk=np.exp(model.intercept_[0])
+baseline_risk=np.exp(model.intercept_[0])/(1+np.exp(model.intercept_[0]))
 print('Probabilidad basal de fallecer: ',baseline_risk)
 
 recall2019, ppv2019, _, _ = performance(obs=preds.OBS+preds.OBS2019, pred=preds.PRED, K=20000)
@@ -96,6 +96,7 @@ agesGP=pd.DataFrame(X.filter(regex=("AGE*")).idxmax(1).value_counts(normalize=Tr
 
 import seaborn as sns
 import matplotlib.pyplot as plt
+plt.figure(dpi=1200) 
 fig, ax=plt.subplots(figsize=(8,10))
 
 
@@ -113,6 +114,8 @@ sns.barplot( y='Grupo edad',x='Porcentaje',ax=ax,data=agesGP,
 sns.barplot( y='Grupo edad',x='Porcentaje',ax=ax,data=agesRisk,
             order=sorted(agesRisk['Grupo edad'].values),color='r', alpha=0.5,label='Grupo riesgo')
 ax.legend()
+plt.savefig(config.ROOTPATH+'congresses/figures/canarias_distr_edad.png',dpi=1200)
+X.drop('AGE_85+',axis=1,inplace=True)
 #%%
 def explain_example(lower,upper, preds, coefs, X, descriptions, random_state):
     patient_A=preds.loc[preds.PRED>lower].loc[preds.PRED<upper].sample(1,random_state=random_state)
@@ -122,8 +125,14 @@ def explain_example(lower,upper, preds, coefs, X, descriptions, random_state):
     df_A=pd.concat([coefs[patient_A_CCS].T.nlargest(5,0),smallest.loc[smallest[0]<0]])
     df_A['CATEGORIES']=df_A.index
     df_A=pd.merge(df_A,descriptions,on='CATEGORIES',how='left')
-    return patient_A, df_A
+    agesex_A=X.loc[X.PATIENT_ID==patient_A.PATIENT_ID.values[0]].filter(regex='AGE|FEMALE')
+    return patient_A, df_A, agesex_A.T
 
-patient_A, df_A=explain_example(0.95,0.96,preds.loc[preds.TopK==1],coefs,X,descriptions,0)
-patient_B, df_B=explain_example(0.2,0.25,preds.loc[preds.TopK==1],coefs,X,descriptions,0)
+patient_A, df_A, agesex_A=explain_example(0.95,0.96,preds.loc[preds.TopK==1],coefs,X,descriptions,1)
+
+patient_B, df_B, agesex_B=explain_example(0.5,0.55,preds.loc[preds.TopK==1],coefs,X,descriptions,0)
+patient_C, df_C, agesex_C=explain_example(preds.loc[preds.TopK==1].PRED.min(),
+                                0.5,preds.loc[preds.TopK==1].loc[preds.OBS2019==1],
+                                coefs,X,descriptions,1)
+
 #%%
