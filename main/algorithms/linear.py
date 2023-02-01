@@ -28,6 +28,8 @@ from sklearn.linear_model import LinearRegression
 np.random.seed(config.SEED)
 
 X,y=getData(2016)
+if hasattr(config, 'exclusion_criteria'):
+    X, y = config.exclusion_criteria(X,y)
 #%%
 
 y=y[config.COLUMNS]
