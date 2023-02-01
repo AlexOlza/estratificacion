@@ -6,6 +6,9 @@ Created on Tue Jan 31 10:01:28 2023
 @author: aolza
 """
 """
+We exclude 444162 patients, 65.18094749213125 % women
+Sample size  1810090 , female percentage:  47.5460888685093
+Initial AUC for propensity scores:  0.7095418287008433
 
 a reference: https://sci-hub.se/10.1213/ANE.0000000000002787
 Created on Tue Nov  8 10:32:34 2022
@@ -16,7 +19,7 @@ Source: https://github.com/konosp/propensity-score-matching/blob/main/propensity
 import sys
 sys.path.append('/home/aolza/Desktop/estratificacion/')#necessary in cluster
 cost=eval(input('Enter True for COST or False for HOSPITALIZATION: '))
-exp= 'costCCS_parsimonious' if cost else 'urgcmsCCS_parsimonious'
+exp= 'costCCS_vigo' if cost else 'urgcmsCCS_vigo'
 conf='linear' if cost else 'logistic'
 chosen_config='configurations.cluster.'+conf
 experiment='configurations.'+exp
@@ -49,12 +52,6 @@ def logit(x, eps=1e-16):
         return 1e6
     logit_=np.log(x)-np.log(1-x)
     return logit_
-def perfom_matching_v2(row, indexes, df_data): #MATCHES WITH REPLACEMENT!! 
-    current_index = int(row['index']) # Obtain value from index-named column, not the actual DF index.
-    for idx in indexes[current_index,:]:
-        if (current_index != idx) and (row.FEMALE == 1) and (df_data.loc[idx].FEMALE == 0):
-            return int(idx)
-        
 
 def get_matching_pairs(treated_df, non_treated_df, caliper):
     treated_df.index=range(len(treated_df))
@@ -90,15 +87,7 @@ def load_pairs(filename,directory=config.DATAPATH):
 
     util.vprint('Loaded in ',time()-t0,' seconds')
     return(pairs)
-def exclusion_criteria(X, y):
-    """ We exclude patients that have genitourinary conditions, and drop those columns """
-    genitoCCS=X.filter(regex='PATIENT_ID|CCS(2[4-9]$|3[0-1]$|16[3-9]$|17[0-9]$|18[0-9]$|19[0-6]$|215$)',axis=1)
-    patients_to_exclude=X.loc[genitoCCS.filter(regex='CCS').sum(axis=1)>=1]
-    percentwomen=100*patients_to_exclude.FEMALE.sum()/len(patients_to_exclude)
-    print(f'We exclude {len(patients_to_exclude)} patients, {percentwomen} % women')
-    X=X.loc[~X.PATIENT_ID.isin(patients_to_exclude.PATIENT_ID)].drop(genitoCCS.filter(regex='CCS').columns,axis=1)
-    y=y.loc[~y.PATIENT_ID.isin(patients_to_exclude.PATIENT_ID)]
-    return (X,y)
+
 #%%
 
 np.random.seed(config.SEED)
@@ -107,9 +96,9 @@ plot=eval(input('Make plots? (True/False) '))
 evaluate_matching=eval(input('Evaluate matching? (True/False) '))
 #%%
 X,y=getData(2016)
-X,y=exclusion_criteria(X, y)
+X,y=config.exclusion_criteria(X, y)
 original_columns=X.columns
-print('Sample size ',len(X), 'females: ',100*X.FEMALE.sum()/len(X))
+print('Sample size ',len(X), ', female percentage: ',100*X.FEMALE.sum()/len(X))
 assert not 'AGE_85GT' in X.columns
 
 #%%
@@ -132,16 +121,16 @@ propensity_logit = np.array([logit(xi) for xi in propensity_scores])
 
 X.loc[:,'propensity_score'] = propensity_scores
 X.loc[:,'propensity_score_logit'] = propensity_logit
-X.loc[:,'outcome'] = y.iloc[X.index][config.COLUMNS].values
+X.loc[:,'outcome'] = y[config.COLUMNS].values
 initial_AUC=roc_auc_score(X.FEMALE, propensity_scores)
 print('Initial AUC for propensity scores: ', initial_AUC)
 #%%
 """ PERFORM MATCHING OR RELOAD PAIRS FROM FILE """
 if not Path(filename).is_file():
    
-    X.loc[:,'propensity_score'] = propensity_scores
-    X.loc[:,'propensity_score_logit'] = propensity_logit
-    X.loc[:,'outcome'] = y.iloc[X.index][config.COLUMNS].values
+    # X.loc[:,'propensity_score'] = propensity_scores
+    # X.loc[:,'propensity_score_logit'] = propensity_logit
+    # X.loc[:,'outcome'] = y.iloc[X.index][config.COLUMNS].values
     
     if plot:
         import seaborn as sns
@@ -159,9 +148,9 @@ if not Path(filename).is_file():
     """ MATCHING """
     
     common_support = (propensity_logit > -150) & (propensity_logit < 40)
-    caliper = np.std(propensity_logit[common_support]) * 0.25
+    caliper = np.std(propensity_logit[common_support]) * 0.2
     
-    print('\nCaliper (radius) is: {:.4f}\n'.format(caliper))#radius is 1,1450
+    print('\nCaliper (radius) is: {:.4f}\n'.format(caliper))#radius is 0.2746
         
     pairs=get_matching_pairs(X.loc[X.FEMALE==1][list(original_columns)+['propensity_score','propensity_score_logit']],
                              X.loc[X.FEMALE==0][list(original_columns)+['propensity_score','propensity_score_logit']],
@@ -215,18 +204,23 @@ if evaluate_matching:
             d = ( treated_metric.mean() - untreated_metric.mean() ) / np.sqrt(((treated_metric.count()-1)*treated_metric.std()**2 + (untreated_metric.count()-1)*untreated_metric.std()**2) / (treated_metric.count() + untreated_metric.count()-2))
             return d
         data = []
-        cols = [c for c in original_columns if not (c=='FEMALE') or (c=='PATIENT_ID')]
+        cols = [c for c in original_columns if not ((c=='FEMALE') or (c=='PATIENT_ID'))]
         for cl in cols:
             data.append([cl,'before', cohenD(X,cl)])
             data.append([cl,'after', cohenD(pairs,cl)])
         
-        res = pd.DataFrame(data, columns=['variable','matching','effect_size'])
+        res = pd.DataFrame(data, columns=['CATEGORIES','matching','effect_size'])
+        descriptions=pd.read_csv(config.DATAPATH+'CCSCategoryNames_FullLabels.csv')
+        res=pd.merge(res,descriptions,on='CATEGORIES',how='left')
+        res['variable']=np.where(res.LABELS.isna(),res.CATEGORIES,res.LABELS)
+        
+        fig, ax = plt.subplots()
         sns.set(rc={'figure.figsize':(10,60)}, font_scale=1.0)
         sn_plot = sns.barplot(data = res, y = 'variable', x = 'effect_size', hue = 'matching', orient='h')
         sn_plot.set(title='Standardised Mean differences accross covariates before and after matching')
         sn_plot.figure.savefig(os.path.join(config.FIGUREPATH,"two_all_standardised_mean_differences.png"))
         
-        
+        fig, ax = plt.subplots()
         sns.set(rc={'figure.figsize':(10,60)}, font_scale=1.0)
         sn_plot = sns.barplot(data = res, y = 'variable', x = res.effect_size.abs(), hue = 'matching', orient='h')
         sn_plot.set(title='Absolute value of standardised mean differences accross covariates before and after matching')
@@ -234,7 +228,7 @@ if evaluate_matching:
     
     #%%
     # Evaluate the decrease in AUC
-    logistic=LogisticRegression(penalty='none',max_iter=300,verbose=2,n_jobs=-1)
+    logistic=LogisticRegression(penalty='none',max_iter=400,n_jobs=-1)
     newfit=logistic.fit(pairs[original_columns].drop(['FEMALE','PATIENT_ID'], axis=1), pairs.FEMALE.values.reshape(-1,1))
     new_propensity_scores=newfit.predict_proba(pairs[original_columns].drop(['FEMALE','PATIENT_ID'], axis=1))[:,1]
     new_AUC=roc_auc_score(pairs.FEMALE, new_propensity_scores)
@@ -343,6 +337,7 @@ print(f'The percentage of women in the top {K} list is ',percent)
 from matplotlib import pyplot as plt
 recall, PPV= {}, {}
 plot={}
+sns.set(rc={'figure.figsize':(16,10)}, font_scale=1.3)
 fig, ax = plt.subplots(1,1)
 for sex, yy, preds in zip(['Male', 'Female'], [yMale, yFemale], [predsMale, predsFemale]):
     if config.ALGORITHM=='logistic':
