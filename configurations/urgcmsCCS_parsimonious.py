@@ -8,7 +8,7 @@ Created on Fri Jan 27 09:33:30 2023
 EXPERIMENT=__name__.split('.')[-1]
 CONFIGNAME=EXPERIMENT+'.py'
 COLUMNS=['urgcms']
-TRACEBACK=True
+TRACEBACK=False
 
 """PREDICTORS: They will be different for each script."""
 PREDICTORREGEX=r'PATIENT_ID|AGE_[0-9]+$|FEMALE|CCS(?!260[1-9]+|261[0-9]+|2620|2621|25[5-9]+)[0-9]+|CCSONCOLO'
@@ -21,13 +21,6 @@ EXCLUDEOSI=['OS16','OS22']
 RESOURCEUSAGE=False
 PHARMACY=True
 BINARIZE_CCS=True
-""" GMA """
-GMA=True
-GMACATEGORIES=True
-GMACOMPLEXITY=False
-GMAOUTFILES={2016: ['gma/outGMA_2016_h.txt','gma/outGMA_2016_m.txt'],
-             2017: ['gma/outGMA_2017_h.txt','gma/outGMA_2017_m.txt']}
-
 
 """ CCS"""
 CCS=True
