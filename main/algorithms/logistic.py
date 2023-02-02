@@ -38,7 +38,7 @@ print('Sample size ',len(X), 'positive: ',sum(y))
 assert not 'AGE_85GT' in X.columns
 
 #%%
-logistic=LogisticRegression(penalty='none',max_iter=1000,verbose=0)
+logistic=LogisticRegression(penalty='none',max_iter=1000,verbose=0, n_jobs=-1)
 
 to_drop=['PATIENT_ID','ingresoUrg']
 for c in to_drop:
