@@ -18,11 +18,13 @@ Source: https://github.com/konosp/propensity-score-matching/blob/main/propensity
 """
 import sys
 sys.path.append('/home/aolza/Desktop/estratificacion/')#necessary in cluster
-cost=eval(input('Enter True for COST or False for HOSPITALIZATION: '))
-exp= 'costCCS_vigo' if cost else 'urgcmsCCS_vigo'
-conf='linear' if cost else 'logistic'
-chosen_config='configurations.cluster.'+conf
-experiment='configurations.'+exp
+# cost=eval(input('Enter True for COST or False for HOSPITALIZATION: '))
+# exp= 'costCCS_vigo' if cost else 'urgcmsCCS_vigo'
+# conf='linear' if cost else 'logistic'
+# chosen_config='configurations.cluster.'+conf
+# experiment='configurations.'+exp
+chosen_config='configurations.cluster.'+sys.argv[1]
+experiment='configurations.'+sys.argv[2]
 import importlib
 importlib.invalidate_caches()
 from python_settings import settings as config
@@ -96,23 +98,25 @@ plot=eval(input('Make plots? (True/False) '))
 evaluate_matching=eval(input('Evaluate matching? (True/False) '))
 #%%
 X,y=getData(2016)
-X,y=config.exclusion_criteria(X, y)
+X,y=config.exclusion_criteria(X, y) if hasattr(config, 'exclusion_criteria') else X,y
 original_columns=X.columns
 print('Sample size ',len(X), ', female percentage: ',100*X.FEMALE.sum()/len(X))
 assert not 'AGE_85GT' in X.columns
-
+prefix='general_population_' if len(X)==2254252 else ''
+print(prefix)
 #%%
-filename=os.path.join(config.DATAPATH,'vigo_pairs.csv')
-ps_model_filename=os.path.join(config.MODELPATH,'logistic_propensity_score_model.joblib')
+ps_model_name=f'{prefix}logistic_propensity_score_model'
+filename=os.path.join(config.DATAPATH,f'{prefix}{config.EXPERIMENT}_pairs.csv')
+ps_model_filename=os.path.join(config.MODELPATH,f'{ps_model_name}.joblib')
 #%%
 """ COMPUTE OR RELOAD PROPENSITY SCORE MODEL """
 if (not Path(ps_model_filename).is_file()):
-    logistic=LogisticRegression(penalty='none',max_iter=1000,verbose=0)
+    logistic=LogisticRegression(penalty='none',max_iter=1000,verbose=0, n_jobs=-1)
     
     t0=time()
     fit=logistic.fit(X.drop(['FEMALE', 'PATIENT_ID'], axis=1), X['FEMALE'])
     print('fitting time: ',time()-t0)
-    util.savemodel(config, fit,name='logistic_propensity_score_model')
+    util.savemodel(config, fit,name=ps_model_name)
     
 else:
     fit=job.load(ps_model_filename)
@@ -142,7 +146,7 @@ if not Path(filename).is_file():
         sns.kdeplot(x = propensity_scores, hue = X.FEMALE , ax = ax)
         ax.set_title('Propensity Score')
         
-        plt.savefig(os.path.join(config.FIGUREPATH,'propensity_densities_before.png'))
+        plt.savefig(os.path.join(config.FIGUREPATH,f'{prefix}propensity_densities_before.png'))
         plt.show()
     
     """ MATCHING """
@@ -150,7 +154,7 @@ if not Path(filename).is_file():
     common_support = (propensity_logit > -150) & (propensity_logit < 40)
     caliper = np.std(propensity_logit[common_support]) * 0.2
     
-    print('\nCaliper (radius) is: {:.4f}\n'.format(caliper))#radius is 0.2746
+    print('\nCaliper (radius) is: {:.4f}\n'.format(caliper))#radius is 0.2246
         
     pairs=get_matching_pairs(X.loc[X.FEMALE==1][list(original_columns)+['propensity_score','propensity_score_logit']],
                              X.loc[X.FEMALE==0][list(original_columns)+['propensity_score','propensity_score_logit']],
@@ -160,7 +164,10 @@ if not Path(filename).is_file():
     print('Saved ',filename)
 else:
     pairs=load_pairs(filename)
-#%%
+    
+if hasattr(config, 'exclusion_criteria'):
+    assert not 'PHARMA_Benign_prostatic_hyperplasia' in pairs
+#%
 
 if no_duplicates:
     females_=pairs.loc[pairs.FEMALE==1].drop_duplicates('counterfactual')
@@ -184,7 +191,7 @@ if evaluate_matching:
         fig.suptitle('Density distribution plots for propensity score.')
         sns.kdeplot(x = pairs.propensity_score.values, hue = pairs.FEMALE.values , ax = ax)
         ax.set_title('Propensity Score')  
-        plt.savefig(os.path.join(config.FIGUREPATH,'two_propensity_densities_after.png'))
+        plt.savefig(os.path.join(config.FIGUREPATH,f'{prefix}two_propensity_densities_after.png'))
         plt.show()
         
         
@@ -193,7 +200,7 @@ if evaluate_matching:
         sns.stripplot(data = X, y = 'binary_outcome', alpha=0.5, x = 'propensity_score_logit', hue = 'FEMALE', orient = 'h', ax = ax[0]).set(title = 'Before matching', xlim=(-6, 4))
         sns.stripplot(data = pairs, y = 'binary_outcome', alpha=0.5, x = 'propensity_score_logit', hue = 'FEMALE', ax = ax[1] , orient = 'h').set(title = 'After matching', xlim=(-6, 4))
         plt.subplots_adjust(hspace = 0.3)
-        plt.savefig(os.path.join(config.FIGUREPATH,'two_stripplot.png'))
+        plt.savefig(os.path.join(config.FIGUREPATH,f'{prefix}two_stripplot.png'))
         plt.show()
         
         sns.set(rc={'figure.figsize':(10,60)}, font_scale=1.0)
@@ -218,13 +225,13 @@ if evaluate_matching:
         sns.set(rc={'figure.figsize':(10,60)}, font_scale=1.0)
         sn_plot = sns.barplot(data = res, y = 'variable', x = 'effect_size', hue = 'matching', orient='h')
         sn_plot.set(title='Standardised Mean differences accross covariates before and after matching')
-        sn_plot.figure.savefig(os.path.join(config.FIGUREPATH,"two_all_standardised_mean_differences.png"))
+        sn_plot.figure.savefig(os.path.join(config.FIGUREPATH,f"{prefix}two_all_standardised_mean_differences.png"))
         
         fig, ax = plt.subplots()
         sns.set(rc={'figure.figsize':(10,60)}, font_scale=1.0)
         sn_plot = sns.barplot(data = res, y = 'variable', x = res.effect_size.abs(), hue = 'matching', orient='h')
         sn_plot.set(title='Absolute value of standardised mean differences accross covariates before and after matching')
-        sn_plot.figure.savefig(os.path.join(config.FIGUREPATH,"two_all_abs_standardised_mean_differences.png"))
+        sn_plot.figure.savefig(os.path.join(config.FIGUREPATH,f"{prefix}two_all_abs_standardised_mean_differences.png"))
     
     #%%
     # Evaluate the decrease in AUC
@@ -257,7 +264,7 @@ if config.ALGORITHM=='linear':
 
 #%%
 overview2 = pairs[['binary_outcome','FEMALE']].groupby(by = ['FEMALE']).aggregate(['sum',np.mean, np.var, np.std, 'count'])
-print(overview2)
+print(overview2.to_markdown())
 treated_outcome = overview2['binary_outcome']['mean'][1]
 treated_counterfactual_outcome = overview2['binary_outcome']['mean'][0]
 att2 = treated_outcome - treated_counterfactual_outcome
@@ -285,14 +292,14 @@ if config.ALGORITHM=='logistic':
     estimator=LogisticRegression(penalty='none',max_iter=1000,verbose=0,n_jobs=-1)
 elif config.ALGORITHM=='linear':
     estimator=LinearRegression(n_jobs=-1)  
-if not Path(os.path.join(config.MODELPATH,f'{config.ALGORITHM}_psm.joblib')).is_file():    
+if not Path(os.path.join(config.MODELPATH,f'{prefix}{config.ALGORITHM}_psm.joblib')).is_file():    
     print('fitting ...')
     t0=time()
     fit=estimator.fit(x, ypairs)
     print('fitting time: ',time()-t0)
-    util.savemodel(config, fit,name=f'{config.ALGORITHM}_psm')
+    util.savemodel(config, fit,name=f'{prefix}{config.ALGORITHM}_psm')
 else:
-    fit=job.load(os.path.join(config.MODELPATH,f'{config.ALGORITHM}_psm.joblib'))
+    fit=job.load(os.path.join(config.MODELPATH,f'{prefix}{config.ALGORITHM}_psm.joblib'))
 if config.ALGORITHM=='logistic':
     predict=fit.predict_proba
     score=roc_auc_score
