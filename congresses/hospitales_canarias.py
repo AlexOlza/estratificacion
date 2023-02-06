@@ -71,18 +71,35 @@ sorted_coefs=pd.merge(coefsT.sort_values(0,ascending=False),descriptions,on='CAT
 print(sorted_coefs.loc[sorted_coefs[0]!=0].to_markdown())
 # coefs=coefs.T.loc[coefs.T[0]!=0].T
 #%%
+
 def table_1(preds,X,descriptions, chosen_CCSs):
     topK=X.loc[X.PATIENT_ID.isin(preds.loc[preds.TopK==1].PATIENT_ID)]
     table={}
-    for chosen_CCS in chosen_CCSs:
-        inlist=topK[chosen_CCS].sum()
-        inpopulation=X[chosen_CCS].sum()
-        table[descriptions.loc[descriptions.CATEGORIES==chosen_CCS].LABELS.values[0]]=[f'{inlist} ({round(100*inlist/len(topK),2)} %)',f'{inpopulation} ({round(100*inpopulation/len(X),2)} %)']
+    for chosen_CCS_group in chosen_CCSs:
+        if isinstance(chosen_CCS_group, int):
+            chosen_CCS=f'CCS{chosen_CCS_group}'
+            inlist=topK[chosen_CCS].sum()
+            inpopulation=X[chosen_CCS].sum()
+            table[descriptions.loc[descriptions.CATEGORIES==chosen_CCS].LABELS.values[0]]=[round(100*inlist/len(topK),2) ,round(100*inpopulation/len(X),2) ]
+            
+            #f'{inlist} ({round(100*inlist/len(topK),2)} %)',f'{inpopulation} ({round(100*inpopulation/len(X),2)} %)']
+        else:
+            inlist,inpopulation= 0, 0
+            for ccs in chosen_CCS_group:
+                chosen_CCS=f'CCS{ccs}'
+                print(topK[chosen_CCS].sum(),'people have ',chosen_CCS)
+                inlist+=topK[chosen_CCS].sum()
+                inpopulation+=X[chosen_CCS].sum()
+            table[descriptions.loc[descriptions.CATEGORIES==chosen_CCS].LABELS.values[0]]=[round(100*inlist/len(topK),2) ,round(100*inpopulation/len(X),2) ]
+    table['Mujeres']=[100*topK['FEMALE'].sum()/len(topK),100*X['FEMALE'].sum()/len(X)]
     table=pd.DataFrame.from_dict(table,orient='index',columns=['Listado', 'Población General'])
-    print(table.to_markdown())
+    print(table.sort_values('Listado',ascending=False).to_markdown())
     return table
 
-table1=table_1(preds,X,descriptions, chosen_CCSs=['CCS1','CCS2','CCS3'])
+chosen_CCSs=[[i for i in range(11,46)],[98,99],127,128,[49,50],108,158,79,202,659,83,206,205,657,[100,101]]
+
+table1=table_1(preds,X,descriptions, chosen_CCSs=chosen_CCSs)
+
 #%%
 
 if not 'AGE_85+' in X:
