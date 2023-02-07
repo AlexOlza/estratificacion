@@ -153,3 +153,56 @@ patient_C, df_C, agesex_C=explain_example(preds.loc[preds.TopK==1].PRED.min(),
                                 coefs,X,descriptions,1)
 
 #%%
+zeros=pd.DataFrame([np.zeros(X.shape[1]-1)],columns=X.drop('PATIENT_ID',axis=1).columns)
+healthy_patients={}
+healthy_predictions={}
+agecols=[c for c in X if 'AGE' in c]
+for c in agecols:
+    healthy_patients[f'FEMALE=1{c}']=zeros.copy()
+    healthy_patients[f'FEMALE=1{c}'][['FEMALE',c]]=1
+    
+    healthy_patients[f'FEMALE=0{c}']=zeros.copy()
+    healthy_patients[f'FEMALE=0{c}'][[c]]=1
+    
+    healthy_predictions[f'FEMALE=1{c}']=model.predict_proba(healthy_patients[f'FEMALE=1{c}'])[:,1]
+    healthy_predictions[f'FEMALE=0{c}']=model.predict_proba(healthy_patients[f'FEMALE=0{c}'])[:,1]
+
+healthy_patients[f'FEMALE=1AGE_85GT']=zeros.copy()
+healthy_patients[f'FEMALE=1AGE_85GT']['FEMALE']=1
+healthy_predictions['FEMALE=0AGE_85GT']=model.predict_proba(zeros.copy())[:,1]
+healthy_predictions['FEMALE=1AGE_85GT']=model.predict_proba(healthy_patients[f'FEMALE=1AGE_85GT'])[:,1]
+#%%
+def explain_all_examples(preds, coefs, X, descriptions, healthy_predictions):
+    all_explanations={}
+    for i,patient_id in enumerate(preds.PATIENT_ID):
+        print(i, len(preds.PATIENT_ID))
+        CCS=X.loc[X.PATIENT_ID==patient_id]
+        # healthy_counterpart=CCS.copy()
+        CCS=[c for c in CCS if CCS[c].values[0]==1]
+        age=[c for c in CCS if 'AGE' in c]
+        age='AGE_85GT' if len(age)==0 else age[0]
+        sex=f'FEMALE={X.loc[X.PATIENT_ID==patient_id].FEMALE.values[0]}'
+        smallest=coefs[CCS].T.nsmallest(3,0)
+        df=pd.concat([coefs[CCS].T.nlargest(3,0),smallest.loc[smallest[0]<0]])
+        df['CATEGORIES']=df.index
+        df=pd.merge(df,descriptions,on='CATEGORIES',how='left')
+        pred=preds.loc[preds.PATIENT_ID==patient_id].PRED
+        obs=preds.loc[preds.PATIENT_ID==patient_id].OBS
+        obs2019=preds.loc[preds.PATIENT_ID==patient_id].OBS2019
+        # healthy_counterpart[[c for c in healthy_counterpart.columns if (('CCS' in c) or ('PHARMA' in c))]]=0
+        baseline=healthy_predictions[f'{sex}{age}'][0]
+        df['type']=np.where(df[0]>=0,'Risk: ', 'Protection: ')
+        factors=np.where(df.LABELS.isna(),df.type+df.CATEGORIES, df.type+df.LABELS)
+        death='2018' if obs.values[0]==1 else 'unknown'
+        death='2019' if obs2019.values[0]==1 else death
+        patient_descr=f'Sex: {sex}, Age: {age[0]}, Death : {death}. Prediction is {round(pred.values[0],2)}, {round(pred.values[0]/baseline)} times the risk for a healthy patient of same age and sex.'
+        patient_descr=list([patient_descr])+list(['; '.join(factors)])
+        all_explanations[patient_id]=patient_descr
+        
+    all_explanations=pd.DataFrame.from_dict(all_explanations, orient='index', columns=['DESCRIPTION','EXPLANATION'])
+    all_explanations['PATIENT_ID']=all_explanations.index
+    return all_explanations
+    
+all_explanations=explain_all_examples(preds.loc[preds.TopK==1], coefs, X, descriptions, healthy_predictions)        
+all_explanations.to_csv(config.PREDPATH+'explanations_top20k.csv')        
+    
