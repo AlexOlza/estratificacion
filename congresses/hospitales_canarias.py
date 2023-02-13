@@ -111,27 +111,47 @@ Yy=y.loc[X.PATIENT_ID.isin(preds.loc[preds.TopK==1].PATIENT_ID)]
 agesRisk=pd.DataFrame(Xx.filter(regex=("AGE*")).idxmax(1).value_counts(normalize=True)*100)
 agesGP=pd.DataFrame(X.filter(regex=("AGE*")).idxmax(1).value_counts(normalize=True)*100)
 
-import seaborn as sns
 import matplotlib.pyplot as plt
-plt.figure(dpi=1200) 
-fig, ax=plt.subplots(figsize=(8,10))
-
-
-agesRisk['Grupo edad']=agesRisk.index
-agesRisk['Porcentaje']=agesRisk[0]
-agesRisk=agesRisk[['Grupo edad', 'Porcentaje']]
+def new_age_groups(agesRisk):
+    agesRisk['Grupo edad']=agesRisk.index
+    agesRisk['Grupo edad']=agesRisk['Grupo edad'].str.replace('AGE_','')
+    agesRisk['Grupo edad']=np.where(agesRisk['Grupo edad'].str.contains('85+'),
+                                    agesRisk['Grupo edad'],
+                                    agesRisk['Grupo edad'].str[:2]+'-'+agesRisk['Grupo edad'].str[2:])
+    agesRisk['Porcentaje']=agesRisk[0]
+    agesRisk=agesRisk[['Grupo edad', 'Porcentaje']]
+    agesRisk.loc['AGE_7584']=['75-84',agesRisk.loc['AGE_7579'].Porcentaje+agesRisk.loc['AGE_8084'].Porcentaje]
+    agesRisk.loc['AGE_6574']=['65-74',agesRisk.loc['AGE_6569'].Porcentaje+agesRisk.loc['AGE_7074'].Porcentaje]
+    agesRisk.loc['AGE_1854']=['18-54',agesRisk.loc['AGE_1834'].Porcentaje+agesRisk.loc['AGE_3544'].Porcentaje+agesRisk.loc['AGE_4554'].Porcentaje]
+    agesRisk=agesRisk.loc[['AGE_1854','AGE_5564','AGE_6574','AGE_7584','AGE_85+']]
+    return agesRisk
 # agesRisk.loc[len(agesRisk.index)]=['AGE_85+',a85plus]
-agesGP['Grupo edad']=agesGP.index
-agesGP['Porcentaje']=agesGP[0]
-agesGP=agesGP[['Grupo edad', 'Porcentaje']]
-# agesGP.loc[len(agesGP.index)]=['AGE_85+',a85plus]
-sns.barplot( y='Grupo edad',x='Porcentaje',ax=ax,data=agesGP,
-            order=sorted(agesRisk['Grupo edad'].values),color='b', alpha=0.5, label='Población general')
+agesRisk=new_age_groups(agesRisk)
+agesGP=new_age_groups(agesGP)
 
-sns.barplot( y='Grupo edad',x='Porcentaje',ax=ax,data=agesRisk,
-            order=sorted(agesRisk['Grupo edad'].values),color='r', alpha=0.5,label='Grupo riesgo')
-ax.legend()
-plt.savefig(config.ROOTPATH+'congresses/figures/canarias_distr_edad.png',dpi=1200)
+def fmt(x):
+    return '{:.1f}%'.format(x)
+
+labels = [f'{group}' for group, perc in zip(agesRisk['Grupo edad'],agesRisk['Porcentaje'])]
+
+plt.figure(dpi=1200,figsize=(10,8)) 
+patches, texts,_ =plt.pie(agesRisk.Porcentaje.values,autopct=fmt,pctdistance=1.1)
+plt.legend(patches, labels,loc='center left', title='Edad')
+plt.axis('equal')
+plt.title('Grupo de riesgo\n')
+plt.tight_layout()
+plt.show()
+plt.savefig(config.ROOTPATH+'congresses/figures/canarias_distr_edad_pie_risk.png',dpi=1200)
+
+labels = [f'{group}' for group in agesGP['Grupo edad']]
+plt.figure(dpi=1200,figsize=(10,8)) 
+patches, texts, _ =plt.pie(agesGP.Porcentaje.values,autopct=fmt,pctdistance=1.1)
+plt.legend(patches, labels,loc='center left', title='Edad')
+plt.axis('equal')
+plt.title('Población General\n')
+plt.tight_layout()
+plt.show()
+plt.savefig(config.ROOTPATH+'congresses/figures/canarias_distr_edad_pie_general.png',dpi=1200)
 X.drop('AGE_85+',axis=1,inplace=True)
 #%%
 def explain_example(lower,upper, preds, coefs, X, descriptions, random_state):
@@ -183,8 +203,8 @@ def explain_all_examples(preds, coefs, X, descriptions, healthy_predictions):
         age='AGE_85GT' if len(age)==0 else age
         age= age[0] if isinstance(age,list) else age
         sex=f'FEMALE={X.loc[X.PATIENT_ID==patient_id].FEMALE.values[0]}'
-        smallest=coefs[CCS].T.nsmallest(3,0)
-        df=pd.concat([coefs[CCS].T.nlargest(3,0),smallest.loc[smallest[0]<0]])
+        smallest=coefs[CCS].T.nsmallest(5,0)
+        df=pd.concat([coefs[CCS].T.nlargest(5,0),smallest.loc[smallest[0]<0]])
         df['CATEGORIES']=df.index
         df=pd.merge(df,descriptions,on='CATEGORIES',how='left')
         pred=preds.loc[preds.PATIENT_ID==patient_id].PRED
@@ -204,7 +224,7 @@ def explain_all_examples(preds, coefs, X, descriptions, healthy_predictions):
     all_explanations['PATIENT_ID']=all_explanations.index
     return all_explanations
 
-explanations_filename=config.PREDPATH+'/explanations_top20k.csv'
+explanations_filename=config.PREDPATH+'/explanations_top20k_5.csv'
 try: 
     all_explanations=pd.read_csv(explanations_filename)
 except:
@@ -220,4 +240,49 @@ print(middle_aged_women_cancer_ovary.drop('PATIENT_ID',axis=1).to_markdown(index
 
 print(cystic_fibrosis.drop('PATIENT_ID',axis=1).to_markdown(index=False))
 
-very_young=all_explanations.loc[all_explanations.DESCRIPTION.str.contains(r'0004|0511|1217|1834')].loc[all_explanations.DESCRIPTION.str.contains('2018|2019')]
+very_young=all_explanations.loc[all_explanations.DESCRIPTION.str.contains(r'0004|0511|1217|1834|3544')].loc[all_explanations.DESCRIPTION.str.contains('2018|2019')]
+
+neurologic_organ=all_explanations.loc[all_explanations.DESCRIPTION.str.contains('FEMALE=0')].loc[all_explanations.EXPLANATION.str.contains('^(?=.*[cC]erebrovascular)(?=.*Diabetes mellitus)(?=.*astrointestinal)')]
+print(neurologic_organ.drop('PATIENT_ID',axis=1).to_markdown(index=False))
+
+"""
+EJEMPLO CÁNCER
+ Sex: FEMALE=1, Age: AGE_4554, Death : 2019. 
+ Prediction is 0.3, 221 times the risk for a healthy patient of same age and sex.  
+| Risk: Secondary malignancies; Risk: Cancer of ovary; Risk: CCSONCOLO; 
+Risk: Meningitis (except that caused by tuberculosis or sexually transmitted disease);
+ Risk: PHARMA_Steroidresponsive_disease; 
+ Protection: AGE_4554; Protection: FEMALE; Protection: PHARMA_Hyperlipidaemia
+ 
+ 
+EJEMPLO PERSONA JOVEN QUE MURIÓ
+Sex: FEMALE=1, Age: AGE_3544, Death : 2019. 
+Prediction is 0.25, 539 times the risk for a healthy patient of 
+same age and sex.  | 
+Risk: Substance-related disorders; Risk: HIV infection;
+ Risk: Alcohol-related disorders; Risk: PHARMA_Psychotic_illness;
+ Risk: Congestive heart failure; nonhypertensive; 
+ Protection: AGE_3544; Protection: FEMALE;
+ Protection: PHARMA_Ischaemic_heart_disease_hypertension |
+ 
+EJEMPLO SIN CÁNCER (ENFERMO DE ÓRGANO Y NEUROLÓGICO)
+Sex: FEMALE=0, Age: AGE_85GT, Death : unknown.
+ Prediction is 0.31, 5 times the risk for a healthy 
+ patient of same age and sex. |
+ Risk: Chronic ulcer of skin; 
+ Risk: Acute cerebrovascular disease;
+ Risk: Chronic obstructive pulmonary disease and
+ bronchiectasis; Risk: PHARMA_Diabetes;
+ Risk: Diabetes mellitus with complications; 
+ Protection: PHARMA_Hyperlipidaemia; 
+ Protection: PHARMA_Hypertension; 
+ Protection: PHARMA_Ischaemic_heart_disease_hypertension 
+
+Sex: FEMALE=0, Age: AGE_85GT, Death : unknown. 
+Prediction is 0.22, 3 times the risk for a healthy patient of same age and sex.
+ | Risk: Acute cerebrovascular disease; Risk: Deficiency and other anemia;
+ Risk: PHARMA_Diabetes; Risk: Diabetes mellitus with complications; 
+ Risk: Gastrointestinal hemorrhage; 
+ Protection: PHARMA_Ischaemic_heart_disease_hypertension 
+"""
+ 
