@@ -28,6 +28,8 @@ from sklearn.linear_model import LogisticRegression
 np.random.seed(config.SEED)
 
 X,y=getData(2016)
+if hasattr(config, 'exclusion_criteria'):
+    X,y = config.exclusion_criteria(X,y)
 #%%
 
 y=np.where(y[config.COLUMNS]>=1,1,0)
@@ -36,7 +38,7 @@ print('Sample size ',len(X), 'positive: ',sum(y))
 assert not 'AGE_85GT' in X.columns
 
 #%%
-logistic=LogisticRegression(penalty='none',max_iter=1000,verbose=0)
+logistic=LogisticRegression(penalty='none',max_iter=1000,verbose=0, n_jobs=-1)
 
 to_drop=['PATIENT_ID','ingresoUrg']
 for c in to_drop:

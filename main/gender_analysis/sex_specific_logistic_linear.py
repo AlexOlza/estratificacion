@@ -29,6 +29,8 @@ from sklearn.linear_model import LogisticRegression, LinearRegression, RidgeCV
 np.random.seed(config.SEED)
 
 X,y=getData(2016) 
+if hasattr(config, 'exclusion_criteria'):
+    X, y = config.exclusion_criteria(X,y)
 #%%
 female=X['FEMALE']==1
 male=X['FEMALE']==0
