@@ -180,7 +180,8 @@ def explain_all_examples(preds, coefs, X, descriptions, healthy_predictions):
         # healthy_counterpart=CCS.copy()
         CCS=[c for c in CCS if CCS[c].values[0]==1]
         age=[c for c in CCS if 'AGE' in c]
-        age='AGE_85GT' if len(age)==0 else age[0]
+        age='AGE_85GT' if len(age)==0 else age
+        age= age[0] if isinstance(age,list) else age
         sex=f'FEMALE={X.loc[X.PATIENT_ID==patient_id].FEMALE.values[0]}'
         smallest=coefs[CCS].T.nsmallest(3,0)
         df=pd.concat([coefs[CCS].T.nlargest(3,0),smallest.loc[smallest[0]<0]])
@@ -195,14 +196,28 @@ def explain_all_examples(preds, coefs, X, descriptions, healthy_predictions):
         factors=np.where(df.LABELS.isna(),df.type+df.CATEGORIES, df.type+df.LABELS)
         death='2018' if obs.values[0]==1 else 'unknown'
         death='2019' if obs2019.values[0]==1 else death
-        patient_descr=f'Sex: {sex}, Age: {age[0]}, Death : {death}. Prediction is {round(pred.values[0],2)}, {round(pred.values[0]/baseline)} times the risk for a healthy patient of same age and sex.'
+        patient_descr=f'Sex: {sex}, Age: {age}, Death : {death}. Prediction is {round(pred.values[0],2)}, {round(pred.values[0]/baseline)} times the risk for a healthy patient of same age and sex.'
         patient_descr=list([patient_descr])+list(['; '.join(factors)])
         all_explanations[patient_id]=patient_descr
         
     all_explanations=pd.DataFrame.from_dict(all_explanations, orient='index', columns=['DESCRIPTION','EXPLANATION'])
     all_explanations['PATIENT_ID']=all_explanations.index
     return all_explanations
-    
-all_explanations=explain_all_examples(preds.loc[preds.TopK==1], coefs, X, descriptions, healthy_predictions)        
-all_explanations.to_csv(config.PREDPATH+'explanations_top20k.csv')        
-    
+
+explanations_filename=config.PREDPATH+'/explanations_top20k.csv'
+try: 
+    all_explanations=pd.read_csv(explanations_filename)
+except:
+    all_explanations=explain_all_examples(preds.loc[preds.TopK==1], coefs, X, descriptions, healthy_predictions)        
+    all_explanations.to_csv(explanations_filename)        
+
+
+all_explanations.loc[all_explanations.DESCRIPTION.str.contains(r'^(?=.*FEMALE=1)(?=.*4554)(?=.*ovary)')]
+
+middle_aged_women_cancer_ovary=all_explanations.loc[all_explanations.DESCRIPTION.str.contains(r'^(?=.*FEMALE=1)(?=.*4554)')].loc[all_explanations.EXPLANATION.str.contains(r'ovary')]
+cystic_fibrosis=all_explanations.loc[all_explanations.DESCRIPTION.str.contains(r'0004|0511|1217|1834|3544|4554|5564|6569|7074|7579')].loc[all_explanations.EXPLANATION.str.contains(r'Cystic')]
+print(middle_aged_women_cancer_ovary.drop('PATIENT_ID',axis=1).to_markdown(index=False))
+
+print(cystic_fibrosis.drop('PATIENT_ID',axis=1).to_markdown(index=False))
+
+very_young=all_explanations.loc[all_explanations.DESCRIPTION.str.contains(r'0004|0511|1217|1834')].loc[all_explanations.DESCRIPTION.str.contains('2018|2019')]
