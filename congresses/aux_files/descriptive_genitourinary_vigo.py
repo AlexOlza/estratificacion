@@ -155,3 +155,9 @@ def plot_ages(X, title):
     
 plot_ages(Xgen.loc[Xgen.FEMALE==1], 'Genitourinary female patients')
 plot_ages(Xgen.loc[Xgen.FEMALE==0], 'Genitourinary male patients')
+
+plot_ages(Xnogen.loc[Xnogen.FEMALE==1], 'Non-genitourinary female patients')
+plot_ages(Xnogen.loc[Xnogen.FEMALE==0], 'Non-genitourinary male patients')
+
+plot_ages(X.loc[X.FEMALE==1], 'All female patients')
+plot_ages(X.loc[X.FEMALE==0], 'All male patients')
