@@ -45,6 +45,32 @@ def transform(X):
     dff=pd.concat([dff, pd.get_dummies(dff.Nueva_categoria)],axis=1)
     dff.drop(['complejidad','Nueva_categoria'], axis=1,inplace=True)
     return dff
+
+def reproduce_GMA_complexity(X):
+    dff=X.copy()
+    dff['GMA']=dff.filter(regex='GMA_[0-9]+').idxmax(axis=1)
+    dff['complejidad']=1
+    
+    cutoff={'GMA_10':[1.381,2.23,3.247,5.38],
+           'GMA_20':[4.543,8.469,11.514,15.506],
+           'GMA_31':[0.97,1.919,2.846,4.575],
+           'GMA_32':[2.842,4.562,6.183,8.949],
+           'GMA_33':[8.442,13.317,18.38,28.506],
+           'GMA_40':[10.264,18.772,27.755,42.25]} 
+    
+    for gmagroup in sorted(dff.GMA.str.slice(0,-1).unique()):
+        in_group=dff.GMA.str.slice(0,-1)==gmagroup
+        quantiles_=cutoff[gmagroup]
+        # quantiles=[0,1,2,3]
+        dff.loc[in_group,'complejidad']=np.where(dff.loc[in_group,'GMA_peso-ip']>=quantiles_[0],2,1)
+        dff.loc[in_group,'complejidad']=np.where(dff.loc[in_group,'GMA_peso-ip']>=quantiles_[1],3,dff.loc[in_group,'complejidad'])
+        dff.loc[in_group,'complejidad']=np.where(dff.loc[in_group,'GMA_peso-ip']>=quantiles_[2],4,dff.loc[in_group,'complejidad'])
+        dff.loc[in_group,'complejidad']=np.where(dff.loc[in_group,'GMA_peso-ip']>=quantiles_[3],5,dff.loc[in_group,'complejidad'])
+    dff['Nueva_categoria']=dff.GMA.str.slice(0,-1)+dff.complejidad.astype(str)
+    dff=dff[[c for c in dff if not (('GMA' in c))]]
+    dff=pd.concat([dff, pd.get_dummies(dff.Nueva_categoria)],axis=1)
+    dff.drop(['complejidad','Nueva_categoria'], axis=1,inplace=True)
+    return dff
 #%%
 table=pd.DataFrame()
 predictors=['PATIENT_ID|FEMALE|AGE_[0-9]+$|ACG_','PATIENT_ID|FEMALE|AGE_[0-9]+$|GMA_']
