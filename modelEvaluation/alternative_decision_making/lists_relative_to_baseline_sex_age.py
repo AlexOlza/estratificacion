@@ -66,7 +66,7 @@ def performance(obs, pred, K, computemetrics=True, verbose=True):
     if verbose: print('Recall, PPV, Spec = ', recall, ppv, specificity)
     return (recall, ppv, specificity, newpred)
 
-def healthy_preds(model,X):
+def healthy_preds_age(model,X):
     zeros=pd.DataFrame([np.zeros(X.shape[1]-1)],columns=X.drop('PATIENT_ID',axis=1).columns)
     healthy_patients={}
     healthy_predictions={}
@@ -81,6 +81,16 @@ def healthy_preds(model,X):
         healthy_predictions[f'FEMALE=1{c}']=model.predict_proba(healthy_patients[f'FEMALE=1{c}'])[:,1]
         healthy_predictions[f'FEMALE=0{c}']=model.predict_proba(healthy_patients[f'FEMALE=0{c}'])[:,1]
 
+    healthy_patients[f'FEMALE=1AGE_85GT']=zeros.copy()
+    healthy_patients[f'FEMALE=1AGE_85GT']['FEMALE']=1
+    healthy_predictions['FEMALE=0AGE_85GT']=model.predict_proba(zeros.copy())[:,1]
+    healthy_predictions['FEMALE=1AGE_85GT']=model.predict_proba(healthy_patients[f'FEMALE=1AGE_85GT'])[:,1]
+    return healthy_predictions
+
+def healthy_preds_no_age(model,X):
+    zeros=pd.DataFrame([np.zeros(X.shape[1]-1)],columns=X.drop('PATIENT_ID',axis=1).columns)
+    healthy_patients={}
+    healthy_predictions={}
     healthy_patients[f'FEMALE=1AGE_85GT']=zeros.copy()
     healthy_patients[f'FEMALE=1AGE_85GT']['FEMALE']=1
     healthy_predictions['FEMALE=0AGE_85GT']=model.predict_proba(zeros.copy())[:,1]
@@ -107,13 +117,16 @@ X.drop(['AGE','AGE_85GT'],axis=1,inplace=True)
 preds,score=predict(selected_modelname,config.EXPERIMENT,2018)
 preds=pd.merge(preds,XageSex,on='PATIENT_ID')
 
-healthy=healthy_preds(model, X)
+healthy=healthy_preds_age(model, X)
+healthy_no_age=healthy_preds_no_age(model, X)
 #%%
 preds['BASELINE']=0
+preds['BASELINE_WITH_AGE']=0
 for sex in preds.FEMALE.unique():
+    preds.loc[(preds.FEMALE==sex),'BASELINE']=healthy_no_age[f'FEMALE={sex}AGE_85GT'][0]
     for age in preds.AGE.unique():
         key=f'FEMALE={sex}{age}'
-        preds.loc[(preds.FEMALE==sex) & (preds.AGE==age),'BASELINE']=healthy[key][0]
+        preds.loc[(preds.FEMALE==sex) & (preds.AGE==age),'BASELINE_WITH_AGE']=healthy[key][0]
 #%%
 perf={}
 perf['global']=performance(preds.OBS, preds.PRED/preds.BASELINE, K=20000)
@@ -121,7 +134,7 @@ perf['global']=performance(preds.OBS, preds.PRED/preds.BASELINE, K=20000)
 from matplotlib import pyplot as plt
 import seaborn as sns
 
-plt.xlim(0, 5)
+
 fig,ax=plt.subplots()
 sns.set_style('whitegrid')
 for sex in preds.FEMALE.unique():
@@ -131,3 +144,54 @@ for sex in preds.FEMALE.unique():
     sns.kdeplot(p.PRED/p.BASELINE,ax=ax,label=sex)
 
 #%%
+preds['relative_sex']=preds.PRED/preds.BASELINE
+preds['top_20k_relative_sex']=np.where(
+    preds.PATIENT_ID.isin(preds.nlargest(20000,'relative_sex').PATIENT_ID),1,0)
+
+preds['relative_sex_age']=preds.PRED/preds.BASELINE_WITH_AGE
+preds['top_20k_relative_sex_age']=np.where(
+    preds.PATIENT_ID.isin(preds.nlargest(20000,'relative_sex_age').PATIENT_ID),1,0)
+
+preds['top_20k']=np.where(
+    preds.PATIENT_ID.isin(preds.nlargest(20000,'PRED').PATIENT_ID),1,0)
+
+print('Top 20k % women: ',preds.loc[preds.FEMALE==1]['top_20k'].sum()*100/20000)
+print('Top 20k relative sex % women: ',preds.loc[preds.FEMALE==1]['top_20k_relative_sex'].sum()*100/20000)
+print('Top 20k relative sex and age % women: ',preds.loc[preds.FEMALE==1]['top_20k_relative_sex_age'].sum()*100/20000)
+#%%
+
+#%%
+def table(preds):
+    df=pd.DataFrame()
+    perf={}
+    
+    for col in ['top_20k','top_20k_relative_sex','top_20k_relative_sex_age']:
+        newobs = np.where(preds.OBS >= 1, 1, 0)  # Whether the patient had ANY admission
+        c = confusion_matrix(y_true=newobs, y_pred=preds[col])
+        recall = c[1][1] / (c[1][0] + c[1][1])
+        ppv = c[1][1] / (c[0][1] + c[1][1])
+        perf['global']=[recall,ppv]
+        for sex in preds.FEMALE.unique():
+            p=preds.loc[preds.FEMALE==sex]
+            newobs = np.where(p.OBS >= 1, 1, 0)  # Whether the patient had ANY admission
+            c = confusion_matrix(y_true=newobs, y_pred=p[col])
+            recall = c[1][1] / (c[1][0] + c[1][1])
+            ppv = c[1][1] / (c[0][1] + c[1][1])
+            perf[sex]=[recall,ppv]
+        df_=pd.DataFrame(perf).rename(columns={0:'Men',1:'Women'},
+                                     index={0:f'Recall_{col}',1:f'PPV_{col}'})
+        df=pd.concat([df,df_])
+    df['Ratio']=df.Women/df.Men
+    return df
+#%%
+df=table(preds)
+"""
+                                   global       Men     Women     Ratio
+Recall_top_20k                   0.076966  0.095282  0.057549  0.603989
+PPV_top_20k                      0.490700  0.504682  0.467945  0.927208
+Recall_top_20k_relative_sex      0.074903  0.074906  0.074901  0.999940
+PPV_top_20k_relative_sex         0.477550  0.524434  0.436206  0.831765
+Recall_top_20k_relative_sex_age  0.071892  0.075347  0.068228  0.905517
+PPV_top_20k_relative_sex_age     0.458350  0.503719  0.414629  0.823137
+"""
+#RR = OR/[(1-probability in reference group) + (probability in reference group x OR)]
