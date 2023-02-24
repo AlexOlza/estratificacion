@@ -67,6 +67,10 @@ def performance(obs, pred, K, computemetrics=True, verbose=True):
     return (recall, ppv, specificity, newpred)
 
 def healthy_preds_age(model,X):
+    if not 'COSTE_TOTAL_ANO2' in config.COLUMNS:
+        def predict_fn(x): return model.predict_proba(x)[:,1]  # Whether the patient had ANY admission
+    else:
+        def predict_fn(x): return model.predict(x)[0]
     zeros=pd.DataFrame([np.zeros(X.shape[1]-1)],columns=X.drop('PATIENT_ID',axis=1).columns)
     healthy_patients={}
     healthy_predictions={}
@@ -78,23 +82,27 @@ def healthy_preds_age(model,X):
         healthy_patients[f'FEMALE=0{c}']=zeros.copy()
         healthy_patients[f'FEMALE=0{c}'][[c]]=1
         
-        healthy_predictions[f'FEMALE=1{c}']=model.predict_proba(healthy_patients[f'FEMALE=1{c}'])[:,1]
-        healthy_predictions[f'FEMALE=0{c}']=model.predict_proba(healthy_patients[f'FEMALE=0{c}'])[:,1]
+        healthy_predictions[f'FEMALE=1{c}']=predict_fn(healthy_patients[f'FEMALE=1{c}'])
+        healthy_predictions[f'FEMALE=0{c}']=predict_fn(healthy_patients[f'FEMALE=0{c}'])
 
     healthy_patients[f'FEMALE=1AGE_85GT']=zeros.copy()
     healthy_patients[f'FEMALE=1AGE_85GT']['FEMALE']=1
-    healthy_predictions['FEMALE=0AGE_85GT']=model.predict_proba(zeros.copy())[:,1]
-    healthy_predictions['FEMALE=1AGE_85GT']=model.predict_proba(healthy_patients[f'FEMALE=1AGE_85GT'])[:,1]
+    healthy_predictions['FEMALE=0AGE_85GT']=predict_fn(zeros.copy())
+    healthy_predictions['FEMALE=1AGE_85GT']=predict_fn(healthy_patients[f'FEMALE=1AGE_85GT'])
     return healthy_predictions
 
 def healthy_preds_no_age(model,X):
+    if not 'COSTE_TOTAL_ANO2' in config.COLUMNS:
+        def predict_fn(x): return model.predict_proba(x)[:,1]  # Whether the patient had ANY admission
+    else:
+        def predict_fn(x): return model.predict(x)[0]
     zeros=pd.DataFrame([np.zeros(X.shape[1]-1)],columns=X.drop('PATIENT_ID',axis=1).columns)
     healthy_patients={}
     healthy_predictions={}
     healthy_patients[f'FEMALE=1AGE_85GT']=zeros.copy()
     healthy_patients[f'FEMALE=1AGE_85GT']['FEMALE']=1
-    healthy_predictions['FEMALE=0AGE_85GT']=model.predict_proba(zeros.copy())[:,1]
-    healthy_predictions['FEMALE=1AGE_85GT']=model.predict_proba(healthy_patients[f'FEMALE=1AGE_85GT'])[:,1]
+    healthy_predictions['FEMALE=0AGE_85GT']=predict_fn(zeros.copy())
+    healthy_predictions['FEMALE=1AGE_85GT']=predict_fn(healthy_patients[f'FEMALE=1AGE_85GT'])
     return healthy_predictions
 #%%
 year=2017#eval(input('Year: '))
@@ -161,37 +169,65 @@ print('Top 20k relative sex and age % women: ',preds.loc[preds.FEMALE==1]['top_2
 #%%
 
 #%%
-def table(preds):
+def table(preds,cols=['top_20k','top_20k_relative_sex','top_20k_relative_sex_age'],K=20000):
     df=pd.DataFrame()
     perf={}
     
-    for col in ['top_20k','top_20k_relative_sex','top_20k_relative_sex_age']:
-        newobs = np.where(preds.OBS >= 1, 1, 0)  # Whether the patient had ANY admission
+    for col in cols:
+        if not 'COSTE_TOTAL_ANO2' in config.COLUMNS:
+            newobs = np.where(preds.OBS >= 1, 1, 0)  # Whether the patient had ANY admission
+            from sklearn.metrics import roc_auc_score as score
+            obs=newobs
+        else:
+            from sklearn.metrics import r2_score as score
+            newobs= np.where(preds.OBS.isin(preds.OBS.nlargest(K)), 1, 0)
+            obs=preds.OBS
         c = confusion_matrix(y_true=newobs, y_pred=preds[col])
         recall = c[1][1] / (c[1][0] + c[1][1])
         ppv = c[1][1] / (c[0][1] + c[1][1])
-        perf['global']=[recall,ppv]
+        perf['global']=[score(obs, preds.PRED),recall,ppv]
         for sex in preds.FEMALE.unique():
             p=preds.loc[preds.FEMALE==sex]
-            newobs = np.where(p.OBS >= 1, 1, 0)  # Whether the patient had ANY admission
+            if not 'COSTE_TOTAL_ANO2' in config.COLUMNS:
+                newobs = np.where(p.OBS >= 1, 1, 0)  # Whether the patient had ANY admission
+                obs=newobs
+            else:
+                newobs= np.where(p.OBS.isin(p.OBS.nlargest(K)), 1, 0) 
+                obs=p.OBS
             c = confusion_matrix(y_true=newobs, y_pred=p[col])
             recall = c[1][1] / (c[1][0] + c[1][1])
             ppv = c[1][1] / (c[0][1] + c[1][1])
-            perf[sex]=[recall,ppv]
+            perf[sex]=[score(obs, p.PRED),recall,ppv]
         df_=pd.DataFrame(perf).rename(columns={0:'Men',1:'Women'},
-                                     index={0:f'Recall_{col}',1:f'PPV_{col}'})
+                                     index={0:f'Score_{col}',1:f'Recall_{col}',2:f'PPV_{col}'})
         df=pd.concat([df,df_])
     df['Ratio']=df.Women/df.Men
     return df
 #%%
 df=table(preds)
 """
+urgcmsCCS_parsimonious
+
                                    global       Men     Women     Ratio
+Score_top_20k                    0.804270  0.807296  0.801028  0.992237
 Recall_top_20k                   0.076966  0.095282  0.057549  0.603989
 PPV_top_20k                      0.490700  0.504682  0.467945  0.927208
+Score_top_20k_relative_sex       0.804270  0.807296  0.801028  0.992237
 Recall_top_20k_relative_sex      0.074903  0.074906  0.074901  0.999940
 PPV_top_20k_relative_sex         0.477550  0.524434  0.436206  0.831765
+Score_top_20k_relative_sex_age   0.804270  0.807296  0.801028  0.992237
 Recall_top_20k_relative_sex_age  0.071892  0.075347  0.068228  0.905517
 PPV_top_20k_relative_sex_age     0.458350  0.503719  0.414629  0.823137
-"""
+
+costCCS_parsimonious
+                                   global       Men     Women     Ratio
+Score_top_20k                    0.212348  0.239607  0.181984  0.759512
+Recall_top_20k                   0.221950  0.206350  0.138350  0.670463
+PPV_top_20k                      0.221950  0.340962  0.350431  1.027771
+Score_top_20k_relative_sex       0.212348  0.239607  0.181984  0.759512
+Recall_top_20k_relative_sex      0.218150  0.173850  0.170550  0.981018
+PPV_top_20k_relative_sex         0.218150  0.369461  0.322127  0.871882
+Score_top_20k_relative_sex_age   0.212348  0.239607  0.181984  0.759512
+Recall_top_20k_relative_sex_age  0.164250  0.128150  0.145350  1.134218
+PPV_top_20k_relative_sex_age     0.164250  0.317439  0.243753  0.767875"""
 #RR = OR/[(1-probability in reference group) + (probability in reference group x OR)]
