@@ -152,6 +152,12 @@ for sex in preds.FEMALE.unique():
     sns.kdeplot(p.PRED/p.BASELINE,ax=ax,label=sex)
 
 #%%
+females=preds.loc[preds.FEMALE==1]
+males=preds.loc[preds.FEMALE==0]
+top_10k_and_10k=pd.concat([females.nlargest(10000,'PRED'),
+          males.nlargest(10000,'PRED')])
+preds['top_10k_and_10k']=np.where(preds.PATIENT_ID.isin(top_10k_and_10k.PATIENT_ID), 1,0)
+
 preds['relative_sex']=preds.PRED/preds.BASELINE
 preds['top_20k_relative_sex']=np.where(
     preds.PATIENT_ID.isin(preds.nlargest(20000,'relative_sex').PATIENT_ID),1,0)
@@ -164,12 +170,13 @@ preds['top_20k']=np.where(
     preds.PATIENT_ID.isin(preds.nlargest(20000,'PRED').PATIENT_ID),1,0)
 
 print('Top 20k % women: ',preds.loc[preds.FEMALE==1]['top_20k'].sum()*100/20000)
+print('Top 10k and 10k % women: ',preds.loc[preds.FEMALE==1]['top_10k_and_10k'].sum()*100/20000)
 print('Top 20k relative sex % women: ',preds.loc[preds.FEMALE==1]['top_20k_relative_sex'].sum()*100/20000)
 print('Top 20k relative sex and age % women: ',preds.loc[preds.FEMALE==1]['top_20k_relative_sex_age'].sum()*100/20000)
 #%%
 
 #%%
-def table(preds,cols=['top_20k','top_20k_relative_sex','top_20k_relative_sex_age'],K=20000):
+def table(preds,cols=['top_20k', 'top_10k_and_10k','top_20k_relative_sex','top_20k_relative_sex_age'],K=20000):
     df=pd.DataFrame()
     perf={}
     
@@ -203,10 +210,18 @@ def table(preds,cols=['top_20k','top_20k_relative_sex','top_20k_relative_sex_age
         df=pd.concat([df,df_])
     df['Ratio']=df.Women/df.Men
     return df
+
 #%%
 df=table(preds)
+
+
 """
+
 urgcmsCCS_parsimonious
+
+Top 20k % women:  38.06
+Top 20k relative sex % women:  53.14
+Top 20k relative sex and age % women:  50.925
 
                                    global       Men     Women     Ratio
 Score_top_20k                    0.804270  0.807296  0.801028  0.992237
