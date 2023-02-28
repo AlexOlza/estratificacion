@@ -128,11 +128,7 @@ def predict(model_name,experiment_name,year,**kwargs):
         print('Model not found :(')
         print('missing ',modelfilename)
         return (None, None)
-    Xx=kwargs.get('X',None)
-    Yy=kwargs.get('y',None)
-    if (not isinstance(Xx,pd.DataFrame)) or (not isinstance(Yy,pd.DataFrame)):
-        Xx,Yy=getData(year-1,predictors=predictors)
-
+    
     predFilename=generate_filename(filename,year)
     calibFilename=generate_filename(filename,year, calibrated=True)
     zipfilename = '/'.join(predFilename.split('/')[:-1])+'.zip'
@@ -141,6 +137,14 @@ def predict(model_name,experiment_name,year,**kwargs):
     uncalibrated_predictions_found= Path(predFilename).is_file()
     no_predictions_found=(not uncalibrated_predictions_found) and (not calibrated_predictions_found)
     zipfile_found=zipfile.is_zipfile(zipfilename)
+    
+    Xx=kwargs.get('X',None)
+    Yy=kwargs.get('y',None)
+    if no_predictions_found:
+        if (not isinstance(Xx,pd.DataFrame)) or (not isinstance(Yy,pd.DataFrame)):
+            Xx,Yy=getData(year-1,predictors=predictors)
+
+    
     
     if zipfile_found:
         zfile=zipfile.ZipFile(zipfilename,'r')

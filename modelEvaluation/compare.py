@@ -157,14 +157,20 @@ from sklearn.metrics import confusion_matrix
 
 
 def performance(obs, pred, K, computemetrics=True, verbose=True):
-    orderedPred = sorted(pred, reverse=True)
-    orderedObs = sorted(obs, reverse=True)
+    assert K>0, 'K must be greater than zero'
+    assert len(obs)==len(pred), 'obs and pred must have the same length'
+    if K<1: #K can be expressed in proportion form, for example 0.01 to use 1% of the population
+        K_=K
+        K=round(len(obs)*K)
+        print(f'The top {100*K_}% list has {K} patients')
+    orderedPred = sorted(pred, reverse=True)   
     cutoff = orderedPred[K - 1]
     # print(f'Cutoff value ({K} values): {cutoff}')
     # print(f'Observed cutoff value ({K} values): {orderedObs[K-1]}')
     newpred = pred >= cutoff
     # print('Length of selected list ',sum(newpred))
     if 'COSTE_TOTAL_ANO2' in config.COLUMNS:  # maybe better: not all([int(i)==i for i in obs])
+        orderedObs = sorted(obs, reverse=True)
         newobs = obs >= orderedObs[K - 1]
     else:
         newobs = np.where(obs >= 1, 1, 0)  # Whether the patient had ANY admission

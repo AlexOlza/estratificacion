@@ -35,7 +35,6 @@ ATCFILES={2016:'pharma2016.csv',
 
 def exclusion_criteria(X, y):
     import pandas as pd
-    """ We exclude patients that have genitourinary conditions, and drop those columns """
     genitoCCS=X.filter(regex='PHARMA_Benign_prostatic_hyperplasia|CCS(2[4-9]$|3[0-1]$|46$|16[3-9]$|17[0-9]$|18[0-9]$|19[0-6]$|215$)',axis=1)
     print(f'We drop {len(genitoCCS.columns)} columns of genitourinary conditions')
     X=X.drop(genitoCCS.columns,axis=1)

@@ -34,7 +34,6 @@ from modelEvaluation.compare import detect_models, compare, detect_latest, perfo
 
 import pandas as pd
 import re
-from tensorflow import keras
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.metrics import recall_score, average_precision_score, roc_auc_score, RocCurveDisplay, roc_curve, auc, precision_recall_curve, PrecisionRecallDisplay
@@ -87,10 +86,6 @@ female = X['FEMALE'] == 1
 male = X['FEMALE'] == 0
 sex = ['Mujeres', 'Hombres']
 
-# if config.ALGORITHM=='logistic':
-#     globalmodelname='logistic20230201_110443' if 'vigo' in config.EXPERIMENT else 'logistic20230201_121805'
-# else:
-#     globalmodelname='linear20230201_110830'
 # %%
 tail=True
 if tail:
@@ -108,7 +103,7 @@ FPR, TPR, ROCTHRESHOLDS = {k: {} for k in sex}, {k: {}
                                                  for k in sex}, {k: {} for k in sex}
 prec_at_rec=pd.DataFrame()
 table = pd.DataFrame()
-K = 20000
+K = 0.01
 models = ['Global', 'Separado']
 fighist, axs = plt.subplots(2, 2, figsize=(25, 20))
 
@@ -116,6 +111,7 @@ axhist, axhist2, axhist3, axhist4= axs[0,0], axs[0,1], axs[1,0], axs[1,1]
 # fighist2, (axhist3, axhist4) = plt.subplots(1, 2)
 
 for i, group, groupname in zip([1, 0], [female, male], sex):
+    print(groupname)
     recall, ppv, spec, score, ap = {}, {}, {}, {}, {}
     separatemodelname = f'{config.ALGORITHM}{groupname}'
     selected = [l for l in available_models if (bool(re.match(f'{config.ALGORITHM}{groupname}$|{config.ALGORITHM}\d+', l)))]
@@ -262,9 +258,9 @@ for i, model in enumerate(models):
     print(' ')
     print(model)
     print('what should the probability threshold be to get the same recall for women as for men? ')
-    print('Recall for men (global model): ', table.Recall_20000.iloc[i])
+    print('Recall for men (global model): ', table[f'Recall_{K}'].iloc[i])
     idx = [n for n, i in enumerate(
-        RECALL['Mujeres'][model]) if i <= table.Recall_20000.iloc[0]][0]
+        RECALL['Mujeres'][model]) if i <= table[f'Recall_{K}'].iloc[0]][0]
     t = THRESHOLDS['Mujeres'][model][idx]
     idx2 = [n for n, i in enumerate(
         ROCTHRESHOLDS['Mujeres'][model]) if i <= t][0]
@@ -274,9 +270,9 @@ for i, model in enumerate(models):
 
     print('Specificity for these women is: ', 1-FPR['Mujeres'][model][idx2])
 
-    print('And for men: ', table.Specificity_20000.iloc[i])
+    print('And for men: ', table[f'Specificity_{K}'].iloc[i])
     print('PPV for these women is: ', PRECISION['Mujeres'][model][idx])
-    print('ANd for men: ', table.PPV_20000.iloc[i])
+    print('ANd for men: ', table[f'PPV_{K}'].iloc[i])
 
 # %% CALIBRATION CURVES
 for title, preds in zip(['Global', 'Separado'], [joint_cal, separate_cal]):
