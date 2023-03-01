@@ -46,13 +46,26 @@ def fit_models(variables:dict,X, y,
             continue
         Xx=X.filter(regex=val, axis=1)
         
+        if key=='GMA_peso_ip_categorizado':
+            Xx=categorize_ip(Xx)
+        
         print('Number of predictors: ',len(Xx.columns))
         t0=time()
         fit=estimator.fit(Xx, y)
         print('fitting time: ',time()-t0)
 
         util.savemodel(config, fit, name='{0}'.format(key))
-
+def categorize_ip(X):
+    dff=X.copy()
+    quantiles=dff['GMA_peso-ip'].quantile([0.5,0.8,0.95,0.99])
+    dff['complejidad']=np.where(dff['GMA_peso-ip']>=quantiles[0.50],2,1)
+    dff['complejidad']=np.where(dff['GMA_peso-ip']>=quantiles[0.80],3,dff['complejidad'])
+    dff['complejidad']=np.where(dff['GMA_peso-ip']>=quantiles[0.95],4,dff['complejidad'])
+    dff['complejidad']=np.where(dff['GMA_peso-ip']>=quantiles[0.99],5,dff['complejidad'])
+    dff=pd.concat([dff, pd.get_dummies(dff.complejidad)],axis=1)
+    dff.rename(columns={i:f'GMA_peso_quantile_{i}' for i in [1,2,3,4,5]},inplace=True)
+    dff.drop(['complejidad'], axis=1,inplace=True)
+    return dff
 #%%
 np.random.seed(config.SEED)
 
@@ -70,6 +83,7 @@ additional_columns=indices+patologias
 basico='PATIENT_ID|FEMALE|AGE_[0-9]+$|CCS|PHARMA|'
 variables={ 'CCSPHARMA':basico[:-1],
             'GMA_peso_ip':basico+'GMA_peso-ip',
+            'GMA_peso_ip_categorizado':basico+'GMA_peso-ip',
             'GMA_31cat':basico+'GMA_[0-9]+$',
             'GMA_indices': basico+ '|'.join(indices),
             'GMA_patologias':basico+ '|'.join(patologias),
@@ -95,7 +109,7 @@ for drop_,vardict_ in zip(drop,vardict):
                     GMACATEGORIES=True,
                     GMA_DROP_DIGITS=drop_,
                     additional_columns=additional_columns)
-    
+        # assert False
         to_drop=['PATIENT_ID','ingresoUrg']
         for c in to_drop:
             try:
@@ -138,11 +152,15 @@ for drop_,vardict_ in zip(drop,vardict):
         
         for key, val in vardict_.items():
             Xx=X.copy()
+            Xx=Xx.filter(regex=val, axis=1)
+            if key=='GMA_peso_ip_categorizado':
+                Xx=categorize_ip(Xx)
+
             if not val:
                 continue
             try:
                 probs,_=predict(key,experiment_name=config.EXPERIMENT,year=2018,
-                                  X=Xx.filter(regex=val, axis=1), y=y)
+                                  X=Xx, y=y)
                 auc=roc_auc_score(probs.OBS,probs.PRED)
                 recall, ppv, spec, newpred = performance(obs=probs.OBS, pred=probs.PRED, K=20000)
                 
