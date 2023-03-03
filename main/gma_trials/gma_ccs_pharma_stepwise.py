@@ -34,10 +34,10 @@ X,y=getData(2016,
              BINARIZE_CCS=True,
              GMA=True,
              GMACATEGORIES=True,
-             GMA_DROP_DIGITS=0,
-             additional_columns=[])
+             GMA_DROP_DIGITS=0)
 
-X=reverse_one_hot(X)
+if hasattr(config, 'modifyData'):
+    X,y=config.modifyData(X,y)
 # assert False
 print('Sample size ',len(X))
 
@@ -74,9 +74,9 @@ X,y=getData(2017,
              BINARIZE_CCS=True,
              GMA=True,
              GMACATEGORIES=True,
-             GMA_DROP_DIGITS=0,
-             additional_columns=[])
-X=reverse_one_hot(X)
+             GMA_DROP_DIGITS=0)
+if hasattr(config, 'modifyData'):
+    X,y=config.modifyData(X,y)
 #%%
 import os
 from modelEvaluation.predict import predict
