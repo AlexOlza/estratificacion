@@ -7,7 +7,7 @@ Created on Fri Jun 10 09:25:11 2022
 """
 import sys
 sys.path.append('/home/aolza/Desktop/estratificacion/')#necessary in cluster
-logistic_model='logistic20220207_122835'
+logistic_model='logistic20220705_155354'#'logistic20220207_122835'
 chosen_config='configurations.cluster.logistic'
 experiment='configurations.urgcms_excl_nbinj'
 
@@ -27,7 +27,7 @@ import modelEvaluation.calibrate as cal
 import pandas as pd
 import numpy as np
 import re
-from modelEvaluation.comparative_article_plotting_functions import *
+from modelEvaluation.article_BMC.comparative_article_plotting_functions import *
 config.METRICSPATH=config.ROOTPATH+'metrics/'+config.EXPERIMENT
 #%%
 
