@@ -67,15 +67,7 @@ def ROC_PR_comparison(models, yr, logistic_model, mode='ROC', **kwargs):
     labels=model_labels(models)
     for m, label in zip(models, labels): 
         print(m, label)
-<<<<<<< HEAD
-        if m==logistic_model:
-            model=calibrate(m, yr,experiment_name=config.EXPERIMENT,
-                            )
-        else:
-            predpath=re.sub(config.EXPERIMENT,'hyperparameter_variability_'+config.EXPERIMENT,config.PREDPATH)
-            model=calibrate(m, yr, experiment_name='hyperparameter_variability_'+config.EXPERIMENT,
-                            filename=os.path.join(predpath,f'{m}'))
-||||||| merged common ancestors
+
         if m==logistic_model:
             model=calibrate(m, yr,experiment_name=config.EXPERIMENT,
                             )
@@ -83,15 +75,7 @@ def ROC_PR_comparison(models, yr, logistic_model, mode='ROC', **kwargs):
             predpath=re.sub(config.EXPERIMENT,'hyperparameter_variability_'+config.EXPERIMENT,config.PREDPATH)
             model=calibrate(m, yr, experiment_name='hyperparameter_variability_'+config.EXPERIMENT,
                             filename=os.path.join(predpath,f'{m}_calibrated_{yr}.csv'))
-=======
-        # if m==logistic_model:
-        #     model=calibrate(m, yr,experiment_name=config.EXPERIMENT,
-        #                     )
-        # else:
-        predpath=re.sub(config.EXPERIMENT,'hyperparameter_variability_'+config.EXPERIMENT,config.PREDPATH)
-        model=calibrate(m, yr, experiment_name='hyperparameter_variability_'+config.EXPERIMENT,
-                        filename=os.path.join(predpath,f'{m}_calibrated_{yr}.csv'))
->>>>>>> 0012c547275f95df9be8136bcf170a0f44945128
+
         obs=np.where(model.OBS>=1,1,0)
         fpr, tpr, _ = roc_curve(obs, model.PREDCAL)
         prec, rec, _ = precision_recall_curve(obs, model.PREDCAL)
