@@ -67,11 +67,12 @@ def calibrate(model_name,yr, **kwargs):
         filename=kwargs.get('filename',None)
         experiment_name=kwargs.get('experiment_name',config.EXPERIMENT)
         if filename:
+            print('initial FILENAME ',filename)
             calibFilename=os.path.join(config.PREDPATH,filename+f'_calibrated_{yr}.csv')
             uncalFilename=os.path.join(config.PREDPATH,filename+f'__{yr}.csv')
         else:
-            calibFilename=generate_filename(model_name,yr, calibrated=True)
-            uncalFilename=generate_filename(model_name,yr, calibrated=False)
+            calibFilename=generate_filename(model_name,yr, experiment_name, calibrated=True)
+            uncalFilename=generate_filename(model_name,yr, experiment_name, calibrated=False)
         print('CALIBFILENAME ',calibFilename)
         print('UNCALFILENAME ',uncalFilename)
         #Conditions
@@ -241,9 +242,10 @@ def plot(p, consistency_bars=True, **kwargs):
         f.tight_layout(rect=[0, 1, 1, 0.95],w_pad=4.0)
     gs.tight_layout(fig)
     gs2.tight_layout(fig2)
+    
+    fig.savefig(os.path.join(path,filename+'BeforeCal.pdf'), bbox_inches = 'tight')
+    fig2.savefig(os.path.join(path,filename+'AfterCal.pdf'), bbox_inches = 'tight')
     plt.show()
-    fig.savefig(os.path.join(path,filename+'BeforeCal.png'), bbox_inches = 'tight')
-    fig2.savefig(os.path.join(path,filename+'AfterCal.png'), bbox_inches = 'tight')
     
 
 #%%

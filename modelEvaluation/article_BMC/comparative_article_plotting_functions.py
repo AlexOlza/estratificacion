@@ -57,10 +57,11 @@ def model_labels(models):
 
 def ROC_PR_comparison(models, yr, logistic_model, mode='ROC', **kwargs):
     # load logistic predictions
-    # parent=calibrate(logistic_model, yr)
+    parent=calibrate(logistic_model, yr)
     predpath=re.sub(config.EXPERIMENT,'hyperparameter_variability_'+config.EXPERIMENT,config.PREDPATH)
-    parent=calibrate(logistic_model, yr, experiment_name='hyperparameter_variability_'+config.EXPERIMENT,
-                    filename=os.path.join(predpath,f'{logistic_model}_calibrated_{yr}.csv'))
+    # parent=calibrate(logistic_model, yr, experiment_name='hyperparameter_variability_'+config.EXPERIMENT,
+    #                 )
+    
     display={}
     # load models predictions
     models.append(logistic_model)
@@ -69,12 +70,12 @@ def ROC_PR_comparison(models, yr, logistic_model, mode='ROC', **kwargs):
         print(m, label)
 
         if m==logistic_model:
-            model=calibrate(m, yr,experiment_name=config.EXPERIMENT,
+            model=calibrate(m, yr,
                             )
         else:
             predpath=re.sub(config.EXPERIMENT,'hyperparameter_variability_'+config.EXPERIMENT,config.PREDPATH)
             model=calibrate(m, yr, experiment_name='hyperparameter_variability_'+config.EXPERIMENT,
-                            filename=os.path.join(predpath,f'{m}_calibrated_{yr}.csv'))
+                            )
 
         obs=np.where(model.OBS>=1,1,0)
         fpr, tpr, _ = roc_curve(obs, model.PREDCAL)
@@ -93,7 +94,7 @@ def ROC_PR_comparison(models, yr, logistic_model, mode='ROC', **kwargs):
     for curve in display.values():
         curve.plot(ax)
     return(display)
-def boxplots(df, **kwargs):
+def boxplots(df, directory=os.path.join(config.FIGUREPATH,'comparative'),**kwargs):
     import seaborn as sns
     order=kwargs.get('order',None)
     hue=kwargs.get('hue',None)
@@ -122,6 +123,8 @@ def boxplots(df, **kwargs):
         else:
             ax.axhline(y = parent_metrics[metric].values[0], linestyle = ls, label='Logistic', color=c)
         plt.legend()
+        plt.savefig(os.path.join(directory,f'violin{metric}.pdf'))
+        
     df['Before/After']='After'
     dff=df.copy()
     dff['Before/After']='Before'
@@ -140,9 +143,10 @@ def boxplots(df, **kwargs):
     plt.legend()
     plt.suptitle('')
     plt.tight_layout()
+    plt.savefig(os.path.join(directory,f'violinBrier.pdf'))
     plt.show()
     
-def brier_boxplot_zoom(df, violin=True):
+def brier_boxplot_zoom(df, violin=True, directory=os.path.join(config.FIGUREPATH,'comparative')):
     import seaborn as sns
     labels={'randomForest':'RF',
                 'neuralNetworkRandom':'MLP','hgb':'GBDT'}
@@ -267,4 +271,5 @@ def brier_boxplot_zoom(df, violin=True):
     # plt.legend()
     plt.suptitle('')
     plt.tight_layout()
+    plt.savefig(os.path.join(directory,'violinzoom.pdf'))
     plt.show()
