@@ -47,11 +47,15 @@ except:
 from dataManipulation.dataPreparation import getData
 import os
 #%%     FUNCTIONS
-def generate_filename(model_name,yr, calibrated=False):
+def generate_filename(model_name,yr,experiment_name=config.EXPERIMENT, calibrated=False):
+    if experiment_name==config.EXPERIMENT:
+        predpath=config.PREDPATH
+    else:
+        predpath=re.sub(config.EXPERIMENT,experiment_name,config.PREDPATH)
     if calibrated:
-        fname=os.path.join(config.PREDPATH,'{0}_calibrated_{1}.csv'.format(model_name,yr))
+        fname=os.path.join(predpath,'{0}_calibrated_{1}.csv'.format(model_name,yr))
     else: 
-        fname=os.path.join(config.PREDPATH,'{0}__{1}.csv'.format(model_name,yr))
+        fname=os.path.join(predpath,'{0}__{1}.csv'.format(model_name,yr))
     return fname
 def predict_save(yr,model,model_name,X,y,**kwargs):
     assert len(X)==len(y)

@@ -173,7 +173,7 @@ for metric in ['Recall_20000', 'PPV_20000']:
         # else:
         predpath=re.sub(config.EXPERIMENT,'hyperparameter_variability_'+config.EXPERIMENT,config.PREDPATH)
         preds= cal.calibrate(model, yr,  experiment_name='hyperparameter_variability_urgcms_excl_nbinj',
-                                                       filename=os.path.join(predpath,f'{model}__{yr}.csv'))
+                                                       filename=os.path.join(predpath,f'{model}'))
         tn, fp, fn, tp=performance(preds.OBS,preds.PREDCAL,K,computemetrics=False)
         correct[metric][model]=tn+tp
         incorrect[metric][model]=fn+fp
@@ -183,7 +183,7 @@ for metric in ['Recall_20000', 'PPV_20000']:
     print('MLP vs LR ' , correct[metric]['neuralNetworkRandom_43']-correct[metric][logistic_model])       
 
 #%%
-
+directory=os.path.join(config.FIGUREPATH,'comparative')
 median_models = {}
 for metric in ['Score', 'AP']:
     mediandf = metrics.groupby(['Algorithm'])[metric].agg([median]).stack(level=0)
@@ -201,9 +201,10 @@ for metric in ['Score', 'AP']:
 
 """ ROC AND PR FIGURES """
 # os.environ["DISPLAY"] =':99'
-ROC_PR_comparison(median_models['AP'], 2018, logistic_model, mode='PR')
-ROC_PR_comparison(median_models['Score'], 2018, logistic_model, mode='ROC')
-
+figPR=ROC_PR_comparison(median_models['AP'], 2018, logistic_model, mode='PR')
+plt.savefig(os.path.join(directory,'PRcurve.jpeg'),dpi=300)
+figROC=ROC_PR_comparison(median_models['Score'], 2018, logistic_model, mode='ROC')
+plt.savefig(os.path.join(directory,'ROCcurve.jpeg'),dpi=300)
 """ BOXPLOTS """
 
 boxplots(metrics)
@@ -228,10 +229,12 @@ for metric in ['Brier', 'Brier Before']:
         try:
             median_models[metric][model_labels([chosen_model])[0]]= cal.calibrate(chosen_model, yr,
                                                            experiment_name='hyperparameter_variability_urgcms_excl_nbinj',
-                                                           filename=os.path.join(predpath,f'{chosen_model}_calibrated_{yr}.csv'))
+                                                           # filename=os.path.join(predpath,f'{chosen_model}_calibrated_{yr}.csv')
+                                                           )
         except KeyError:
             median_models[metric]={model_labels([chosen_model])[0]: cal.calibrate(chosen_model,yr,   experiment_name='hyperparameter_variability_urgcms_excl_nbinj',
-                                                           filename=os.path.join(predpath,f'{chosen_model}_calibrated_{yr}.csv'))}
+                                                           # filename=os.path.join(predpath,f'{chosen_model}_calibrated_{yr}.csv')
+                                                           )}
 
 
 # median_models['Brier']['LR']= cal.calibrate(logistic_model,yr)

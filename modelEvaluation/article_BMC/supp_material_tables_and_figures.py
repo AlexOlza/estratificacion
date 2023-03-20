@@ -7,7 +7,7 @@ Created on Fri Jun 10 09:25:11 2022
 """
 import sys
 sys.path.append('/home/aolza/Desktop/estratificacion/')#necessary in cluster
-logistic_model='logistic20220207_122835'
+logistic_model='logistic20220207_122835'#'logistic20220705_155354'#'logistic20220207_122835'
 chosen_config='configurations.cluster.logistic'
 experiment='configurations.urgcms_excl_nbinj'
 
@@ -27,7 +27,7 @@ import modelEvaluation.calibrate as cal
 import pandas as pd
 import numpy as np
 import re
-from modelEvaluation.comparative_article_plotting_functions import *
+from modelEvaluation.article_BMC.comparative_article_plotting_functions import *
 config.METRICSPATH=config.ROOTPATH+'metrics/'+config.EXPERIMENT
 #%%
 
@@ -60,6 +60,13 @@ for chosen_model in columns:
                     'Seizure disorders': ['EDC_NUR07']
                     }
     
+    pluripathologic_categories={'A': ['EDC_CAR03','EDC_CAR05'],
+                                'B': ['EDC_REN01'],
+                                'C': ['EDC_RES04'],
+                                'D': ['EDC_GAS02','EDC_GAS05'],
+                                'E': ['EDC_NUR05','EDC_NUR24', 'EDC_NUR25'],
+                                'F': ['EDC_GSU11','EDC_EYE13','EDC_END07','EDC_END09']}
+    
     table1= pd.DataFrame(index=[ 'Hospitalized in Year 2', 
                                 '% of women',
                                 'Aged 0-17',
@@ -67,8 +74,7 @@ for chosen_model in columns:
                                 'Aged 65-69',
                                 'Aged 70-79',
                                 'Aged 80-84',
-                                'Aged 85+']+list(comorbidities.keys()))
-    comorb={}
+                                'Aged 85+']+list(comorbidities.keys())+list(['Pluripathologic']))
     
     
     comorb=[]
@@ -76,6 +82,16 @@ for chosen_model in columns:
         s=[Xx[EDC].sum() for EDC in EDClist]
         comorb.append(f'{sum(s)} ({sum(s)*100/len(Xx):2.2f} %)')
         print(disease, 'total (M+W): ',sum([Xx[EDC].sum() for EDC in EDClist]))
+        
+    pluri=[]
+    Xpluricat=Xx.copy()
+    for key,val in pluripathologic_categories.items():
+        Xpluricat[key]=Xpluricat[val].max(axis=1)
+    Xpluricat=Xpluricat[list(['PATIENT_ID'])+list('ABCDEF')]
+    
+    pluripatients=len(Xpluricat.loc[Xpluricat[list('ABCDEF')].sum(axis=1)>=2])
+    pluri.append(f'{pluripatients} ({pluripatients*100/len(Xx):2.2f} %)')
+    
     # Yy18=y.loc[group18]
     a1=sum(Xx.AGE_0004)+sum(Xx.AGE_0511)+sum(Xx.AGE_0511)
     a2=sum(Xx.AGE_1834)+sum(Xx.AGE_3544)+sum(Xx.AGE_4554)+sum(Xx.AGE_5564)
@@ -95,7 +111,7 @@ for chosen_model in columns:
                         f'{a3} ({a3*100/len(Xx):2.2f} %) ',
                         f'{a4} ({a4*100/len(Xx):2.2f} %) ',
                         f'{a5} ({a5*100/len(Xx):2.2f} %) ',
-                        f'{a85plus} ({a85plus*100/len(Xx):2.2f} %) ']+comorb
+                        f'{a85plus} ({a85plus*100/len(Xx):2.2f} %) ']+comorb+pluri
     
     
     # table1=pd.DataFrame({chosen_model:table1})
@@ -104,8 +120,6 @@ for chosen_model in columns:
     else:
         table=table.join(table1,lsuffix=' - MLP', rsuffix=' - LR')
 print(table.style.to_latex())
-    
-#%%
 
 #%%
 """ MATERIALS AND METHODS: Comments on variability assessment"""
@@ -189,7 +203,8 @@ for metric in ['Recall_20000', 'PPV_20000']:
         else:
             predpath=re.sub(config.EXPERIMENT,'hyperparameter_variability_'+config.EXPERIMENT,config.PREDPATH)
             preds= cal.calibrate(model, yr,  experiment_name='hyperparameter_variability_urgcms_excl_nbinj',
-                                                           filename=os.path.join(predpath,f'{model}'))
+                                                           # filename=os.path.join(predpath,f'{model}')
+                                                           )
         tn, fp, fn, tp=performance(preds.OBS,preds.PREDCAL,K,computemetrics=False)
         correct[metric][model]=tn+tp
         incorrect[metric][model]=fn+fp
@@ -333,16 +348,21 @@ for chosen_model in columns:
                     'Schizophrenia & affective dis.': ['EDC_PSY07'],
                     'Seizure disorders': ['EDC_NUR07']
                     }
+    pluripathologic_categories={'A': ['EDC_CAR03','EDC_CAR05'],
+                                'B': ['EDC_REN01'],
+                                'C': ['EDC_RES04'],
+                                'D': ['EDC_GAS02','EDC_GAS05'],
+                                'E': ['EDC_NUR05','EDC_NUR24', 'EDC_NUR25'],
+                                'F': ['EDC_GSU11','EDC_EYE13','EDC_END07','EDC_END09']}
     
-    table1= pd.DataFrame(index=[ 'Hospitalized in 2018', 
+    table1= pd.DataFrame(index=[ 'Hospitalized in Year 2', 
                                 '% of women',
                                 'Aged 0-17',
                                 'Aged 18-64',
                                 'Aged 65-69',
                                 'Aged 70-79',
                                 'Aged 80-84',
-                                'Aged 85+']+list(comorbidities.keys()))
-    comorb={}
+                                'Aged 85+']+list(comorbidities.keys())+list(['Pluripathologic']))
     
     
     comorb=[]
@@ -350,6 +370,16 @@ for chosen_model in columns:
         s=[Xx[EDC].sum() for EDC in EDClist]
         comorb.append(f'{sum(s)} ({sum(s)*100/len(Xx):2.2f} %)')
         print(disease, 'total (M+W): ',sum([Xx[EDC].sum() for EDC in EDClist]))
+        
+    pluri=[]
+    Xpluricat=Xx.copy()
+    for key,val in pluripathologic_categories.items():
+        Xpluricat[key]=Xpluricat[val].max(axis=1)
+    Xpluricat=Xpluricat[list(['PATIENT_ID'])+list('ABCDEF')]
+    
+    pluripatients=len(Xpluricat.loc[Xpluricat[list('ABCDEF')].sum(axis=1)>=2])
+    pluri.append(f'{pluripatients} ({pluripatients*100/len(Xx):2.2f} %)')
+
     # Yy18=y.loc[group18]
     a1=sum(Xx.AGE_0004)+sum(Xx.AGE_0511)+sum(Xx.AGE_0511)
     a2=sum(Xx.AGE_1834)+sum(Xx.AGE_3544)+sum(Xx.AGE_4554)+sum(Xx.AGE_5564)
@@ -369,7 +399,7 @@ for chosen_model in columns:
                         f'{a3} ({a3*100/len(Xx):2.2f} %) ',
                         f'{a4} ({a4*100/len(Xx):2.2f} %) ',
                         f'{a5} ({a5*100/len(Xx):2.2f} %) ',
-                        f'{a85plus} ({a85plus*100/len(Xx):2.2f} %) ']+comorb
+                        f'{a85plus} ({a85plus*100/len(Xx):2.2f} %) ']+comorb+pluri
     
     
     # table1=pd.DataFrame({chosen_model:table1})
