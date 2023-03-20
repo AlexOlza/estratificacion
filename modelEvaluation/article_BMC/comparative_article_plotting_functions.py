@@ -123,7 +123,7 @@ def boxplots(df, directory=os.path.join(config.FIGUREPATH,'comparative'),**kwarg
         else:
             ax.axhline(y = parent_metrics[metric].values[0], linestyle = ls, label='Logistic', color=c)
         plt.legend()
-        plt.savefig(os.path.join(directory,f'violin{metric}.pdf'))
+        plt.savefig(os.path.join(directory,f'violin{metric}.jpeg'),dpi=300, bbox_inches='tight')
         
     df['Before/After']='After'
     dff=df.copy()
@@ -143,7 +143,7 @@ def boxplots(df, directory=os.path.join(config.FIGUREPATH,'comparative'),**kwarg
     plt.legend()
     plt.suptitle('')
     plt.tight_layout()
-    plt.savefig(os.path.join(directory,f'violinBrier.pdf'))
+    plt.savefig(os.path.join(directory,f'violinBrier.jpeg'),dpi=300, bbox_inches='tight')
     plt.show()
     
 def brier_boxplot_zoom(df, violin=True, directory=os.path.join(config.FIGUREPATH,'comparative')):
@@ -271,5 +271,5 @@ def brier_boxplot_zoom(df, violin=True, directory=os.path.join(config.FIGUREPATH
     # plt.legend()
     plt.suptitle('')
     plt.tight_layout()
-    plt.savefig(os.path.join(directory,'violinzoom.pdf'))
+    plt.savefig(os.path.join(directory,'violinzoom.jpeg'),dpi=300, bbox_inches='tight')
     plt.show()

@@ -86,6 +86,7 @@ def calibrate(model_name,yr, **kwargs):
             print('zipfile found')
             zfile=zipfile.ZipFile(zipfilename,'r')
             if experiment_name=='hyperparameter_variability_urgcms_excl_nbinj':
+                print('entering directory inside zip')
                 zipfile_contains_calibrated=experiment_name+'/'+os.path.basename(calibFilename) in zfile.namelist()
                 zipfile_contains_uncalibrated=experiment_name+'/'+os.path.basename(uncalFilename) in zfile.namelist()
             else:
@@ -243,8 +244,8 @@ def plot(p, consistency_bars=True, **kwargs):
     gs.tight_layout(fig)
     gs2.tight_layout(fig2)
     
-    fig.savefig(os.path.join(path,filename+'BeforeCal.pdf'), bbox_inches = 'tight')
-    fig2.savefig(os.path.join(path,filename+'AfterCal.pdf'), bbox_inches = 'tight')
+    fig.savefig(os.path.join(path,filename+'BeforeCal.jpeg'),dpi=300, bbox_inches = 'tight')
+    fig2.savefig(os.path.join(path,filename+'AfterCal.jpeg'),dpi=300, bbox_inches = 'tight')
     plt.show()
     
 

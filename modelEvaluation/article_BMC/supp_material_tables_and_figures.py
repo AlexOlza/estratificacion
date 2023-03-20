@@ -7,7 +7,7 @@ Created on Fri Jun 10 09:25:11 2022
 """
 import sys
 sys.path.append('/home/aolza/Desktop/estratificacion/')#necessary in cluster
-logistic_model='logistic20220705_155354'#'logistic20220207_122835'
+logistic_model='logistic20220207_122835'#'logistic20220705_155354'#'logistic20220207_122835'
 chosen_config='configurations.cluster.logistic'
 experiment='configurations.urgcms_excl_nbinj'
 
@@ -35,7 +35,6 @@ config.METRICSPATH=config.ROOTPATH+'metrics/'+config.EXPERIMENT
 yr=2018
 X,y=getData(2017)
 X16,y17=getData(2016)
-assert False
 #%%
 #%%
 table=pd.DataFrame()
@@ -121,8 +120,6 @@ for chosen_model in columns:
     else:
         table=table.join(table1,lsuffix=' - MLP', rsuffix=' - LR')
 print(table.style.to_latex())
-    
-#%%
 
 #%%
 """ MATERIALS AND METHODS: Comments on variability assessment"""
@@ -206,7 +203,8 @@ for metric in ['Recall_20000', 'PPV_20000']:
         else:
             predpath=re.sub(config.EXPERIMENT,'hyperparameter_variability_'+config.EXPERIMENT,config.PREDPATH)
             preds= cal.calibrate(model, yr,  experiment_name='hyperparameter_variability_urgcms_excl_nbinj',
-                                                           filename=os.path.join(predpath,f'{model}'))
+                                                           # filename=os.path.join(predpath,f'{model}')
+                                                           )
         tn, fp, fn, tp=performance(preds.OBS,preds.PREDCAL,K,computemetrics=False)
         correct[metric][model]=tn+tp
         incorrect[metric][model]=fn+fp
