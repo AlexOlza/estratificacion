@@ -5,7 +5,7 @@ Created on Mon Jan 16 09:53:52 2023
 
 @author: aolza
 """
-prefix='stepwise_ordinal_RMSE_'
+prefix='stepwise_R2_'
 import sys
 sys.path.append('/home/aolza/Desktop/estratificacion/')#necessary in cluster
 
@@ -26,7 +26,7 @@ import numpy as np
 import pandas as pd
 from sklearn.linear_model import LinearRegression, LogisticRegression
 
-from main.gma_trials.forward_regression import sklearn_stepwise_regression
+from main.gma_trials.forward_regression import sklearn_stepwise_regression_simple
 #%%
 X,y=getData(2016,
              CCS=True,
@@ -55,12 +55,10 @@ for group, name in zip(to_add,modelnames):
     print('MINIMAL VARIABLES: ')
     print(minimal)
     print('POTENTIAL CANDIDATES: ',cand)
-    model=sklearn_stepwise_regression(df.filter(regex=cand+f'|{ycol}'),
+    model=sklearn_stepwise_regression_simple(df.filter(regex=cand+f'|{ycol}'),
                                       minimal=minimal,
                                       y=ycol,
-                                      scoring='rmse',
-                                      tol=1e-3,
-                                      test_set=True)
+                                      tol=1e-2)
     minimal=model.feature_names_in_
     print('----'*10)
     print('\n')
