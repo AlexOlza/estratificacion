@@ -58,7 +58,7 @@ for group, name in zip(to_add,modelnames):
     model=sklearn_stepwise_regression_simple(df.filter(regex=cand+f'|{ycol}'),
                                       minimal=minimal,
                                       y=ycol,
-                                      tol=1e-2)
+                                      tol=1e-4)
     minimal=model.feature_names_in_
     print('----'*10)
     print('\n')
