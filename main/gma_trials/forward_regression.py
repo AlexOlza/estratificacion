@@ -159,7 +159,7 @@ def sklearn_stepwise_regression_simple(df, y, minimal = [], tol=1e-4,algorithm='
     print(set(df.drop(y, axis=1).columns).difference(candidates))
     return model
 
-def sklearn_stepwise_logistic_regression(df, y, minimal= [], tol= 1e-4,**kwargs): 
+def sklearn_stepwise_logistic_regression(df, y, minimal= [], tol= 100,**kwargs): 
     AIC = dict()
     last_min = np.inf
     candidates = list( minimal.copy())
@@ -197,7 +197,7 @@ def sklearn_stepwise_logistic_regression(df, y, minimal= [], tol= 1e-4,**kwargs)
         min_AIC_key = min(AIC, key=AIC.get)
         # we check whether any of them has increased performance
         print('last min, new min:',last_min,min_AIC)
-        if min_AIC < (last_min ):
+        if min_AIC < (last_min-tol ):
             candidates.append(min_AIC_key) #if so, we add the best one
             last_min = min_AIC
     
