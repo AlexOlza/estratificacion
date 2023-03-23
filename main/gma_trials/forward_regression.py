@@ -7,9 +7,10 @@ Created on Mon Jan 16 09:53:52 2023
 source:
     https://fakhredin.medium.com/forward-selection-to-find-predictive-variables-with-python-code-3c33f0db2393
 """
-from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import LinearRegression, LogisticRegression
 import pandas as pd
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_squared_error, log_loss
+import numpy as np
 
 def sms_forward_regression(df, y, candidates = ['AGE','GMA','FEMALE']): 
     import statsmodels.formula.api as sm
@@ -84,7 +85,10 @@ def sklearn_forward_regression(df, y, candidates = ['AGE','GMA','FEMALE'], tol=1
     print(set(df.drop(y, axis=1).columns).difference(candidates))
     return model
 #%%
-def sklearn_stepwise_regression_simple(df, y, minimal = [], tol=1e-4,**kwargs):    
+def sklearn_stepwise_regression_simple(df, y, minimal = [], tol=1e-4,algorithm='linear',**kwargs):    
+    if algorithm=='logistic':
+        return sklearn_stepwise_logistic_regression(df, y, minimal, tol)
+            
     ar2 = dict()
     last_max = -1
     candidates = list( minimal.copy())
@@ -147,6 +151,84 @@ def sklearn_stepwise_regression_simple(df, y, minimal = [], tol=1e-4,**kwargs):
             print('===============')
         else:
             continue
+    
+    print('\n\n')
+    print('elminated variables: ')
+    print(set(df.drop(y, axis=1).columns).difference(candidates))
+    return model
+
+def sklearn_stepwise_logistic_regression(df, y, minimal= [], tol= 1e-4,**kwargs): 
+    AIC = dict()
+    last_min = np.inf
+    candidates = list( minimal.copy())
+    if len(df.drop(list([y])+list(minimal), axis=1).columns)==0:
+        model = LogisticRegression(penalty='none',n_jobs=-1).fit(df[minimal],df[y])
+        #we compute adjusted r squared
+        #we compute AIC
+        #the logloss is the negative log-likelihood
+        y_pred=model.predict_proba(df[minimal])[:,1]
+        AIC['minimal'] = 2*(len(minimal))+2*len(y_pred)*log_loss(df[y], y_pred)
+        print('Returning minimal model')
+        print('AIC: ' + str(AIC['minimal']))
+        return model
+    while(True):
+        # iteration i+1
+        # for each column that is not already in the model
+        for x in df.drop(list([y]) + list(candidates), axis=1).columns:
+            if len(candidates) == 0:
+                features = x
+            else:
+                features = [x]+list(candidates)
+            # we try building a model with such column and the preexisting ones
+            # we now have n_{i+1} columns
+            model = LogisticRegression(penalty='none',n_jobs=-1).fit(df[features],df[y])
+            #we compute AIC
+            #the logloss is the negative log-likelihood
+            y_pred=model.predict_proba(df[features])[:,1]
+            
+            AIC[x] = 2*(len(features))+2*len(y_pred)*log_loss(df[y], y_pred)
+            # after trying all potential next columns
+        print(AIC)
+        min_AIC =  min(AIC.values())
+        min_AIC_key = min(AIC, key=AIC.get)
+        # we check whether any of them has increased performance
+        print('last min, new min:',last_min,min_AIC)
+        if min_AIC < (last_min ):
+            candidates.append(min_AIC_key) #if so, we add the best one
+            last_min = min_AIC
+    
+            print('forward step: ' + str(len(candidates)))
+            print(candidates)
+            print('AIC: ' + str(min_AIC))
+            
+        else:
+            break
+        # print('Testing variables to remove...')
+        # for x in [c for c in candidates if not c in minimal] :
+        #     features = [c for c in candidates if c!=x]
+        #     # we try building a model with such column and the preexisting ones
+        #     # we now have n_{i+1} columns
+        #     model = LogisticRegression(penalty='none',n_jobs=-1).fit(df[features],df[y])
+        #     #we compute AIC
+        #     #the logloss is the negative log-likelihood
+        #     y_pred=model.predict_proba(df[features])[:,1]
+        #     AIC[f'-{x}'] = 2*(len(features)+1)+2*log_loss(df[y], y_pred)
+        #     # after trying all potential next columns
+        # print('===============')
+        # min_AIC =  min(AIC.values())
+        # min_AIC_key = min(AIC, key=AIC.get)
+        # # we check whether any of them has increased performance
+        # if min_AIC < (last_min - tol):
+        #     print(min_AIC_key)
+        #     candidates.remove(min_AIC_key[1:]) #if so, we remove the best one
+        #     last_min = min_AIC
+    
+        #     print('backward step: ' + str(len(candidates)) + min_AIC_key)
+        #     print(candidates)
+        #     print('AIC: ' + str(min_AIC))
+        #     print('===============')
+        # else:
+        #     continue
     
     print('\n\n')
     print('elminated variables: ')
