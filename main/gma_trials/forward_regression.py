@@ -193,7 +193,6 @@ def sklearn_stepwise_logistic_regression(df, y, minimal= [], tol= 1e-4,**kwargs)
             t=time.time()
             print(f'Variable {x}, AIC {AIC[x]}, time {str(datetime.timedelta(seconds=t-t0))}')
             # after trying all potential next columns
-        print(AIC)
         min_AIC =  min(AIC.values())
         min_AIC_key = min(AIC, key=AIC.get)
         # we check whether any of them has increased performance
