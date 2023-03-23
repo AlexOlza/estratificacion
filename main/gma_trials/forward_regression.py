@@ -11,6 +11,8 @@ from sklearn.linear_model import LinearRegression, LogisticRegression
 import pandas as pd
 from sklearn.metrics import mean_squared_error, log_loss
 import numpy as np
+import time
+import datetime
 
 def sms_forward_regression(df, y, candidates = ['AGE','GMA','FEMALE']): 
     import statsmodels.formula.api as sm
@@ -181,12 +183,15 @@ def sklearn_stepwise_logistic_regression(df, y, minimal= [], tol= 1e-4,**kwargs)
                 features = [x]+list(candidates)
             # we try building a model with such column and the preexisting ones
             # we now have n_{i+1} columns
+            t0=time.time()
             model = LogisticRegression(penalty='none',n_jobs=-1).fit(df[features],df[y])
             #we compute AIC
             #the logloss is the negative log-likelihood
             y_pred=model.predict_proba(df[features])[:,1]
             
             AIC[x] = 2*(len(features))+2*len(y_pred)*log_loss(df[y], y_pred)
+            t=time.time()
+            print(f'Variable {x}, AIC {AIC[x]}, time {str(datetime.timedelta(seconds=t-t0))}')
             # after trying all potential next columns
         print(AIC)
         min_AIC =  min(AIC.values())
