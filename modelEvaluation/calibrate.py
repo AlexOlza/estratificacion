@@ -82,6 +82,17 @@ def calibrate(model_name,yr, **kwargs):
         zipfilename=str(Path(calibFilename).parent)+'.zip'
         zipfile_found=zipfile.is_zipfile(zipfilename)
         
+        pastX=kwargs.get('pastX',None)
+        pastY=kwargs.get('pastY',None)
+        presentX=kwargs.get('presentX',None)
+        presentY=kwargs.get('presentY',None)
+        
+        if no_predictions_found:
+            if (not isinstance(pastX,pd.DataFrame)) or (not isinstance(pastY,pd.DataFrame)):
+                pastX,pastY=getData(yr-2)
+            if (not isinstance(presentX,pd.DataFrame)) or (not isinstance(presentY,pd.DataFrame)):
+                presentX,presentY=getData(yr-1)
+            
         if zipfile_found:
             print('zipfile found')
             zfile=zipfile.ZipFile(zipfilename,'r')
@@ -109,14 +120,7 @@ def calibrate(model_name,yr, **kwargs):
             to_zip(calibFilename)
             return(p_calibrated)
         predictors=kwargs.get('predictors',config.PREDICTORREGEX)
-        pastX=kwargs.get('pastX',None)
-        pastY=kwargs.get('pastY',None)
-        presentX=kwargs.get('presentX',None)
-        presentY=kwargs.get('presentY',None)
-        if (not isinstance(pastX,pd.DataFrame)) or (not isinstance(pastY,pd.DataFrame)):
-            pastX,pastY=getData(yr-2)
-        if (not isinstance(presentX,pd.DataFrame)) or (not isinstance(presentY,pd.DataFrame)):
-            presentX,presentY=getData(yr-1)
+        
     
         #This reads the prediction files, or creates them if not present
         pastPred, _= predict(model_name,experiment_name,yr-1,

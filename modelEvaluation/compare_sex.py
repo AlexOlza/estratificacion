@@ -7,14 +7,22 @@ Created on Fri Mar 18 13:13:37 2022
 
 @author: aolza
 """
+import sys
 import os
 import configurations.utility as util
 from python_settings import settings as config
+chosen_config='configurations.cluster.'+sys.argv[1]
+experiment='configurations.'+sys.argv[2]
+import importlib
+importlib.invalidate_caches()
+
+logistic_settings=importlib.import_module(chosen_config,package='estratificacion')
 if not config.configured:
-    experiment = input('Experiment: ')
-    config_used = os.path.join(
-        os.environ['USEDCONFIG_PATH'], f'{experiment}/logisticMujeres.json')
-    configuration = util.configure(config_used)
+    config.configure(logistic_settings) # configure() receives a python module
+assert config.configured 
+import configurations.utility as util
+util.makeAllPaths()
+
 import joblib as job
 from dataManipulation.dataPreparation import getData
 import modelEvaluation.calibrate as cal
@@ -26,8 +34,10 @@ import re
 from tensorflow import keras
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.metrics import average_precision_score, roc_auc_score, RocCurveDisplay, roc_curve, auc, precision_recall_curve, PrecisionRecallDisplay
+from sklearn.metrics import confusion_matrix,average_precision_score, roc_auc_score, RocCurveDisplay, roc_curve,  precision_recall_curve, PrecisionRecallDisplay
+from sklearn.metrics import auc as auc_function
 import sys
+from sklearn.metrics import mean_squared_error,r2_score
 sys.path.append('/home/aolza/Desktop/estratificacion/')
 # %%
 
@@ -36,7 +46,7 @@ sys.path.append('/home/aolza/Desktop/estratificacion/')
 
 
 def plot_roc(fpr, tpr, groupname):
-    roc_auc = auc(fpr, tpr)
+    roc_auc = auc_function(fpr, tpr)
     display = RocCurveDisplay(fpr=fpr, tpr=tpr, roc_auc=roc_auc,
                               estimator_name=groupname)
     # display.plot()
@@ -69,6 +79,127 @@ def precision_at_recall(precision, recall, threshold, modelname, value):
     df['model'] = modelname    
     return(df.iloc[(df['recall']-value).abs().argsort()[:1]])
 
+def T1a_T2a(preds,K=20000):
+    T=[]
+    for val, df in preds.groupby('FEMALE'):
+        if config.ALGORITHM=='logistic':
+            obs=np.where(df.OBS>=1,1,0)
+            score1=roc_auc_score(obs, df.PRED) #auc
+            score2=average_precision_score(obs, df.PRED) #ap
+            cols=['FEMALE','AUC','AP','Recall_K','PPV_K']
+        else:
+            score1=r2_score(df.OBS, df.PRED)
+            score2=mean_squared_error(df.OBS, df.PRED,squared=False)
+            obs=np.where(df.OBS.isin(df.OBS.nlargest(K)), 1, 0)
+            cols=['FEMALE','R2','RMSE','Recall_K','PPV_K']
+        c = confusion_matrix(y_true=obs, y_pred=df.top_K)
+        recall = c[1][1] / (c[1][0] + c[1][1])
+        ppv = c[1][1] / (c[0][1] + c[1][1])
+        T.append([val,score1,score2, recall, ppv])
+    T=pd.DataFrame(T,columns=cols)
+    T['Percentage']=[100*len(preds.loc[preds.top_K==1].loc[preds.loc[preds.top_K==1]['FEMALE']==val])/K for val in T.FEMALE.values]
+    return T
+def tables_gender_article_draft(K=20000):
+    if config.ALGORITHM=='logistic':
+        models={'global':'logistic20230324_111354',
+                'separated':['logisticMujeres','logisticHombres'],
+                'same_prevalence':'logistic_gender_balanced'}
+        #T1a
+        preds={}
+        for groupname in ['Mujeres', 'Hombres']:
+            preds[groupname]=cal.calibrate(models["global"], year,
+                                             filename=f'{models["global"]}_{groupname}')
+            preds[groupname]['FEMALE']=1 if groupname=='Mujeres' else 0
+        preds=pd.concat([preds['Mujeres'], preds['Hombres']])
+        preds['top_K']=np.where(
+            preds.PATIENT_ID.isin(preds.nlargest(K,'PRED').PATIENT_ID),1,0)
+        T1a=T1a_T2a(preds)
+        
+        #T2a
+        preds={}
+        for groupname in ['Mujeres', 'Hombres']:
+            preds[groupname]=cal.calibrate(f'logistic{groupname}', year,
+                                             filename=f'logistic{groupname}')
+            preds[groupname]['FEMALE']=1 if groupname=='Mujeres' else 0
+        preds=pd.concat([preds['Mujeres'], preds['Hombres']])
+        preds['top_K']=np.where(
+            preds.PATIENT_ID.isin(preds.nlargest(K,'PRED').PATIENT_ID),1,0)
+        
+        T2a=T1a_T2a(preds)
+        
+        #T3a tomar 10k y 10k
+        preds={}
+        for groupname in ['Mujeres', 'Hombres']:
+            preds[groupname]=cal.calibrate(f'logistic{groupname}', year,
+                                             filename=f'logistic{groupname}')
+            preds[groupname]['FEMALE']=1 if groupname=='Mujeres' else 0
+            preds[groupname]['top_K']=np.where(
+                preds[groupname].PATIENT_ID.isin(preds[groupname].nlargest(int(K/2),'PRED').PATIENT_ID),1,0)
+        preds=pd.concat([preds['Mujeres'], preds['Hombres']])
+       
+        T3a=T1a_T2a(preds)
+        
+        #T4
+        preds={}
+        for groupname in ['Mujeres', 'Hombres']:
+            preds[groupname]=cal.calibrate(f'logistic_gender_balanced', year,
+                                             filename=f'logistic_gender_balanced_{groupname}')
+            preds[groupname]['FEMALE']=1 if groupname=='Mujeres' else 0
+        preds=pd.concat([preds['Mujeres'], preds['Hombres']])
+        preds['top_K']=np.where(
+            preds.PATIENT_ID.isin(preds.nlargest(K,'PRED').PATIENT_ID),1,0)
+        
+        T4=T1a_T2a(preds)
+        
+    else:
+        models={'global':'linear20230324_130625',
+                'separated':['linearMujeres','linearHombres']}
+        
+        #T1b
+        preds={}
+        for groupname in ['Mujeres', 'Hombres']:
+            preds[groupname],_=predict(models["global"],config.EXPERIMENT, year,
+                                             filename=f'{models["global"]}_{groupname}')
+            preds[groupname]['FEMALE']=1 if groupname=='Mujeres' else 0
+        preds=pd.concat([preds['Mujeres'], preds['Hombres']])
+        preds['top_K']=np.where(
+            preds.PATIENT_ID.isin(preds.nlargest(K,'PRED').PATIENT_ID),1,0)
+        preds.loc[preds.PRED<0,'PRED']=0
+        T1a=T1a_T2a(preds)
+        
+        #T2a
+        preds={}
+        for groupname in ['Mujeres', 'Hombres']:
+            preds[groupname],_=predict(f'linear{groupname}',config.EXPERIMENT, year,
+                                             filename=f'linear{groupname}')
+            preds[groupname]['FEMALE']=1 if groupname=='Mujeres' else 0
+        preds=pd.concat([preds['Mujeres'], preds['Hombres']])
+        preds['top_K']=np.where(
+            preds.PATIENT_ID.isin(preds.nlargest(K,'PRED').PATIENT_ID),1,0)
+        preds.loc[preds.PRED<0,'PRED']=0
+        problematic=((preds.PRED-preds.OBS)**2).nlargest(10).index
+        unproblematic_preds=preds.loc[~ preds.index.isin(problematic)]
+     
+        T2a=T1a_T2a(unproblematic_preds)
+        
+        #T3a tomar 10k y 10k
+        preds={}
+        for groupname in ['Mujeres', 'Hombres']:
+            preds[groupname],_=predict(f'linear{groupname}',config.EXPERIMENT, year,
+                                             filename=f'linear{groupname}')
+            preds[groupname]['FEMALE']=1 if groupname=='Mujeres' else 0
+            preds[groupname]['top_K']=np.where(
+                preds[groupname].PATIENT_ID.isin(preds[groupname].nlargest(int(K/2),'PRED').PATIENT_ID),1,0)
+        preds=pd.concat([preds['Mujeres'], preds['Hombres']])
+        preds.loc[preds.PRED<0,'PRED']=0
+        print(((preds.PRED-preds.OBS)**2).nlargest(10))
+        problematic=((preds.PRED-preds.OBS)**2).nlargest(10).index
+        unproblematic_preds=preds.loc[~ preds.index.isin(problematic)]
+        
+        T3a=T1a_T2a(unproblematic_preds)
+        T4=pd.DataFrame()
+    return {'T1a':T1a,'T2a':T2a,'T3a':T3a,'T4':T4}
+        
 # %%
 year = int(input('YEAR TO PREDICT: '))
 X, y = getData(year-1)
@@ -89,6 +220,55 @@ available_models = detect_models()
 female = X['FEMALE'] == 1
 male = X['FEMALE'] == 0
 sex = ['Mujeres', 'Hombres']
+
+#%%
+separate,joint={},{}
+if config.ALGORITHM=='linear':
+    from modelEvaluation.predict import predict
+    for i, group, groupname in zip([1, 0], [female, male], sex):
+        recall, ppv, spec, r2, rmse = {}, {}, {}, {}, {}
+        selected = [l for l in available_models if (bool(re.match(f'{config.ALGORITHM}Random$|{config.ALGORITHM}{groupname}$|{config.ALGORITHM}\d+', l)))]
+        print('Selected models: ', selected)
+        # LOAD MODELS
+        globalmodelname = list(
+            set(selected)-set([f'{config.ALGORITHM}{groupname}']))[0]
+        separatemodelname = f'{config.ALGORITHM}{groupname}'
+
+        globalmodel = job.load(config.MODELPATH+globalmodelname+'.joblib')
+        separatemodel = job.load(config.MODELPATH+separatemodelname+'.joblib')
+        # SUBSET DATA
+        Xgroup = X.loc[group]
+        ygroup = y.loc[y.PATIENT_ID.isin(Xgroup.PATIENT_ID)]
+
+        pastXgroup = pastX.loc[pastX['FEMALE'] == i]
+        pastygroup = pasty.loc[pasty.PATIENT_ID.isin(pastXgroup.PATIENT_ID)]
+
+        assert (all(Xgroup['FEMALE'] == 1) or all(Xgroup['FEMALE'] == 0))
+
+
+        # PREDICT
+        separate[groupname],_ = predict(f'{config.ALGORITHM}{groupname}',config.EXPERIMENT, year,
+                                                filename=f'{config.ALGORITHM}{groupname}',
+                                                predictors=[
+                                                    p for p in predictors if not p == 'FEMALE'],
+                                                X=Xgroup[predictors].drop(
+                                                    'FEMALE', axis=1),
+                                                y=ygroup,
+                                                )
+
+        joint[groupname],_ = predict(globalmodelname,config.EXPERIMENT, year,
+                                             filename=f'{globalmodelname}_{groupname}',
+                                             predictors=predictors,
+                                             X=Xgroup[predictors], y=ygroup,
+                                             )
+        
+    tables=tables_gender_article_draft()
+    
+    separate_preds=separate['Hombres']
+    for table in tables.values():
+        print(table.round(2).to_markdown(index=False))
+        print('\n')
+    quit()
 # %%
 tail=True
 if tail:
@@ -107,7 +287,7 @@ FPR, TPR, ROCTHRESHOLDS = {k: {} for k in sex}, {k: {}
 prec_at_rec=pd.DataFrame()
 table = pd.DataFrame()
 K = 20000
-models = ['Global', 'Separado', 'PSM']
+models = ['Global', 'Separado', 'Same prevalence']
 fighist, axs = plt.subplots(2, 2, figsize=(25, 20))
 
 axhist, axhist2, axhist3, axhist4= axs[0,0], axs[0,1], axs[1,0], axs[1,1]
@@ -115,17 +295,17 @@ axhist, axhist2, axhist3, axhist4= axs[0,0], axs[0,1], axs[1,0], axs[1,1]
 
 for i, group, groupname in zip([1, 0], [female, male], sex):
     recall, ppv, spec, score, ap = {}, {}, {}, {}, {}
-    selected = [l for l in available_models if (bool(re.match(f'{config.ALGORITHM}Random$|{config.ALGORITHM}{groupname}$|{config.ALGORITHM}\d+|{config.ALGORITHM}_psm', l)))]
+    selected = [l for l in available_models if (bool(re.match(f'{config.ALGORITHM}Random$|{config.ALGORITHM}{groupname}$|{config.ALGORITHM}\d+|logistic_gender_balanced', l)))]
     print('Selected models: ', selected)
     # LOAD MODELS
     globalmodelname = list(
-        set(selected)-set([f'{config.ALGORITHM}{groupname}'])-set([f'{config.ALGORITHM}_psm']))[0]
+        set(selected)-set([f'{config.ALGORITHM}{groupname}'])-set([f'logistic_gender_balanced']))[0]
     separatemodelname = f'{config.ALGORITHM}{groupname}'
     if not 'neural' in config.ALGORITHM:
         globalmodel = job.load(config.MODELPATH+globalmodelname+'.joblib')
         try:
             sameprevmodel = job.load(
-                config.MODELPATH+f'{config.ALGORITHM}_psm.joblib')
+                config.MODELPATH+f'{config.ALGORITHM}_gender_balanced.joblib')
             sameprev=True
         except FileNotFoundError:
             print('Same prevalence model not found')
@@ -170,8 +350,8 @@ for i, group, groupname in zip([1, 0], [female, male], sex):
                                          pastX=pastXgroup[predictors], pastY=pastygroup)
     # balanced_cal[groupname] = joint_cal[groupname] #provisional
     if sameprev:
-        balanced_cal[groupname] = cal.calibrate(f'{config.ALGORITHM}_psm', year,
-                                                filename=f'{config.ALGORITHM}_psm_{groupname}',
+        balanced_cal[groupname] = cal.calibrate(f'{config.ALGORITHM}_gender_balanced', year,
+                                                filename=f'{config.ALGORITHM}_gender_balanced_{groupname}',
                                                 presentX=Xgroup[predictors], presentY=ygroup,
                                                 pastX=pastXgroup[predictors],
                                                 pastY=pastygroup,
@@ -356,3 +536,10 @@ for i, group, sex, groupname in zip([1, 0], [selectedfemale, selectedmale], [fem
     ppv = TP/(TP+FP)
     specificity = TN / (TN+FP)
     print('Recall, PPV, Spec = ', recall, ppv, specificity)
+
+#%%
+tables=tables_gender_article_draft()
+
+for table in tables.values():
+    print(table.round(2).to_markdown(index=False))
+    print('\n')
