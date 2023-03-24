@@ -5,7 +5,7 @@ Created on Mon Jan 16 09:53:52 2023
 
 @author: aolza
 """
-prefix='stepwise_ordinal_RMSE_'
+prefix='stepwise_logistic_'
 import sys
 sys.path.append('/home/aolza/Desktop/estratificacion/')#necessary in cluster
 
@@ -25,8 +25,8 @@ from dataManipulation.dataPreparation import getData, reverse_one_hot
 import numpy as np
 import pandas as pd
 from sklearn.linear_model import LinearRegression, LogisticRegression
-
-from main.gma_trials.forward_regression import sklearn_stepwise_regression
+from sklearn.metrics import average_precision_score
+from main.gma_trials.forward_regression import sklearn_stepwise_regression_simple
 #%%
 X,y=getData(2016,
              CCS=True,
@@ -34,11 +34,15 @@ X,y=getData(2016,
              BINARIZE_CCS=True,
              GMA=True,
              GMACATEGORIES=True,
-             GMA_DROP_DIGITS=0,
-             additional_columns=[])
+             GMA_DROP_DIGITS=0)
 
-X=reverse_one_hot(X)
+if hasattr(config, 'modifyData'):
+    X,y=config.modifyData(X,y)
 # assert False
+
+if config.ALGORITHM=='logistic':
+    y[config.COLUMNS]=np.where(y[config.COLUMNS]>=1,1,0)
+
 print('Sample size ',len(X))
 
 #%%
@@ -55,12 +59,11 @@ for group, name in zip(to_add,modelnames):
     print('MINIMAL VARIABLES: ')
     print(minimal)
     print('POTENTIAL CANDIDATES: ',cand)
-    model=sklearn_stepwise_regression(df.filter(regex=cand+f'|{ycol}'),
+    model=sklearn_stepwise_regression_simple(df.filter(regex=cand+f'|{ycol}'),
                                       minimal=minimal,
                                       y=ycol,
-                                      scoring='rmse',
-                                      tol=1e-3,
-                                      test_set=True)
+                                      # tol=tol, use default tolerance
+                                      algorithm=config.ALGORITHM)
     minimal=model.feature_names_in_
     print('----'*10)
     print('\n')
@@ -74,9 +77,13 @@ X,y=getData(2017,
              BINARIZE_CCS=True,
              GMA=True,
              GMACATEGORIES=True,
-             GMA_DROP_DIGITS=0,
-             additional_columns=[])
-X=reverse_one_hot(X)
+             GMA_DROP_DIGITS=0)
+if hasattr(config, 'modifyData'):
+    X,y=config.modifyData(X,y)
+    
+if config.ALGORITHM=='logistic':
+    y[config.COLUMNS]=np.where(y[config.COLUMNS]>=1,1,0)
+
 #%%
 import os
 from modelEvaluation.predict import predict
@@ -100,12 +107,18 @@ from sklearn.metrics import mean_squared_error
 table=pd.DataFrame()
 for model, predictions_ in predictions.items():
     preds=predictions_[0]
-    R2=predictions_[1]
+    score=predictions_[1]
     recall, ppv, _, _ = performance(obs=preds.OBS, pred=preds.PRED, K=20000)
-    rmse=mean_squared_error(preds.OBS,preds.PRED, squared=False)
-    table=pd.concat([table,
-                     pd.DataFrame.from_dict({'Model':[model], 'R2':[ R2], 'RMSE':[rmse],
-                      'R@20k': [recall], 'PPV@20K':[ppv]})])
+    if config.ALGORITHM=='logistic':
+        ap=average_precision_score(np.where(preds.OBS>=1,1,0), preds.PRED)
+        table=pd.concat([table,
+                         pd.DataFrame.from_dict({'Model':[model], 'AUC':[ score], 'AP':[ap],
+                          'R@20k': [recall], 'PPV@20K':[ppv]})])
+    else:
+        rmse=mean_squared_error(preds.OBS,preds.PRED, squared=False)
+        table=pd.concat([table,
+                         pd.DataFrame.from_dict({'Model':[model], 'R2':[ score], 'RMSE':[rmse],
+                          'R@20k': [recall], 'PPV@20K':[ppv]})])
     
 #%%
 print(table.to_markdown(index=False))

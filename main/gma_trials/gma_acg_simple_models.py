@@ -21,12 +21,12 @@ import configurations.utility as util
 util.makeAllPaths()
 import pandas as pd
 from modelEvaluation.predict import predict
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_squared_error,average_precision_score
 from modelEvaluation.compare import performance
 from dataManipulation.dataPreparation import getData
 import numpy as np
 from time import time
-from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import LinearRegression,LogisticRegression
 from pathlib import Path
 import os
 import re
@@ -81,7 +81,7 @@ for predictors_,CCS_,GMACATEGORIES_ in zip(predictors,CCS,GMACATEGORIES):
     preds=re.sub('[^a-zA-Z]|PATIENT_ID','',predictors_)
     modelname=os.path.join(config.MODELPATH,f'linear_{preds}.joblib' )
     if not Path(modelname).is_file():
-        X,y=getData(2016,columns='COSTE_TOTAL_ANO2',
+        X,y=getData(2016,
                 predictors=predictors_,
                 exclude=None,
                 resourceUsage=False,
@@ -91,38 +91,43 @@ for predictors_,CCS_,GMACATEGORIES_ in zip(predictors,CCS,GMACATEGORIES):
                 BINARIZE_CCS=False,
                 GMACATEGORIES=GMACATEGORIES_
                 )
-        y=y.COSTE_TOTAL_ANO2
-    
-        linear=LinearRegression(n_jobs=-1)
+        y=y[config.COLUMNS]
+
+        if config.ALGORITHM=='logistic':
+            y=np.where(y>0,1,0)
+        if config.ALGORITHM=='linear':
+            estimator=LinearRegression(n_jobs=-1)
+        else:
+            estimator=LogisticRegression(n_jobs=-1,penalty='none')
         X.drop('PATIENT_ID',axis=1,inplace=True)
         t0=time()
-        fit=linear.fit(X, y)
+        fit=estimator.fit(X, y)
         print('fitting time: ',time()-t0)
         preds=re.sub('[^a-zA-Z]|PATIENT_ID','',predictors_)
-        util.savemodel(config, fit, name=f'linear_{preds}')
+        util.savemodel(config, fit, name=f'{config.ALGORITHM}_{preds}')
 
 #%%
 predictions={}
 for predictors_,CCS_,GMACATEGORIES_ in zip(predictors,CCS,GMACATEGORIES):
-    X,y=getData(2017,columns='COSTE_TOTAL_ANO2',
-            predictors='PATIENT_ID|FEMALE|AGE_[0-9]+$|GMA_',
+    X,y=getData(2017,
+            predictors=predictors_,
             exclude=None,
             resourceUsage=False,
             FULLEDCS=False,
-            CCS=True,
+            CCS=CCS_,
             PHARMACY=False,
             BINARIZE_CCS=False,
-            GMACATEGORIES=True,
+            GMACATEGORIES=GMACATEGORIES_,
             )
     
     preds=re.sub('[^a-zA-Z]|PATIENT_ID','',predictors_)
-    model=joblib.load(os.path.join(config.MODELPATH,f'linear_{preds}.joblib' ))
-    predictions[preds]=predict(f'linear_{preds}',config.EXPERIMENT,2018,X=X,y=y)
+    model=joblib.load(os.path.join(config.MODELPATH,f'{config.ALGORITHM}_{preds}.joblib' ))
+    predictions[preds]=predict(f'{config.ALGORITHM}_{preds}',config.EXPERIMENT,2018,X=X,y=y)
 
 
 #%%
 """ BUILD MODEL WITH OUR OWN COMPLEXITY CATEGORIES """
-X,y=getData(2016,columns='COSTE_TOTAL_ANO2',
+X,y=getData(2016,
         predictors='PATIENT_ID|FEMALE|AGE_[0-9]+$|GMA_',
         exclude=None,
         resourceUsage=False,
@@ -133,19 +138,26 @@ X,y=getData(2016,columns='COSTE_TOTAL_ANO2',
         GMACATEGORIES=True,
         additional_columns=['GMA_peso-ip']
         )
-y=y.COSTE_TOTAL_ANO2
+y=y[config.COLUMNS]
+
+if config.ALGORITHM=='logistic':
+    y=np.where(y>0,1,0)
 
 X=transform(X)
 X.drop('PATIENT_ID',axis=1,inplace=True)
+if config.ALGORITHM=='linear':
+    estimator=LinearRegression(n_jobs=-1)
+else:
+    estimator=LogisticRegression(n_jobs=-1,penalty='none')
+
 t0=time()
-linear=LinearRegression(n_jobs=-1)
-fit=linear.fit(X, y)
+fit=estimator.fit(X, y)
 print('fitting time: ',time()-t0)
 preds=re.sub('[^a-zA-Z]|PATIENT_ID','',predictors_)
-util.savemodel(config, fit, name=f'linear_{preds}_complejidadcuantiles')
+util.savemodel(config, fit, name=f'{config.ALGORITHM}_{preds}_complejidadcuantiles')
 
 #%%PREDICT FOR THIS MODEL
-X,y=getData(2017,columns='COSTE_TOTAL_ANO2',
+X,y=getData(2017,
         predictors='PATIENT_ID|FEMALE|AGE_[0-9]+$|GMA_',
         exclude=None,
         resourceUsage=False,
@@ -159,25 +171,41 @@ X,y=getData(2017,columns='COSTE_TOTAL_ANO2',
 
 X=transform(X)
 
-model=joblib.load(os.path.join(config.MODELPATH,f'linear_{preds}_complejidadcuantiles.joblib' ))
-predictions[f'{preds}_complejidadcuantiles']=predict(f'linear_{preds}_complejidadcuantiles',config.EXPERIMENT,2018,X=X,y=y)
+if config.ALGORITHM=='logistic':
+    y[config.COLUMNS]=np.where(y[config.COLUMNS]>0,1,0)
+    
+model=joblib.load(os.path.join(config.MODELPATH,f'{config.ALGORITHM}_{preds}_complejidadcuantiles.joblib' ))
+predictions[f'{preds}_complejidadcuantiles']=predict(f'{config.ALGORITHM}_{preds}_complejidadcuantiles',config.EXPERIMENT,2018,X=X,y=y)
 
 #%%
 
 for model, predictions_ in predictions.items():
     preds=predictions_[0]
-    R2=predictions_[1]
+    score=predictions_[1]
     recall, ppv, _, _ = performance(obs=preds.OBS, pred=preds.PRED, K=20000)
-    rmse=mean_squared_error(preds.OBS,preds.PRED, squared=False)
-    table=pd.concat([table,
-                     pd.DataFrame.from_dict({'Model':[model], 'R2':[ R2], 'RMSE':[rmse],
-                      'R@20k': [recall], 'PPV@20K':[ppv]})])
+    if config.ALGORITHM=='logistic':
+        ap=average_precision_score(np.where(preds.OBS>0,1,0), preds.PRED)
+        table=pd.concat([table,
+                        pd.DataFrame.from_dict({'Model':[model], 'AUC':[ score], 'AP':[ap],
+                         'R@20k': [recall], 'PPV@20K':[ppv]})]) 
+    else:
+        rmse=mean_squared_error(preds.OBS,preds.PRED, squared=False)
+        table=pd.concat([table,
+                         pd.DataFrame.from_dict({'Model':[model], 'R2':[ score], 'RMSE':[rmse],
+                          'R@20k': [recall], 'PPV@20K':[ppv]})])
     
 #%%
 print(table.to_markdown(index=False))
 """
-| Model        |       R2 |    RMSE |   R@20k |   PPV@20K |
-|:-------------|---------:|--------:|--------:|----------:|
-| FEMALEAGEACG | 0.140944 | 3739.57 | 0.14565 |  0.1416   |
-| FEMALEAGEGMA | 0.140171 | 3741.25 | 0.1642  |  0.162655 |
+| Model                             |       R2 |    RMSE |   R@20k |   PPV@20K |
+|:----------------------------------|---------:|--------:|--------:|----------:|
+| FEMALEAGEACG                      | 0.140944 | 3739.57 | 0.14565 |  0.1416   |
+| FEMALEAGEGMA                      | 0.140171 | 3741.25 | 0.1642  |  0.162655 |
+| FEMALEAGEGMA_complejidadcuantiles | 0.140481 | 3740.57 | 0.17495 |  0.156373 |
+
+| Model                             |      AUC |       AP |     R@20k |   PPV@20K |
+|:----------------------------------|---------:|---------:|----------:|----------:|
+| FEMALEAGEACG                      | 0.756804 | 0.215594 | 0.0595967 |  0.41457  |
+| FEMALEAGEGMA                      | 0.768863 | 0.219586 | 0.0747574 |  0.431335 |
+| FEMALEAGEGMA_complejidadcuantiles | 0.770331 | 0.225687 | 0.0680096 |  0.477815 |
 """

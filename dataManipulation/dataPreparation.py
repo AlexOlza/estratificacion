@@ -181,6 +181,8 @@ def getData(yr,columns=config.COLUMNS,
     GMA_def= config.GMA if hasattr(config, 'GMA') else False
     GMACATEGORIES_def= config.GMACATEGORIES if hasattr(config, 'GMACATEGORIES') else False
     GMA_DROP_DIGITS_def= config.GMA_DROP_DIGITS if hasattr(config, 'GMA_DROP_DIGITS') else 0
+    GMA_ADDITIONAL_COLS_def= config.GMA_ADDITIONAL_COLS if hasattr(config, 'GMA_ADDITIONAL_COLS') else []
+    
     """ GET KWARGS VALUES """
     fullEDCs_ = kwargs.get('fullEDCs', FULLEDCS_def)
     CCS_ = kwargs.get('CCS', CCS_def)
@@ -189,6 +191,7 @@ def getData(yr,columns=config.COLUMNS,
     GMA_ = kwargs.get('GMA', GMA_def)
     GMACATEGORIES_ = kwargs.get('GMACATEGORIES', GMACATEGORIES_def)
     GMA_DROP_DIGITS_ = kwargs.get('GMA_DROP_DIGITS', GMA_DROP_DIGITS_def)
+    GMA_ADDITIONAL_COLS_ = kwargs.get('additional_columns', GMA_ADDITIONAL_COLS_def)
 
     if ('DEATH_1YEAR' in columns) :
         X,y=getData_death_1year(CCS_,fullEDCs_,predictors, yr,**kwargs)
@@ -204,7 +207,8 @@ def getData(yr,columns=config.COLUMNS,
         X=generatePharmacyData(yr, X, **kwargs)
         print('Length DF with pharmacy: ',len(X))
     if GMA_:
-        X=get_gma_categories(yr,X,dummy_categories=GMACATEGORIES_,drop_digits=GMA_DROP_DIGITS_,**kwargs)
+        X=get_gma_categories(yr,X,dummy_categories=GMACATEGORIES_,drop_digits=GMA_DROP_DIGITS_,
+                             additional_columns=GMA_ADDITIONAL_COLS_)
         print('Length DF with GMA: ',len(X))
     if binarize_ccs_:    
         print('Binarizing')
