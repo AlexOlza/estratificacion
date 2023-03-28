@@ -88,15 +88,16 @@ np.random.seed(config.SEED)
 no_duplicates=eval(input('Drop duplicates? (True/False) '))
 plot=eval(input('Make plots? (True/False) '))
 evaluate_matching=eval(input('Evaluate matching? (True/False) '))
-#%%
+prefix=input('Enter prefix: ')
+    #%%
 X,y=getData(2016)
 original_columns=X.columns
 print('Sample size ',len(X), 'females: ',X.FEMALE.sum())
 assert not 'AGE_85GT' in X.columns
 
 #%%
-filename=os.path.join(config.DATAPATH,'single_neighbour_pairs.csv')
-ps_model_filename=os.path.join(config.MODELPATH,'logistic_propensity_score_model.joblib')
+filename=os.path.join(config.DATAPATH,f'{prefix}single_neighbour_pairs.csv')
+ps_model_filename=os.path.join(config.MODELPATH,f'{prefix}logistic_propensity_score_model.joblib')
 #%%
 """ COMPUTE OR RELOAD PROPENSITY SCORE MODEL """
 if (not Path(ps_model_filename).is_file()):
@@ -105,7 +106,7 @@ if (not Path(ps_model_filename).is_file()):
     t0=time()
     fit=logistic.fit(X.drop(['FEMALE', 'PATIENT_ID'], axis=1), X['FEMALE'])
     print('fitting time: ',time()-t0)
-    util.savemodel(config, fit,name='logistic_propensity_score_model')
+    util.savemodel(config, fit,name=f'{prefix}logistic_propensity_score_model')
     
 else:
     fit=job.load(ps_model_filename)
@@ -135,7 +136,7 @@ if not Path(filename).is_file():
         sns.kdeplot(x = propensity_scores, hue = X.FEMALE , ax = ax)
         ax.set_title('Propensity Score')
         
-        plt.savefig(os.path.join(config.FIGUREPATH,'propensity_densities_before.png'))
+        plt.savefig(os.path.join(config.FIGUREPATH,f'{prefix}propensity_densities_before.png'))
         plt.show()
     
     """ MATCHING """
@@ -199,7 +200,7 @@ if evaluate_matching:
         fig.suptitle('Density distribution plots for propensity score.')
         sns.kdeplot(x = pairs.propensity_score.values, hue = pairs.FEMALE.values , ax = ax)
         ax.set_title('Propensity Score')  
-        plt.savefig(os.path.join(config.FIGUREPATH,'two_propensity_densities_after.png'))
+        plt.savefig(os.path.join(config.FIGUREPATH,f'{prefix}two_propensity_densities_after.png'))
         plt.show()
         
         
@@ -208,7 +209,7 @@ if evaluate_matching:
         sns.stripplot(data = X, y = 'binary_outcome', alpha=0.5, x = 'propensity_score_logit', hue = 'FEMALE', orient = 'h', ax = ax[0]).set(title = 'Before matching', xlim=(-6, 4))
         sns.stripplot(data = pairs, y = 'binary_outcome', alpha=0.5, x = 'propensity_score_logit', hue = 'FEMALE', ax = ax[1] , orient = 'h').set(title = 'After matching', xlim=(-6, 4))
         plt.subplots_adjust(hspace = 0.3)
-        plt.savefig(os.path.join(config.FIGUREPATH,'two_stripplot.png'))
+        plt.savefig(os.path.join(config.FIGUREPATH,f'{prefix}two_stripplot.png'))
         plt.show()
         
         sns.set(rc={'figure.figsize':(10,60)}, font_scale=1.0)
@@ -228,13 +229,13 @@ if evaluate_matching:
         sns.set(rc={'figure.figsize':(10,60)}, font_scale=1.0)
         sn_plot = sns.barplot(data = res, y = 'variable', x = 'effect_size', hue = 'matching', orient='h')
         sn_plot.set(title='Standardised Mean differences accross covariates before and after matching')
-        sn_plot.figure.savefig(os.path.join(config.FIGUREPATH,"two_all_standardised_mean_differences.png"))
+        sn_plot.figure.savefig(os.path.join(config.FIGUREPATH,f"{prefix}two_all_standardised_mean_differences.png"))
         
         
         sns.set(rc={'figure.figsize':(10,60)}, font_scale=1.0)
         sn_plot = sns.barplot(data = res, y = 'variable', x = res.effect_size.abs(), hue = 'matching', orient='h')
         sn_plot.set(title='Absolute value of standardised mean differences accross covariates before and after matching')
-        sn_plot.figure.savefig(os.path.join(config.FIGUREPATH,"two_all_abs_standardised_mean_differences.png"))
+        sn_plot.figure.savefig(os.path.join(config.FIGUREPATH,f"{prefix}two_all_abs_standardised_mean_differences.png"))
     
     #%%
     # Evaluate the decrease in AUC
@@ -306,14 +307,14 @@ if config.ALGORITHM=='logistic':
     estimator=LogisticRegression(penalty='none',max_iter=1000,verbose=0,n_jobs=-1)
 elif config.ALGORITHM=='linear':
     estimator=LinearRegression(n_jobs=-1)  
-if not Path(os.path.join(config.MODELPATH,f'{config.ALGORITHM}_psm.joblib')).is_file():    
+if not Path(os.path.join(config.MODELPATH,f'{prefix}{config.ALGORITHM}_psm.joblib')).is_file():    
     print('fitting ...')
     t0=time()
     fit=estimator.fit(x, ypairs)
     print('fitting time: ',time()-t0)
-    util.savemodel(config, fit,name=f'{config.ALGORITHM}_psm')
+    util.savemodel(config, fit,name=f'{prefix}{config.ALGORITHM}_psm')
 else:
-    fit=job.load(os.path.join(config.MODELPATH,f'{config.ALGORITHM}_psm.joblib'))
+    fit=job.load(os.path.join(config.MODELPATH,f'{prefix}{config.ALGORITHM}_psm.joblib'))
 if config.ALGORITHM=='logistic':
     predict=fit.predict_proba
     score=roc_auc_score
