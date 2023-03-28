@@ -89,7 +89,7 @@ def sklearn_forward_regression(df, y, candidates = ['AGE','GMA','FEMALE'], tol=1
 #%%
 def sklearn_stepwise_regression_simple(df, y, minimal = [], tol=1e-4,algorithm='linear',**kwargs):    
     if algorithm=='logistic':
-        return sklearn_stepwise_logistic_regression(df, y, minimal, tol)
+        return sklearn_stepwise_logistic_regression(df, y, minimal)
             
     ar2 = dict()
     last_max = -1
@@ -159,7 +159,7 @@ def sklearn_stepwise_regression_simple(df, y, minimal = [], tol=1e-4,algorithm='
     print(set(df.drop(y, axis=1).columns).difference(candidates))
     return model
 
-def sklearn_stepwise_logistic_regression(df, y, minimal= [], tol= 100,**kwargs): 
+def sklearn_stepwise_logistic_regression(df, y, minimal= [], tol= 1000,**kwargs): 
     AIC = dict()
     last_min = np.inf
     candidates = list( minimal.copy())
