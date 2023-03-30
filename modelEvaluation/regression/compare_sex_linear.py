@@ -91,6 +91,15 @@ for i, group, groupname in zip([1, 0], [male, female], sex):
                     'neuralRegression':[s for s in selected if ('neural' in s) and (not 'Positive' in s)],
                              'linear':[s for s in selected if 'linear' in s],
                              'linearridge':[s for s in selected if 'linearridge' in s]}
+    # SUBSET DATA
+    Xgroup = X.loc[group]
+    ygroup = y.loc[y.PATIENT_ID.isin(Xgroup.PATIENT_ID)]
+
+
+        
+    pastXgroup = pastX.loc[pastX['FEMALE'] == i]
+    pastygroup = pasty.loc[pasty.PATIENT_ID.isin(pastXgroup.PATIENT_ID)]
+    assert (all(Xgroup['FEMALE'] == 1) or all(Xgroup['FEMALE'] == 0))
     for algorithm, selection in selected_types.items():
         if len(selection)>0:
             try:
@@ -107,19 +116,7 @@ for i, group, groupname in zip([1, 0], [male, female], sex):
                     globalmodel = keras.models.load_model(config.MODELPATH+globalmodelname,custom_objects={'coeff_determination':coeff_determination})
                     separatemodel = keras.models.load_model(config.MODELPATH+separatemodelname,custom_objects={'coeff_determination':coeff_determination}) 
             
-                # SUBSET DATA
-                Xgroup = X.loc[group]
-                ygroup = y.loc[y.PATIENT_ID.isin(Xgroup.PATIENT_ID)]
-            
-        
-                    
-                pastXgroup = pastX.loc[pastX['FEMALE'] == i]
-                pastygroup = pasty.loc[pasty.PATIENT_ID.isin(pastXgroup.PATIENT_ID)]
-            
-           
-            
-                assert (all(Xgroup['FEMALE'] == 1) or all(Xgroup['FEMALE'] == 0))
-            
+
                 # PREDICT
                 joint_preds, joint_r2= predict(globalmodelname,config.EXPERIMENT,year,
                                                X=Xgroup,y=ygroup, filename=f'{globalmodelname}_{groupname}',
@@ -172,6 +169,7 @@ for i, group, groupname in zip([1, 0], [male, female], sex):
                         rsquared=r2_score(unproblematic.OBS, unproblematic.PRED)
                         rmse[model]=mean_squared_error(unproblematic.OBS, unproblematic.PRED, squared=False)
                     
+                   
                     recallK, ppvK, specK, _ = performance(obs, preds['PRED'], K)
                     recall[model] = recallK
                     spec[model] = specK

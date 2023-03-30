@@ -120,7 +120,7 @@ initial_AUC=roc_auc_score(X.FEMALE, propensity_scores)
 print('Initial AUC for propensity scores: ', initial_AUC)
 #%%
 """ PERFORM MATCHING OR RELOAD PAIRS FROM FILE """
-if not Path(filename).is_file():
+if not  Path(filename).is_file():
    
     X.loc[:,'propensity_score'] = propensity_scores
     X.loc[:,'propensity_score_logit'] = propensity_logit
@@ -132,11 +132,11 @@ if not Path(filename).is_file():
         sns.set(rc={'figure.figsize':(16,10)}, font_scale=1.3)
         # Density distribution of propensity score (logic) broken down by treatment status
         fig, ax = plt.subplots(1,1)
-        fig.suptitle('Density distribution plots for propensity score')
+        # fig.suptitle('Density distribution plots for propensity score')
         sns.kdeplot(x = propensity_scores, hue = X.FEMALE , ax = ax)
-        ax.set_title('Propensity Score')
-        
-        plt.savefig(os.path.join(config.FIGUREPATH,f'{prefix}propensity_densities_before.png'))
+        ax.set_xlabel('Propensity Score')
+        plt.tight_layout()
+        plt.savefig(os.path.join(config.FIGUREPATH,f'{prefix}propensity_densities_before.jpeg'),dpi=300)
         plt.show()
     
     """ MATCHING """
@@ -197,10 +197,11 @@ if evaluate_matching:
         sns.set(rc={'figure.figsize':(16,10)}, font_scale=1.3)
         # Density distribution of propensity score (logic) broken down by treatment status
         fig, ax = plt.subplots(1,1)
-        fig.suptitle('Density distribution plots for propensity score.')
+        # fig.suptitle('Density distribution plots for propensity score.')
         sns.kdeplot(x = pairs.propensity_score.values, hue = pairs.FEMALE.values , ax = ax)
-        ax.set_title('Propensity Score')  
-        plt.savefig(os.path.join(config.FIGUREPATH,f'{prefix}two_propensity_densities_after.png'))
+        ax.set_xlabel('Propensity Score')  
+        plt.tight_layout()
+        plt.savefig(os.path.join(config.FIGUREPATH,f'{prefix}two_propensity_densities_after.jpeg'),dpi=300)
         plt.show()
         
         
@@ -225,18 +226,38 @@ if evaluate_matching:
             data.append([cl,'before', cohenD(X,cl)])
             data.append([cl,'after', cohenD(pairs,cl)])
         
-        res = pd.DataFrame(data, columns=['variable','matching','effect_size'])
-        sns.set(rc={'figure.figsize':(10,60)}, font_scale=1.0)
-        sn_plot = sns.barplot(data = res, y = 'variable', x = 'effect_size', hue = 'matching', orient='h')
+        descriptions=pd.read_csv(config.DATAPATH+'CCSCategoryNames_FullLabels.csv')
+        
+        
+        res_plot = pd.DataFrame(data, columns=['variable','matching','effect_size'])
+        res_plot['CATEGORIES']=res_plot.variable
+        res_plot.loc[res_plot.variable.str.startswith('CCS'),'description']=pd.merge(descriptions, res_plot, on='CATEGORIES').LABELS
+        res_plot.description=np.where(res_plot.description.isna(), res_plot.variable, res_plot.description)
+        res_plot['effect_size_abs']=res_plot.effect_size.abs()
+        largest_before=res_plot.loc[res_plot.matching=='before'].nlargest(10,'effect_size_abs')
+        res_plot=res_plot.loc[res_plot.variable.isin(largest_before.variable.values)]
+        sns.set(rc={'figure.figsize':(10,10)}, font_scale=2.0)
+        
+        sn_plot = sns.barplot(data = res_plot, y = 'description', x = 'effect_size_abs', hue = 'matching', orient='h')
+        # sn_plot.set(title='Standardised Mean differences accross covariates before and after matching')
+        plt.xlabel('Effect size (absolute value)')
+        plt.tight_layout()
+        sn_plot.figure.savefig(os.path.join(config.FIGUREPATH,f"{prefix}two_all_standardised_mean_differences.jpeg"), dpi=300)
+        
+        
+        res_plot = pd.DataFrame(data, columns=['variable','matching','effect_size'])
+        res_plot['CATEGORIES']=res_plot.variable
+        res_plot.loc[res_plot.variable.str.startswith('CCS'),'description']=pd.merge(descriptions, res_plot, on='CATEGORIES').LABELS
+        res_plot.description=np.where(res_plot.description.isna(), res_plot.variable, res_plot.description)
+        res_plot['effect_size_abs']=res_plot.effect_size.abs()
+        largest_after=res_plot.loc[res_plot.matching=='after'].nlargest(10,'effect_size_abs')
+        res_plot=res_plot.loc[res_plot.variable.isin(largest_after.variable.values)]
+        sns.set(rc={'figure.figsize':(10,10)}, font_scale=2.0)
+        sn_plot = sns.barplot(data = res_plot, y = 'description', x = 'effect_size_abs', hue = 'matching', orient='h')
         sn_plot.set(title='Standardised Mean differences accross covariates before and after matching')
-        sn_plot.figure.savefig(os.path.join(config.FIGUREPATH,f"{prefix}two_all_standardised_mean_differences.png"))
+        plt.tight_layout()
+        sn_plot.figure.savefig(os.path.join(config.FIGUREPATH,f"{prefix}two_all_standardised_mean_differences2.jpeg"), dpi=300)
         
-        
-        sns.set(rc={'figure.figsize':(10,60)}, font_scale=1.0)
-        sn_plot = sns.barplot(data = res, y = 'variable', x = res.effect_size.abs(), hue = 'matching', orient='h')
-        sn_plot.set(title='Absolute value of standardised mean differences accross covariates before and after matching')
-        sn_plot.figure.savefig(os.path.join(config.FIGUREPATH,f"{prefix}two_all_abs_standardised_mean_differences.png"))
-    
     #%%
     # Evaluate the decrease in AUC
     logistic=LogisticRegression(penalty='none',max_iter=300,verbose=2,n_jobs=-1)

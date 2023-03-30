@@ -81,16 +81,20 @@ def precision_at_recall(precision, recall, threshold, modelname, value):
 
 def T1a_T2a(preds,K=20000):
     T=[]
+    if config.ALGORITHM=='logistic':
+        preds['NEWOBS']=np.where(preds.OBS>=1,1,0)
+    else:
+        preds['NEWOBS']=np.where(preds.OBS.isin(preds.OBS.nlargest(K)), 1, 0)
     for val, df in preds.groupby('FEMALE'):
+        obs=df.NEWOBS
         if config.ALGORITHM=='logistic':
-            obs=np.where(df.OBS>=1,1,0)
             score1=roc_auc_score(obs, df.PRED) #auc
             score2=average_precision_score(obs, df.PRED) #ap
             cols=['FEMALE','AUC','AP','Recall_K','PPV_K']
         else:
             score1=r2_score(df.OBS, df.PRED)
             score2=mean_squared_error(df.OBS, df.PRED,squared=False)
-            obs=np.where(df.OBS.isin(df.OBS.nlargest(K)), 1, 0)
+            
             cols=['FEMALE','R2','RMSE','Recall_K','PPV_K']
         c = confusion_matrix(y_true=obs, y_pred=df.top_K)
         recall = c[1][1] / (c[1][0] + c[1][1])
@@ -266,7 +270,7 @@ if config.ALGORITHM=='linear':
     
     separate_preds=separate['Hombres']
     for table in tables.values():
-        print(table.round(2).to_markdown(index=False))
+        print(table.round(2).to_latex(index=False))
         print('\n')
     quit()
 # %%
