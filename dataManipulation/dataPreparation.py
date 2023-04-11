@@ -111,9 +111,9 @@ def getData_hospitalization(columns,exclude,resourceUsage,yr,predictors,fullEDCs
     
            
     y17=pd.merge(ingT[yr+1],full16['PATIENT_ID'],on='PATIENT_ID',how='outer').fillna(0)
-    print('number of patients y17: ', sum(np.where(y17[config.COLUMNS]>=1,1,0)))
+    print('number of patients y17: ', sum(np.where(y17[columns]>=1,1,0)))
     data=pd.merge(pred16,y17,on='PATIENT_ID')
-    print('number of patients in data: ', sum(np.where(data[config.COLUMNS]>=1,1,0)))
+    print('number of patients in data: ', sum(np.where(data[columns]>=1,1,0)))
 
     finalcols=listIntersection(data.columns,pred16.columns)
     return(data[finalcols].reindex(sorted(data[finalcols].columns), axis=1),data[cols])
