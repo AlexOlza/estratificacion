@@ -91,7 +91,13 @@ evaluate_matching=eval(input('Evaluate matching? (True/False) '))
 prefix=input('Enter prefix: ')
     #%%
 X,y=getData(2016)
+Xx,yyy=getData(2016, columns=['urgcms'])
 original_columns=X.columns
+intersection=set(X.PATIENT_ID).intersection(set(Xx.PATIENT_ID))
+X=X.loc[X.PATIENT_ID.isin(intersection)]
+y=pd.merge(y,yyy,on='PATIENT_ID')
+
+del Xx,yyy
 print('Sample size ',len(X), 'females: ',X.FEMALE.sum())
 assert not 'AGE_85GT' in X.columns
 
@@ -100,8 +106,8 @@ filename=os.path.join(config.DATAPATH,f'{prefix}single_neighbour_pairs.csv')
 ps_model_filename=os.path.join(config.MODELPATH,f'{prefix}logistic_propensity_score_model.joblib')
 #%%
 """ COMPUTE OR RELOAD PROPENSITY SCORE MODEL """
-if (not Path(ps_model_filename).is_file()):
-    logistic=LogisticRegression(penalty='none',max_iter=1000,verbose=0)
+if not (  Path(ps_model_filename).is_file()):
+    logistic=LogisticRegression(penalty='none',max_iter=1000,verbose=0, n_jobs=-1)
     
     t0=time()
     fit=logistic.fit(X.drop(['FEMALE', 'PATIENT_ID'], axis=1), X['FEMALE'])
@@ -120,7 +126,7 @@ initial_AUC=roc_auc_score(X.FEMALE, propensity_scores)
 print('Initial AUC for propensity scores: ', initial_AUC)
 #%%
 """ PERFORM MATCHING OR RELOAD PAIRS FROM FILE """
-if not  Path(filename).is_file():
+if   Path(filename).is_file():
    
     X.loc[:,'propensity_score'] = propensity_scores
     X.loc[:,'propensity_score_logit'] = propensity_logit
@@ -176,6 +182,7 @@ if not  Path(filename).is_file():
     print('Saved ',filename)
 else:
     pairs=load_pairs(filename)
+   
 #%%
 
 if no_duplicates:
@@ -184,7 +191,7 @@ if no_duplicates:
     pairs=pd.concat([males_, females_]).sample(frac=1)# to shuffle the data
     pairs.index=range(len(pairs))
 
-pairs['outcome']=pd.merge(pairs[['PATIENT_ID']],y,on='PATIENT_ID')[config.COLUMNS]
+pairs['outcome']=pd.merge(pairs,y, on='PATIENT_ID')[config.COLUMNS]
 #%%
 threshold= 0 if config.ALGORITHM=='logistic' else y[config.COLUMNS].mean().values[0]
 X['binary_outcome']=(y[config.COLUMNS]>threshold)
@@ -234,25 +241,26 @@ if evaluate_matching:
         res_plot.loc[res_plot.variable.str.startswith('CCS'),'description']=pd.merge(descriptions, res_plot, on='CATEGORIES').LABELS
         res_plot.description=np.where(res_plot.description.isna(), res_plot.variable, res_plot.description)
         res_plot['effect_size_abs']=res_plot.effect_size.abs()
+        largest_after=res_plot.loc[res_plot.matching=='after'].nlargest(10,'effect_size_abs')
         largest_before=res_plot.loc[res_plot.matching=='before'].nlargest(10,'effect_size_abs')
-        res_plot=res_plot.loc[res_plot.variable.isin(largest_before.variable.values)]
-        sns.set(rc={'figure.figsize':(10,10)}, font_scale=2.0)
+        res_plot_before=res_plot.loc[res_plot.variable.isin(largest_before.variable.values)]
+        sns.set(rc={'figure.figsize':(25,10)}, font_scale=2.0)
         
-        sn_plot = sns.barplot(data = res_plot, y = 'description', x = 'effect_size_abs', hue = 'matching', orient='h')
+        sn_plot = sns.barplot(data = res_plot_before, y = 'description', x = 'effect_size_abs', hue = 'matching', orient='h')
         # sn_plot.set(title='Standardised Mean differences accross covariates before and after matching')
         plt.xlabel('Effect size (absolute value)')
         plt.tight_layout()
         sn_plot.figure.savefig(os.path.join(config.FIGUREPATH,f"{prefix}two_all_standardised_mean_differences.jpeg"), dpi=300)
         
+        print('Range of effect sizes before matching: ',
+              res_plot.loc[res_plot.matching=='before'].nlargest(1,'effect_size')[['effect_size','description']],
+              res_plot.loc[res_plot.matching=='before'].nsmallest(1,'effect_size')[['effect_size','description']])
+        print('Range of effect sizes after matching: ',
+            res_plot.loc[res_plot.matching=='after'].nlargest(1,'effect_size')[['effect_size','description']],
+              res_plot.loc[res_plot.matching=='after'].nsmallest(1,'effect_size')[['effect_size','description']])
         
-        res_plot = pd.DataFrame(data, columns=['variable','matching','effect_size'])
-        res_plot['CATEGORIES']=res_plot.variable
-        res_plot.loc[res_plot.variable.str.startswith('CCS'),'description']=pd.merge(descriptions, res_plot, on='CATEGORIES').LABELS
-        res_plot.description=np.where(res_plot.description.isna(), res_plot.variable, res_plot.description)
-        res_plot['effect_size_abs']=res_plot.effect_size.abs()
-        largest_after=res_plot.loc[res_plot.matching=='after'].nlargest(10,'effect_size_abs')
         res_plot=res_plot.loc[res_plot.variable.isin(largest_after.variable.values)]
-        sns.set(rc={'figure.figsize':(10,10)}, font_scale=2.0)
+        sns.set(rc={'figure.figsize':(25,10)}, font_scale=2.0)
         sn_plot = sns.barplot(data = res_plot, y = 'description', x = 'effect_size_abs', hue = 'matching', orient='h')
         sn_plot.set(title='Standardised Mean differences accross covariates before and after matching')
         plt.tight_layout()
@@ -318,10 +326,12 @@ for binary, outtype in zip(['','binary_'], [counterfactual_df.outcome_f.dtype, i
     print(binary, ATT)
 """
 #%%
+# pairs=pd.merge(pairs, y, on='PATIENT_ID')
 ypairs=pairs.outcome
 x=pairs[original_columns].drop(['PATIENT_ID'],axis=1)
 
-ypairs=np.where(ypairs>=1,1,0) if config.ALGORITHM=='logistic' else ypairs
+
+ypairs=np.where(ypairs>=1,1,0) if config.ALGORITHM=='logistic' else y.loc[y.PATIENT_ID.isin(pairs.PATIENT_ID)].COSTE_TOTAL_ANO2
 ypairs=ypairs.ravel()
 #%%
 if config.ALGORITHM=='logistic':
@@ -397,9 +407,9 @@ for sex, yy, preds in zip(['Male', 'Female'], [yMale, yFemale], [predsMale, pred
         plot[sex]=plot_pr(prec, rec, sex, yy, preds).plot(ax)
     if config.ALGORITHM=='linear':
         recall[sex], PPV[sex]=[],[]
-        for K in range(1000,len(preds), 10000):
-            rec, ppv, _, _=performance(yy, preds, K=K, verbose=False)
-            recall[sex].append(rec) ; PPV[sex].append(ppv)
+        # for K in range(1000,len(preds), 10000):
+        #     rec, ppv, _, _=performance(yy, preds, K=K, verbose=False)
+        #     recall[sex].append(rec) ; PPV[sex].append(ppv)
 #%%
 import seaborn as sns
 if config.ALGORITHM=='logistic':
