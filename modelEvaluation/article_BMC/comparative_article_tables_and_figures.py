@@ -173,10 +173,15 @@ for metric in ['Recall_20000', 'PPV_20000']:
         # else:
         predpath=re.sub(config.EXPERIMENT,'hyperparameter_variability_'+config.EXPERIMENT,config.PREDPATH)
         preds= cal.calibrate(model, yr,  experiment_name='hyperparameter_variability_urgcms_excl_nbinj',
-                                                       filename=os.path.join(predpath,f'{model}'))
+                                                       filename=os.path.join(predpath,f'{model}'),
+                                                       X=X,y=y,pastX=X16,pasty=y17)
         tn, fp, fn, tp=performance(preds.OBS,preds.PREDCAL,K,computemetrics=False)
         correct[metric][model]=tn+tp
         incorrect[metric][model]=fn+fp
+        
+    print('MEDIAN MODELS:')
+    print(median_models)
+
 #%%
 for metric in ['Recall_20000', 'PPV_20000']:
     print('MLP vs RF ' , correct[metric]['neuralNetworkRandom_43']-correct[metric]['randomForest_59'])       
@@ -198,7 +203,8 @@ for metric in ['Score', 'AP']:
             median_models[metric].append(chosen_model)
         except KeyError:
             median_models[metric] = [chosen_model]
-
+print('MEDIAN MODELS:')
+print(median_models)
 """ ROC AND PR FIGURES """
 # os.environ["DISPLAY"] =':99'
 figPR=ROC_PR_comparison(median_models['AP'], 2018, logistic_model, mode='PR')
