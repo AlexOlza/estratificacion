@@ -40,6 +40,21 @@ from tensorflow import keras
 X,y=getData(2016)
 assert False
 #%%
+""" LOGISTIC REGRESSION MOST IMPORTANT COEFFICIENTS """
+logistic_model=joblib.load(config.ROOTPATH+f'models/urgcms_excl_nbinj/{logistic_modelname}.joblib')
+coefs={name:[value] for name,value in zip(X.drop('PATIENT_ID',axis=1).columns, logistic_model.coef_[0])}
+coefs=pd.DataFrame.from_dict(coefs,orient='index')
+coefs.rename(columns={0:'beta'}, inplace=True)
+coefs['abs_beta']=coefs.beta.abs()
+# coefs.loc['AGE']=coefs.filter(regex='AGE_',axis=0).sum().T
+fig, ax = plt.subplots()
+coefs.nlargest(20,'abs_beta').beta.plot.bar(ax=ax)
+ax.set_title("Largest abs(beta)")
+ax.set_ylabel("beta")
+fig.tight_layout()
+plt.savefig(config.FIGUREPATH+'/comparative/variable_importance_logistic.jpeg',dpi=300)
+
+#%%
 """ RANDOM FOREST VARIABLE IMPORTANCE PLOTS"""
 
 rf_model=joblib.load(config.ROOTPATH+f'models/hyperparameter_variability_urgcms_excl_nbinj/{randomforest_modelname}.joblib')
@@ -51,11 +66,11 @@ forest_importances.drop(forest_importances.filter(regex='AGE_').index,axis=0,inp
 fig, ax = plt.subplots()
 forest_importances.nlargest(20).plot.bar(ax=ax)
 ax.set_title("Feature importances using MDI")
-ax.set_ylabel("Mean decrease in impurity")
+ax.set_ylabel("MDI")
 fig.tight_layout()
 plt.savefig(config.FIGUREPATH+'/comparative/variable_importance_random_forest.jpeg',dpi=300)
 #%%
-""" HGB VARIABLE IMPORTANCE PLOTS"""
+""" HGB SHAP VALUES"""
 
 hgb_model=joblib.load(config.ROOTPATH+f'models/hyperparameter_variability_urgcms_excl_nbinj/{hgb_modelname}.joblib')
 
@@ -92,6 +107,7 @@ fig.tight_layout()
 plt.savefig(config.FIGUREPATH+'/comparative/variable_importance_hgb_bars.jpeg',dpi=300)
 
 #%%
+""" NEURAL SHAP VALUES """
 Xx= Xx.sample(500)
 neural_model=keras.models.load_model(config.ROOTPATH+f'models/hyperparameter_variability_urgcms_excl_nbinj/{neural_modelname}')
 
@@ -109,7 +125,7 @@ shap_df=pd.DataFrame(shap_values,columns=Xx.columns.values)
 shap_df['AGE']=shap_df.filter(regex='AGE_').sum(axis=1)
 shap_df.drop(shap_df.filter(regex='AGE_').columns,axis=1,inplace=True)
 
-shap.summary_plot(shap_df.to_numpy(),Xxcat)#,feature_names=shap_df.columns)
+fig=shap.summary_plot(shap_df.to_numpy(),Xxcat,show=False)#,feature_names=shap_df.columns)
 plt.savefig(config.FIGUREPATH+'/comparative/variable_importance_neural_summary.jpeg',dpi=300)
 
 
