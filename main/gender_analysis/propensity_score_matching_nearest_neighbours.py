@@ -126,7 +126,7 @@ initial_AUC=roc_auc_score(X.FEMALE, propensity_scores)
 print('Initial AUC for propensity scores: ', initial_AUC)
 #%%
 """ PERFORM MATCHING OR RELOAD PAIRS FROM FILE """
-if   Path(filename).is_file():
+if not  Path(filename).is_file():
    
     X.loc[:,'propensity_score'] = propensity_scores
     X.loc[:,'propensity_score_logit'] = propensity_logit
