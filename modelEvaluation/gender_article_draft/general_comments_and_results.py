@@ -89,12 +89,14 @@ def table(path, modelname):
     # Separate models 
     separate_preds=concat_preds(path+f'{modeltype}Mujeres_{cal}_2018.csv',
                                 path+f'{modeltype}Hombres_{cal}_2018.csv')    
+    problematic=((separate_preds.PRED-separate_preds.OBS)**2).nlargest(10).index
+    separate_unproblematic_preds=separate_preds.loc[~ separate_preds.index.isin(problematic)] if modeltype=='linear' else separate_preds
     if modeltype=='logistic':
         index=['global','separate','same_prevalence']
         # Same prevalence model
         sameprevalence_preds=concat_preds(path+'logistic_gender_balanced_Mujeres_calibrated_2018.csv',
                                           path+'logistic_gender_balanced_Hombres_calibrated_2018.csv')
-        allpreds=[global_preds,separate_preds,sameprevalence_preds]
+        allpreds=[global_preds,separate_unproblematic_preds,sameprevalence_preds]
         # Overall metrics: auc and brier
         from sklearn.metrics import roc_auc_score,brier_score_loss 
         def AUC_muj(x): return roc_auc_score(np.where(x.loc[x.FEMALE==1].OBS,1,0),x.loc[x.FEMALE==1].PRED)
@@ -106,7 +108,7 @@ def table(path, modelname):
         df_overall=pd.DataFrame(overall_metrics,columns=['AUC_women','AUC_men','brier_women','brier_men'],index=index)
     else:
         index=['global','separate']
-        allpreds=[global_preds,separate_preds]
+        allpreds=[global_preds,separate_unproblematic_preds]
         #Overall metrics: R2 and RMSE
         from sklearn.metrics import r2_score,mean_squared_error 
         def R2_muj(x): return r2_score(x.loc[x.FEMALE==1].OBS,x.loc[x.FEMALE==1].PRED)
@@ -123,7 +125,7 @@ def table(path, modelname):
         # 2) Select the top 10k women and top 10k men -> top10k_gender
     
     global_preds=patient_selection(global_preds,modeltype)
-    separate_preds=patient_selection(separate_preds,modeltype)
+    separate_unproblematic_preds=patient_selection(separate_unproblematic_preds,modeltype)
     if modeltype=='logistic':
         sameprevalence_preds=patient_selection(sameprevalence_preds,modeltype)
     
@@ -142,5 +144,7 @@ def table(path, modelname):
     return df
 #%%
 df_logistic=table(logistic_predpath,logistic_modelname)
+print(df_logistic.T.round(3).to_latex())
 #%%
 df_linear=table(linear_predpath,linear_modelname)
+print(df_linear.T.round(3).to_latex())
