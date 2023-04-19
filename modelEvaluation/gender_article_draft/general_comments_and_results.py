@@ -131,10 +131,11 @@ def table(path, modelname):
     # In either case, we use the same threshold-specific metrics
     threshold_metrics=[np.array([threshold_muj_hom(x, 'top20k'),threshold_muj_hom(x, 'top10k_gender')]).ravel() for  x in allpreds]
     
-    
+    threshold_metrics=[list(e)+list([100*x.loc[x.top20k==1].FEMALE.sum()/x.top20k.sum()]) for e,x in zip(threshold_metrics, allpreds)]
     
     df_threshold=pd.DataFrame(threshold_metrics,columns=['PPV_women','PPV_men','NPV_women','NPV_men','SENS_women','SENS_men','SPEC_women','SPEC_men',
-                                                'PPV_women_10k','PPV_men_10k','NPV_women_10k','NPV_men_10k','SENS_women_10k','SENS_men_10k','SPEC_women_10k','SPEC_men_10k'],
+                                                'PPV_women_10k','PPV_men_10k','NPV_women_10k','NPV_men_10k','SENS_women_10k','SENS_men_10k','SPEC_women_10k','SPEC_men_10k',
+                                                'Perc_women_top20k'],
                  index=index)
     
     df=pd.concat([df_overall,df_threshold],axis=1)
