@@ -49,7 +49,7 @@ log_sameprev_coefs=pd.DataFrame.from_dict({name:[val] for name,val in zip(logist
 print('logistic global female coef:',log_global_coefs.loc['FEMALE'].values )
 print('logistic same prevalence female coef:',log_sameprev_coefs.loc['FEMALE'].values )
 print('linear global female coef:', lin_global_coefs.loc['FEMALE'].values  )
-
+#%%
 
 """
 HOSPITALIZATION BIG TABLE
@@ -70,20 +70,31 @@ def patient_selection(x,modeltype):
     else:
         x['should_be_selected']=np.where(x.OBS>=1,1,0)
     return x
+from sklearn.metrics import confusion_matrix
+def cm(x,col): return {key: val for key, val in zip(['tn', 'fp', 'fn', 'tp'],confusion_matrix(x[f'should_be_selected'],x[col]).ravel())} 
+def threshold_muj_hom(x,col):
+    c=cm(x.loc[x.FEMALE==1],col)
+    vpp_women, vpn_women, sens_women, esp_women=c['tp']/(c['tp']+c['fp']),    c['tn']/(c['tn']+c['fn']),    c['tp']/(c['tp']+c['fn']),    c['tn']/(c['tn']+c['fp'])
+    c=cm(x.loc[x.FEMALE==0],col)
+    vpp_men, vpn_men, sens_men, esp_men=c['tp']/(c['tp']+c['fp']),    c['tn']/(c['tn']+c['fn']),    c['tp']/(c['tp']+c['fn']),    c['tn']/(c['tn']+c['fp'])
+    return(vpp_women, vpp_men, vpn_women, vpn_men, sens_women, sens_men, esp_women, esp_men)
+
 import numpy as np
 def table(path, modelname):
-    # Global model
-    global_preds=concat_preds(path+f'{modelname}_Mujeres_calibrated_2018.csv',
-                              path+f'{modelname}_Hombres_calibrated_2018.csv')   
-    # Separate models
     modeltype=re.sub('[0-9]|_','',modelname) #this string will contain either "logistic" or "linear"
-    separate_preds=concat_preds(path+f'{modeltype}Mujeres_calibrated_2018.csv',
-                                path+f'{modeltype}Hombres_calibrated_2018.csv')    
+    cal='calibrated' if modeltype=='logistic' else ''
+    # Global model
+    global_preds=concat_preds(path+f'{modelname}_Mujeres_{cal}_2018.csv',
+                              path+f'{modelname}_Hombres_{cal}_2018.csv')   
+    # Separate models 
+    separate_preds=concat_preds(path+f'{modeltype}Mujeres_{cal}_2018.csv',
+                                path+f'{modeltype}Hombres_{cal}_2018.csv')    
     if modeltype=='logistic':
+        index=['global','separate','same_prevalence']
         # Same prevalence model
         sameprevalence_preds=concat_preds(path+'logistic_gender_balanced_Mujeres_calibrated_2018.csv',
                                           path+'logistic_gender_balanced_Hombres_calibrated_2018.csv')
-        
+        allpreds=[global_preds,separate_preds,sameprevalence_preds]
         # Overall metrics: auc and brier
         from sklearn.metrics import roc_auc_score,brier_score_loss 
         def AUC_muj(x): return roc_auc_score(np.where(x.loc[x.FEMALE==1].OBS,1,0),x.loc[x.FEMALE==1].PRED)
@@ -91,9 +102,11 @@ def table(path, modelname):
         def brier_muj(x): return brier_score_loss(np.where(x.loc[x.FEMALE==1].OBS,1,0),x.loc[x.FEMALE==1].PRED)
         def brier_hom(x): return brier_score_loss(np.where(x.loc[x.FEMALE==0].OBS,1,0),x.loc[x.FEMALE==0].PRED)
         
-        overall_metrics=[[AUC_muj(x),AUC_hom(x),brier_muj(x),brier_hom(x)] for x in [global_preds,separate_preds,sameprevalence_preds]]
+        overall_metrics=[[AUC_muj(x),AUC_hom(x),brier_muj(x),brier_hom(x)] for x in allpreds]
+        df_overall=pd.DataFrame(overall_metrics,columns=['AUC_women','AUC_men','brier_women','brier_men'],index=index)
     else:
-        
+        index=['global','separate']
+        allpreds=[global_preds,separate_preds]
         #Overall metrics: R2 and RMSE
         from sklearn.metrics import r2_score,mean_squared_error 
         def R2_muj(x): return r2_score(x.loc[x.FEMALE==1].OBS,x.loc[x.FEMALE==1].PRED)
@@ -101,7 +114,9 @@ def table(path, modelname):
         def RMSE_muj(x): return mean_squared_error(x.loc[x.FEMALE==1].OBS,x.loc[x.FEMALE==1].PRED,squared=False)
         def RMSE_hom(x): return mean_squared_error(x.loc[x.FEMALE==0].OBS,x.loc[x.FEMALE==0].PRED,squared=False)
         
-        
+        overall_metrics=[[R2_muj(x),R2_hom(x),RMSE_muj(x),RMSE_hom(x)] for x in allpreds]
+        df_overall=pd.DataFrame(overall_metrics,columns=['R2_women','R2_men','RMSE_women','RMSE_men'],index=index)
+
     # PATIENT SELECTION:
     # We use two criteria: 
         # 1) Select the top 20k patients as positive, regardless of gender -> top20k
@@ -109,23 +124,22 @@ def table(path, modelname):
     
     global_preds=patient_selection(global_preds,modeltype)
     separate_preds=patient_selection(separate_preds,modeltype)
-    sameprevalence_preds=patient_selection(sameprevalence_preds,modeltype)
+    if modeltype=='logistic':
+        sameprevalence_preds=patient_selection(sameprevalence_preds,modeltype)
     
     
     # In either case, we use the same threshold-specific metrics
-    from sklearn.metrics import confusion_matrix
-    def cm(x,col): return {key: val for key, val in zip(['tn', 'fp', 'fn', 'tp'],confusion_matrix(x[f'should_be_selected'],x[col]).ravel())} 
-    def threshold_muj_hom(x,col):
-        c=cm(x.loc[x.FEMALE==1],col)
-        vpp_women, vpn_women, sens_women, esp_women=c['tp']/(c['tp']+c['fp']),    c['tn']/(c['tn']+c['fn']),    c['tp']/(c['tp']+c['fn']),    c['tn']/(c['tn']+c['fp'])
-        c=cm(x.loc[x.FEMALE==0],col)
-        vpp_men, vpn_men, sens_men, esp_men=c['tp']/(c['tp']+c['fp']),    c['tn']/(c['tn']+c['fn']),    c['tp']/(c['tp']+c['fn']),    c['tn']/(c['tn']+c['fp'])
-        return(vpp_women, vpp_men, vpn_women, vpn_men, sens_women, sens_men, esp_women, esp_men)
-
-    threshold_metrics_20k=[threshold_muj_hom(x, 'top20k') for  x in [global_preds,separate_preds,sameprevalence_preds]]
-    
-    # threshold_metrics=np.array(threshold_metrics).ravel()
+    threshold_metrics=[np.array([threshold_muj_hom(x, 'top20k'),threshold_muj_hom(x, 'top10k_gender')]).ravel() for  x in allpreds]
     
     
-    pd.DataFrame(threshold_metrics_20k,columns=['PPV_women','PPV_men','NPV_women','NPV_men','SENS_women','SENS_men','SPEC_women','SPEC_men'],index=['global','separate','same_prevalence'])
-        
+    
+    df_threshold=pd.DataFrame(threshold_metrics,columns=['PPV_women','PPV_men','NPV_women','NPV_men','SENS_women','SENS_men','SPEC_women','SPEC_men',
+                                                'PPV_women_10k','PPV_men_10k','NPV_women_10k','NPV_men_10k','SENS_women_10k','SENS_men_10k','SPEC_women_10k','SPEC_men_10k'],
+                 index=index)
+    
+    df=pd.concat([df_overall,df_threshold],axis=1)
+    return df
+#%%
+df_logistic=table(logistic_predpath,logistic_modelname)
+#%%
+df_linear=table(linear_predpath,linear_modelname)
