@@ -214,120 +214,96 @@ if evaluate_matching:
             untreated=tmp[tmp.FEMALE == 0][cols]
             p_t=treated.sum()/len(treated)
             p_u=untreated.sum()/len(untreated)
-            effect=p_t*(1-p_u)/(p_u*(1-p_t)+1e-8)
+            effect=pd.Series(np.where(p_u==0,np.nan,p_t*(1-p_u)/(p_u*(1-p_t))),index=cols)
             return effect
-        
+        import textwrap
+        def wrap_labels(ax, width, break_long_words=False):
+            labels = []
+            for label in ax.get_yticklabels():
+                text = label.get_text()
+                labels.append(textwrap.fill(text, width=width,
+                              break_long_words=break_long_words))
+            ax.set_yticklabels(labels, rotation=0)
+            
         effect_before=eff_OR(X, cols)
+        effect_before=effect_before.loc[effect_before!=0].dropna()
         effect_after=eff_OR(pairs, cols)
+        effect_after=effect_after.loc[effect_after!=0].dropna()
+        effect_after=effect_after.loc[effect_after.index.isin(effect_before.index)]
+        effect_before=effect_before.loc[effect_before.index.isin(effect_after.index)]
         
         to_df=[[var, before, after] for var, before, after in zip(effect_before.index, effect_before.values, effect_after.values)]
         res_plot=pd.DataFrame(to_df, columns=['variable','before','after'])
-        
-        # for cl in cols:
-        #     if pairs.loc[pairs.FEMALE==1][cl].sum()>0 and pairs.loc[pairs.FEMALE==0][cl].sum()>0:
-        #         print(cl)
-        #         data.append([cl,'before', effect_size(X,cl)])
-        #         data.append([cl,'after', effect_size(pairs,cl)])
+        res_plot['N_women_before']=[X.loc[X[var]==1].FEMALE.sum() for var in res_plot.variable.values]
+        res_plot['N_men_before']=[len(X.loc[X[var]==1])-X.loc[X[var]==1].FEMALE.sum() for var in res_plot.variable.values]
+        res_plot['N_women_after']=[pairs.loc[pairs[var]==1].FEMALE.sum() for var in res_plot.variable.values]
+        res_plot['N_men_after']=[len(pairs.loc[pairs[var]==1])-pairs.loc[pairs[var]==1].FEMALE.sum() for var in res_plot.variable.values]
         
         descriptions=pd.read_csv(config.DATAPATH+'CCSCategoryNames_FullLabels.csv')
+        genitoCCS='PHARMA_Benign_prostatic_hyperplasia|CCS(2[4-9]$|3[0-1]$|46$|16[3-9]$|17[0-9]$|18[0-9]$|19[0-6]$|215$)'
         
         
         # res_plot = pd.DataFrame(data, columns=['variable','matching','effect_size'])
         res_plot['CATEGORIES']=res_plot.variable
-        res_plot.loc[res_plot.variable.str.startswith('CCS'),'description']=pd.merge(descriptions, res_plot, on='CATEGORIES').LABELS
+        res_plot['description']=np.nan
+        res_plot.loc[res_plot.variable.str.startswith('CCS'),'description']=pd.merge(descriptions, res_plot, on='CATEGORIES',how='right').LABELS
         res_plot.description=np.where(res_plot.description.isna(), res_plot.variable, res_plot.description)
-        res_plot.description=[v[:50] for v in res_plot.description.values]
-        res_plot=res_plot.loc[(res_plot.before!=0) & (res_plot.after!=0)]
-        res_plot['log_before']=np.log10(res_plot.before)
-        res_plot['log_after']=np.log10(res_plot.after)
-        sns.set(rc={'figure.figsize':(25,10)}, font_scale=2.0)
+        # res_plot.description=[v for v in res_plot.description.values]
+        # res_plot=res_plot.loc[(res_plot.before!=0) & (res_plot.after!=0)]
+        res_plot=res_plot.loc[~res_plot.variable.str.contains(genitoCCS)]
+        res_plot['log_before']=res_plot.before
+        res_plot['log_after']=res_plot.after
         
-        before_plot=pd.concat([res_plot.nlargest(5,'before'),res_plot.nsmallest(5,'before')])[['description','variable','log_before']]
+        sns.set(rc={'figure.figsize':(40,20)}, font_scale=3.0)
+        fig, ax = plt.subplots(1,1)
+        before_plot=pd.concat([res_plot.nlargest(5,'before'),res_plot.nsmallest(5,'before')])[['description','variable','log_before','N_women_before','N_men_before','N_women_after','N_men_after']]
         before_plot['matching']='before'
-        before_plot['log(OR)']=before_plot.log_before
-        before_plot_after=pd.concat([res_plot.nlargest(5,'before'),res_plot.nsmallest(5,'before')])[['description','variable','log_after']]
+        before_plot['OR_minus_one']=before_plot.log_before-1
+        before_plot_after=pd.concat([res_plot.nlargest(5,'before'),res_plot.nsmallest(5,'before')])[['description','variable','log_after','N_women_before','N_men_before','N_women_after','N_men_after']]
         before_plot_after['matching']='after'
-        before_plot_after['log(OR)']=before_plot_after.log_after
-        sn_plot = sns.barplot(data = pd.concat([before_plot,before_plot_after]),hue_order=['before','after'], y = 'description', hue='matching', x= 'log(OR)', orient='h')
-        plt.xlabel('log10(OR)')
+        before_plot_after['OR_minus_one']=before_plot_after.log_after-1
+        before_plot['label']='M: '+before_plot.N_men_before.astype(str)+'\nW: '+before_plot.N_women_before.astype(str)
+        before_plot_after['label']='M: '+before_plot_after.N_men_after.astype(str)+'\nW: '+before_plot_after.N_women_after.astype(str)
+        df_plot_before=pd.concat([before_plot,before_plot_after])
+        sn_plot = sns.barplot(data = df_plot_before,left=1,hue_order=['before','after'], y = 'description', hue='matching', x= 'OR_minus_one', orient='h', ax=ax)
+
+        # _ = ax.bar_label(ax.containers[0], labels=before_plot.label)
+        # _ = ax.bar_label(ax.containers[1], labels=before_plot_after.label)
+        sn_plot.set_xscale("log")
+        
+        wrap_labels(ax, 50)
+        plt.xlabel('Odds Ratio')
+        plt.axvline(x=1)
+
         plt.tight_layout()
+        sn_plot.figure.savefig(os.path.join(config.FIGUREPATH,f"{prefix}psm_odds_ratios_nongenito_before.jpeg"), dpi=300)
         plt.show()
         
+        fig, ax = plt.subplots(1,1)
         after_plot=pd.concat([res_plot.nlargest(5,'after'),res_plot.nsmallest(5,'after')])[['description','variable','log_after']]
         after_plot['matching']='after'
-        after_plot['log(OR)']=after_plot.log_after
+        after_plot['OR_minus_one']=after_plot.log_after-1
         after_plot_before=pd.concat([res_plot.nlargest(5,'after'),res_plot.nsmallest(5,'after')])[['description','variable','log_before']]
         after_plot_before['matching']='before'
-        after_plot_before['log(OR)']=after_plot_before.log_before
-        sn_plot = sns.barplot(data = pd.concat([after_plot,after_plot_before]),hue_order=['before','after'], y = 'description', hue='matching', x= 'log(OR)', orient='h')
-        plt.xlabel('log10(OR)')
+        after_plot_before['OR_minus_one']=after_plot_before.log_before-1
+        df_plot_after=pd.concat([after_plot,after_plot_before])
+        sn_plot = sns.barplot(data = df_plot_after,left=1,hue_order=['before','after'], y = 'description', hue='matching', x= 'OR_minus_one', orient='h',ax=ax)
+        wrap_labels(ax, 50)
+        plt.xlabel('Odds Ratio')
+        sn_plot.set_xscale("log")
+        plt.axvline(x=1)
         plt.tight_layout()
+        sn_plot.figure.savefig(os.path.join(config.FIGUREPATH,f"{prefix}psm_odds_ratios_nongenito_after.jpeg"), dpi=300)
         plt.show()
-        
-  
-        
-        # res_plot=res_plot.loc[res_plot.effect_size!=0]
-        # largest_before=res_plot.loc[res_plot.matching=='before'].nlargest(10,'effect_size')
-        # smallest_before=res_plot.loc[res_plot.matching=='before'].nsmallest(10,'effect_size')
-        
-        # largest_after=res_plot.loc[res_plot.matching=='after'].nlargest(10,'effect_size')
-        # smallest_after=res_plot.loc[res_plot.matching=='after'].nsmallest(10,'effect_size')
-        
-        # sns.set(rc={'figure.figsize':(25,10)}, font_scale=2.0)
-        
-        # sn_plot = sns.barplot(data = largest_before, y = 'description', x = 'effect_size', orient='h')
-        # plt.xlabel('Effect size (absolute value)')
-        # plt.tight_layout()
-        # plt.show()
-        # sn_plot2 = sns.barplot(data = smallest_before, y = 'description', x = 'effect_size', orient='h')
-        # ## sn_plot.set(title='Standardised Mean differences accross covariates before and after matching')
-        # plt.xlabel('Effect size (absolute value)')
-        # plt.tight_layout()
-        # plt.show()
-        
-        # sn_plot = sns.barplot(data = largest_after, y = 'description', x = 'effect_size', orient='h')
-        # plt.xlabel('Effect size (absolute value)')
-        # plt.tight_layout()
-        # plt.show()
-        # sn_plot2 = sns.barplot(data = smallest_after, y = 'description', x = 'effect_size', orient='h')
-        # ## sn_plot.set(title='Standardised Mean differences accross covariates after and after matching')
-        # plt.xlabel('Effect size (absolute value)')
-        # plt.tight_layout()
-        # plt.show()
-        
-        # df_to_plot=pd.DataFrame()
-        # df_to_plot['effect_size_abs_before']=res_plot.loc[res_plot.matching=='before'].effect_size.values
-        # df_to_plot['effect_size_abs_after']=res_plot_before.effect_size.values
-        # df_to_plot['description']=res_plot.loc[res_plot.matching=='before'].description.values
-        # df_to_plot['bars']=df_to_plot['effect_size_abs_after']/df_to_plot['effect_size_abs_before']
-        
-        # df_to_plot['effect_size_abs_before']=res_plot.loc[res_plot.matching=='before'].effect_size.values
-        # df_to_plot['effect_size_abs_after']=res_plot.loc[res_plot.matching=='after'].effect_size.values
-        # df_to_plot['description']=res_plot.loc[res_plot.matching=='before'].description.values
-        # df_to_plot['bars']=df_to_plot['effect_size_abs_after']/df_to_plot['effect_size_abs_before']
-        
-        sns.set(rc={'figure.figsize':(25,10)}, font_scale=2.0)
-        
-        sn_plot = sns.barplot(data = df_to_plot.nlargest(10,'bars'), y = 'description', x = 'bars', orient='h')
-        # sn_plot.set(title='Standardised Mean differences accross covariates before and after matching')
-        plt.xlabel('Effect size (absolute value)')
-        plt.tight_layout()
-        # sn_plot.figure.savefig(os.path.join(config.FIGUREPATH,f"{prefix}two_all_standardised_mean_differences.jpeg"), dpi=300)
-        sn_plot.figure.savefig(os.path.join(config.FIGUREPATH,f"{prefix}psm_odds_ratios.jpeg"), dpi=300)
-        
+
+       
         print('Range of effect sizes before matching: ',
-              res_plot.loc[res_plot.matching=='before'].nlargest(1,'effect_size')[['effect_size','description']].values,
-              res_plot.loc[res_plot.matching=='before'].nsmallest(1,'effect_size')[['effect_size','description']].values)
+              df_plot_before.nlargest(1,'log_before')[['log_before','description']].values,
+              df_plot_before.nsmallest(1,'log_before')[['log_before','description']].values)
         print('Range of effect sizes after matching: ',
-            res_plot.loc[res_plot.matching=='after'].nlargest(1,'effect_size')[['effect_size','description']],
-              res_plot.loc[res_plot.matching=='after'].nsmallest(1,'effect_size')[['effect_size','description']])
+            df_plot_after.nlargest(1,'log_before')[['log_before','description']],
+            df_plot_after.nsmallest(1,'log_before')[['log_before','description']])
         
-        res_plot=res_plot.loc[res_plot.variable.isin(largest_after.variable.values)]
-        sns.set(rc={'figure.figsize':(25,10)}, font_scale=2.0)
-        sn_plot = sns.barplot(data = res_plot, y = 'description', x = 'effect_size_abs', hue = 'matching', orient='h')
-        sn_plot.set(title='Standardised Mean differences accross covariates before and after matching')
-        plt.tight_layout()
-        sn_plot.figure.savefig(os.path.join(config.FIGUREPATH,f"{prefix}two_all_standardised_mean_differences2.jpeg"), dpi=300)
         
     #%%
     # Evaluate the decrease in AUC
@@ -340,7 +316,7 @@ if evaluate_matching:
     print('After matching, AUC for new propensity scores: ', new_AUC)
 #%%
 overview = pairs[['outcome','FEMALE']].groupby(by = ['FEMALE']).aggregate([np.mean, np.var, np.std, 'count'])
-print(overview)
+print(overview.to_latex(index=False))
 
 treated_outcome = overview['outcome']['mean'][1]
 treated_counterfactual_outcome = overview['outcome']['mean'][0]
@@ -360,7 +336,7 @@ if config.ALGORITHM=='linear':
 
 #%%
 overview2 = pairs[['binary_outcome','FEMALE']].groupby(by = ['FEMALE']).aggregate(['sum',np.mean, np.var, np.std, 'count'])
-print(overview2)
+print(overview2.to_latex())
 treated_outcome = overview2['binary_outcome']['mean'][1]
 treated_counterfactual_outcome = overview2['binary_outcome']['mean'][0]
 att2 = treated_outcome - treated_counterfactual_outcome

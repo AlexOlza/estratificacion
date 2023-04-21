@@ -113,11 +113,13 @@ def table(path, modelname):
         from sklearn.metrics import r2_score,mean_squared_error 
         def R2_muj(x): return r2_score(x.loc[x.FEMALE==1].OBS,x.loc[x.FEMALE==1].PRED)
         def R2_hom(x): return r2_score(x.loc[x.FEMALE==0].OBS,x.loc[x.FEMALE==0].PRED)
+        def RSS_muj(x): return ((x.loc[x.FEMALE==1].OBS-x.loc[x.FEMALE==1].PRED)**2).sum()
+        def RSS_hom(x): return ((x.loc[x.FEMALE==0].OBS-x.loc[x.FEMALE==0].PRED)**2).sum()
         def RMSE_muj(x): return mean_squared_error(x.loc[x.FEMALE==1].OBS,x.loc[x.FEMALE==1].PRED,squared=False)
         def RMSE_hom(x): return mean_squared_error(x.loc[x.FEMALE==0].OBS,x.loc[x.FEMALE==0].PRED,squared=False)
         
-        overall_metrics=[[R2_muj(x),R2_hom(x),RMSE_muj(x),RMSE_hom(x)] for x in allpreds]
-        df_overall=pd.DataFrame(overall_metrics,columns=['R2_women','R2_men','RMSE_women','RMSE_men'],index=index)
+        overall_metrics=[[R2_muj(x),R2_hom(x),RMSE_muj(x),RMSE_hom(x),RSS_muj(x),RSS_hom(x)] for x in allpreds]
+        df_overall=pd.DataFrame(overall_metrics,columns=['R2_women','R2_men','RMSE_women','RMSE_men','RSS_women','RSS_men'],index=index)
 
     # PATIENT SELECTION:
     # We use two criteria: 
@@ -135,16 +137,38 @@ def table(path, modelname):
     
     threshold_metrics=[list(e)+list([100*x.loc[x.top20k==1].FEMALE.sum()/x.top20k.sum()]) for e,x in zip(threshold_metrics, allpreds)]
     
-    df_threshold=pd.DataFrame(threshold_metrics,columns=['PPV_women','PPV_men','NPV_women','NPV_men','SENS_women','SENS_men','SPEC_women','SPEC_men',
-                                                'PPV_women_10k','PPV_men_10k','NPV_women_10k','NPV_men_10k','SENS_women_10k','SENS_men_10k','SPEC_women_10k','SPEC_men_10k',
-                                                'Perc_women_top20k'],
+    df_threshold=pd.DataFrame(threshold_metrics,columns=['PPV_20k_women','PPV_20k_men','NPV_20k_women','NPV_20k_men','SENS_20k_women','SENS_20k_men','SPEC_20k_women','SPEC_20k_men',
+                                                'PPV_10k_women','PPV_10k_men','NPV_10k_women','NPV_10k_men','SENS_10k_women','SENS_10k_men','SPEC_10k_women','SPEC_10k_men',
+                                                'Perc_top20k_women'],
                  index=index)
     
     df=pd.concat([df_overall,df_threshold],axis=1)
+    
+    nmen=len(global_preds)-global_preds.FEMALE.sum()
+    print('N women ',global_preds.FEMALE.sum())
+    print('N men ',nmen)
+    print('Prevalence women: ',np.where(global_preds.loc[global_preds.FEMALE==1].OBS,1,0).sum()/global_preds.FEMALE.sum())
+    print('Prevalence men: ',np.where(global_preds.loc[global_preds.FEMALE==0].OBS,1,0).sum()/nmen)
+    
     return df
 #%%
 df_logistic=table(logistic_predpath,logistic_modelname)
 print(df_logistic.T.round(3).to_latex())
 #%%
+df_log_round=df_logistic.round(3)
+cols=pd.Series([re.sub('_men|_women','',c) for c in df_logistic]).drop_duplicates()
+df=pd.DataFrame(index=df_log_round.index)
+for col in cols:
+    df[col]=[c for c in df_log_round.filter(regex=col).values]
+print(df.T.to_latex())
+
+#%%
 df_linear=table(linear_predpath,linear_modelname)
 print(df_linear.T.round(3).to_latex())
+#%%
+df_lin_round=df_linear.round(3)
+cols=pd.Series([re.sub('_men|_women','',c) for c in df_linear]).drop_duplicates()
+df=pd.DataFrame(index=df_lin_round.index)
+for col in cols:
+    df[col]=[c for c in df_lin_round.filter(regex=col).values]
+print(df.T.to_latex())
