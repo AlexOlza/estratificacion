@@ -40,6 +40,10 @@ linear_predpath=re.sub('models','predictions',linear_modelpath)
 
 logistic_global_model=joblib.load(logistic_modelpath+f'{logistic_modelname}.joblib')
 linear_global_model=joblib.load(linear_modelpath+f'{linear_modelname}.joblib')
+logistic_women_model=joblib.load(logistic_modelpath+f'logisticMujeres.joblib')
+linear_women_model=joblib.load(linear_modelpath+f'linearMujeres.joblib')
+logistic_men_model=joblib.load(logistic_modelpath+f'logisticHombres.joblib')
+linear_men_model=joblib.load(linear_modelpath+f'linearHombres.joblib')
 logistic_sameprev_model=joblib.load(logistic_modelpath+'logistic_gender_balanced.joblib')
 
 
@@ -95,6 +99,7 @@ def patient_selection(x,modeltype):
     top10k_women=x.loc[x.FEMALE==1].nlargest(10000,'PRED')
     top10k_men=x.loc[x.FEMALE==0].nlargest(10000,'PRED')
     x['top10k_gender']=np.where(x.PATIENT_ID.isin(pd.concat([top10k_women,top10k_men]).PATIENT_ID),1,0)
+    x['relative_top20k']=np.where(x.PATIENT_ID.isin(x.nlargest(20000,'relativePRED').PATIENT_ID),1,0)
     if modeltype=='linear':
         x['should_be_selected']=np.where(x.PATIENT_ID.isin(x.nlargest(20000,'OBS').PATIENT_ID),1,0)
     else:
@@ -110,7 +115,35 @@ def threshold_muj_hom(x,col):
     return(vpp_women, vpp_men, vpn_women, vpn_men, sens_women, sens_men, esp_women, esp_men)
 
 import numpy as np
-def table(path, modelname):
+def healthy_preds_separate(models,modeltype):
+    healthy_predictions={}
+    for i,model in enumerate(models):
+        if modeltype=='logistic':
+            def predict_fn(x): return model.predict_proba(x)[:,1]  # Whether the patient had ANY admission
+        else:
+            def predict_fn(x): return model.predict(x)[0]
+        zeros=pd.DataFrame([np.zeros(model.n_features_in_)],columns=model.feature_names_in_)
+        healthy_predictions[f'FEMALE={i}AGE_85GT']=predict_fn(zeros)
+    return healthy_predictions
+
+def healthy_preds(model,modeltype,separate=False):
+    if separate:
+        assert len(model)==2, 'You must provide a list of two models: [men, women]'
+        return healthy_preds_separate(model, modeltype)
+    if modeltype=='logistic':
+        def predict_fn(x): return model.predict_proba(x)[:,1]  # Whether the patient had ANY admission
+    else:
+        def predict_fn(x): return model.predict(x)[0]
+    zeros=pd.DataFrame([np.zeros(model.n_features_in_)],columns=model.feature_names_in_)
+    healthy_patients={}
+    healthy_predictions={}
+    healthy_patients[f'FEMALE=1AGE_85GT']=zeros.copy()
+    healthy_patients[f'FEMALE=1AGE_85GT']['FEMALE']=1
+    healthy_predictions['FEMALE=0AGE_85GT']=predict_fn(zeros.copy())
+    healthy_predictions['FEMALE=1AGE_85GT']=predict_fn(healthy_patients[f'FEMALE=1AGE_85GT'])
+    return healthy_predictions
+
+def table(path, modelname, models):
     modeltype=re.sub('[0-9]|_','',modelname) #this string will contain either "logistic" or "linear"
     cal='calibrated' if modeltype=='logistic' else ''
     # Global model
@@ -152,24 +185,44 @@ def table(path, modelname):
         df_overall=pd.DataFrame(overall_metrics,columns=['R2_women','R2_men','RMSE_women','RMSE_men','RSS_women','RSS_men'],index=index)
 
     # PATIENT SELECTION:
-    # We use two criteria: 
+    # We use three criteria: 
         # 1) Select the top 20k patients as positive, regardless of gender -> top20k
         # 2) Select the top 10k women and top 10k men -> top10k_gender
+        # 3) Divide each prediction by the healthy equivalent per gender. Select the top 20k -> relative
+    global_healthy=healthy_preds(models['global'], modeltype)
+    separate_healthy=healthy_preds(models['separate'], modeltype,separate=True)
+    
+    for sex in global_preds.FEMALE.unique():
+        global_preds.loc[(global_preds.FEMALE==sex),'BASELINE']=global_healthy[f'FEMALE={sex}AGE_85GT'][0]
+        separate_unproblematic_preds.loc[(separate_unproblematic_preds.FEMALE==sex),'BASELINE']=separate_healthy[f'FEMALE={sex}AGE_85GT'][0]
+    global_preds['relativePRED']=global_preds.PRED/global_preds.BASELINE
+    separate_unproblematic_preds['relativePRED']=separate_unproblematic_preds.PRED/separate_unproblematic_preds.BASELINE
+
     
     global_preds=patient_selection(global_preds,modeltype)
     separate_unproblematic_preds=patient_selection(separate_unproblematic_preds,modeltype)
+    
+    
     if modeltype=='logistic':
+        sameprevalence_model=models['same_prevalence']
+        sameprevalence_healthy=healthy_preds(sameprevalence_model, modeltype)
+        for sex in sameprevalence_preds.FEMALE.unique():
+            sameprevalence_preds.loc[(sameprevalence_preds.FEMALE==sex),'BASELINE']=sameprevalence_healthy[f'FEMALE={sex}AGE_85GT'][0]
+        sameprevalence_preds['relativePRED']=sameprevalence_preds.PRED/sameprevalence_preds.BASELINE
         sameprevalence_preds=patient_selection(sameprevalence_preds,modeltype)
-    
-    
     # In either case, we use the same threshold-specific metrics
-    threshold_metrics=[np.array([threshold_muj_hom(x, 'top20k'),threshold_muj_hom(x, 'top10k_gender')]).ravel() for  x in allpreds]
+    threshold_metrics=[np.array([threshold_muj_hom(x, 'top20k'),threshold_muj_hom(x, 'top10k_gender'),threshold_muj_hom(x, 'relative_top20k')]).ravel() for  x in allpreds]
     
-    threshold_metrics=[list(e)+list([100*x.loc[x.top20k==1].FEMALE.sum()/x.top20k.sum()]) for e,x in zip(threshold_metrics, allpreds)]
+    threshold_metrics=[list(e)+list([100*x.loc[x.top20k==1].FEMALE.sum()/x.top20k.sum(),100*x.loc[x.relative_top20k==1].FEMALE.sum()/x.top20k.sum()]) for e,x in zip(threshold_metrics, allpreds)]
     
-    df_threshold=pd.DataFrame(threshold_metrics,columns=['PPV_20k_women','PPV_20k_men','NPV_20k_women','NPV_20k_men','SENS_20k_women','SENS_20k_men','SPEC_20k_women','SPEC_20k_men',
-                                                'PPV_10k_women','PPV_10k_men','NPV_10k_women','NPV_10k_men','SENS_10k_women','SENS_10k_men','SPEC_10k_women','SPEC_10k_men',
-                                                'Perc_top20k_women'],
+    df_threshold=pd.DataFrame(threshold_metrics,columns=['PPV_20k_women','PPV_20k_men','NPV_20k_women','NPV_20k_men',
+                                                         'SENS_20k_women','SENS_20k_men','SPEC_20k_women','SPEC_20k_men',
+                                                'PPV_10k_women','PPV_10k_men','NPV_10k_women','NPV_10k_men',
+                                                'SENS_10k_women','SENS_10k_men','SPEC_10k_women','SPEC_10k_men',
+                                                'PPV_relative_women','PPV_relative_men','NPV_relative_women','NPV_relative_men',
+                                                'SENS_relative_women','SENS_relative_men','SPEC_relative_women','SPEC_relative_men',
+                                                'Perc_top20k_women',
+                                                'Perc_relativetop20k_women'],
                  index=index)
     
     df=pd.concat([df_overall,df_threshold],axis=1)
@@ -182,7 +235,8 @@ def table(path, modelname):
     
     return df
 #%%
-df_logistic=table(logistic_predpath,logistic_modelname)
+df_logistic=table(logistic_predpath,logistic_modelname,{'global':logistic_global_model,'separate':[logistic_men_model,logistic_women_model],
+                                                        'same_prevalence':logistic_sameprev_model})
 print(df_logistic.T.round(3).to_latex())
 #%%
 df_log_round=df_logistic.round(3)
@@ -193,7 +247,8 @@ for col in cols:
 print(df.T.to_latex())
 
 #%%
-df_linear=table(linear_predpath,linear_modelname)
+df_linear=table(linear_predpath,linear_modelname,
+                {'global':linear_global_model,'separate':[linear_men_model,linear_women_model]})
 print(df_linear.T.round(3).to_latex())
 #%%
 df_lin_round=df_linear.round(3)
