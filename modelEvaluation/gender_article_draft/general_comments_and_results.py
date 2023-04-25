@@ -25,6 +25,9 @@ import joblib
 from dataManipulation.dataPreparation import getData
 import pandas as pd
 import re
+import seaborn as sns
+from matplotlib import pyplot as plt
+figurepath='/home/aolza/Desktop/estratificacion/figures/gender_article_draft'
 
 logistic_modelpath=config.ROOTPATH+'models/urgcmsCCS_parsimonious/'
 linear_modelpath=config.ROOTPATH+'models/costCCS_parsimonious/'
@@ -49,17 +52,44 @@ log_sameprev_coefs=pd.DataFrame.from_dict({name:[val] for name,val in zip(logist
 print('logistic global female coef:',log_global_coefs.loc['FEMALE'].values )
 print('logistic same prevalence female coef:',log_sameprev_coefs.loc['FEMALE'].values )
 print('linear global female coef:', lin_global_coefs.loc['FEMALE'].values  )
-#%%
 
-"""
-HOSPITALIZATION BIG TABLE
-"""
+#%%
 def concat_preds(file1,file2):
     muj=pd.read_csv(file1)
     muj['FEMALE']=1
     hom=pd.read_csv(file2)
     hom['FEMALE']=0
     return pd.concat([muj,hom])
+for path,modeltype in zip([linear_predpath,logistic_predpath],['linear','logistic']):
+    cal='calibrated' if modeltype=='logistic' else ''
+    separate_preds_w=pd.read_csv(path+f'{modeltype}Mujeres_{cal}_2018.csv')
+    separate_preds_m=pd.read_csv(path+f'{modeltype}Hombres_{cal}_2018.csv')  
+    separate_preds_m['Gender']='Male' ; separate_preds_w['Gender']='Female'
+    if modeltype=='linear':
+        separate_preds_m.loc[separate_preds_m.PRED<0,'PRED']=0
+        separate_preds_w.loc[separate_preds_w.PRED<0,'PRED']=0
+    separate_preds=pd.concat([separate_preds_m,separate_preds_w]).reset_index()
+    df=pd.concat([separate_preds_m.PRED.describe().rename('Men'),separate_preds_w.PRED.describe().rename('Women')],axis=1)
+    print(df)
+    
+    data=separate_preds.nlargest(20000,'PRED')
+    if modeltype=='linear':
+        data=data.nsmallest(len(data)-2,'PRED') #remove two outliers
+        xlabel='Predicted cost in euros'
+    else:
+        xlabel='Predicted probability'
+
+    fig,ax=plt.subplots()
+    plot=sns.kdeplot(data=data,x='PRED',hue='Gender', ax=ax,clip=(data.PRED.min(),data.PRED.max()))
+    ax.set_xlabel(xlabel)
+    plt.tight_layout()
+    plt.savefig(figurepath+f'/{modeltype}_separate_predictions_density.jpeg', dpi=300)
+#%%
+
+"""
+HOSPITALIZATION BIG TABLE
+"""
+
 def patient_selection(x,modeltype):
     x['top20k']=np.where(x.PATIENT_ID.isin(x.nlargest(20000,'PRED').PATIENT_ID),1,0)
     top10k_women=x.loc[x.FEMALE==1].nlargest(10000,'PRED')
