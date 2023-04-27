@@ -28,16 +28,27 @@ import re
 import seaborn as sns
 from matplotlib import pyplot as plt
 figurepath='/home/aolza/Desktop/estratificacion/figures/gender_article_draft'
+CCS=eval(input('CCS? True/False: '))
+ccs='CCS' if CCS else 'ACG'
 
-logistic_modelpath=config.ROOTPATH+'models/urgcmsCCS_parsimonious/'
-linear_modelpath=config.ROOTPATH+'models/costCCS_parsimonious/'
-
-logistic_modelname='logistic20230324_111354'
-linear_modelname='linear20230324_130625'
-
-logistic_predpath=re.sub('models','predictions',logistic_modelpath)
-linear_predpath=re.sub('models','predictions',linear_modelpath)
-
+if CCS:
+    logistic_modelpath=config.ROOTPATH+'models/urgcmsCCS_parsimonious/'
+    linear_modelpath=config.ROOTPATH+'models/costCCS_parsimonious/'
+    
+    logistic_modelname='logistic20230324_111354'
+    linear_modelname='linear20230324_130625'
+    
+    logistic_predpath=re.sub('models','predictions',logistic_modelpath)
+    linear_predpath=re.sub('models','predictions',linear_modelpath)
+else: #ACG
+    logistic_modelpath=config.ROOTPATH+'models/urgcms_excl_nbinj/'
+    linear_modelpath=config.ROOTPATH+'models/cost_ACG/'
+    
+    logistic_modelname='logistic20220705_155354'
+    linear_modelname='linear20221018_103900'
+    
+    logistic_predpath=re.sub('models','predictions',logistic_modelpath)
+    linear_predpath=re.sub('models','predictions',linear_modelpath)
 logistic_global_model=joblib.load(logistic_modelpath+f'{logistic_modelname}.joblib')
 linear_global_model=joblib.load(linear_modelpath+f'{linear_modelname}.joblib')
 logistic_women_model=joblib.load(logistic_modelpath+f'logisticMujeres.joblib')
@@ -87,7 +98,7 @@ for path,modeltype in zip([linear_predpath,logistic_predpath],['linear','logisti
     plot=sns.kdeplot(data=data,x='PRED',hue='Gender', ax=ax,clip=(data.PRED.min(),data.PRED.max()))
     ax.set_xlabel(xlabel)
     plt.tight_layout()
-    plt.savefig(figurepath+f'/{modeltype}_separate_predictions_density.jpeg', dpi=300)
+    plt.savefig(figurepath+f'/{modeltype}_{ccs}_separate_predictions_density.jpeg', dpi=300)
 #%%
 
 """
@@ -112,7 +123,10 @@ def threshold_muj_hom(x,col):
     vpp_women, vpn_women, sens_women, esp_women=c['tp']/(c['tp']+c['fp']),    c['tn']/(c['tn']+c['fn']),    c['tp']/(c['tp']+c['fn']),    c['tn']/(c['tn']+c['fp'])
     c=cm(x.loc[x.FEMALE==0],col)
     vpp_men, vpn_men, sens_men, esp_men=c['tp']/(c['tp']+c['fp']),    c['tn']/(c['tn']+c['fn']),    c['tp']/(c['tp']+c['fn']),    c['tn']/(c['tn']+c['fp'])
-    return(vpp_women, vpp_men, vpn_women, vpn_men, sens_women, sens_men, esp_women, esp_men)
+    p=x.loc[x[col]==1]
+    cp_women=p.loc[p.FEMALE==1].PRED.min()
+    cp_men=p.loc[p.FEMALE==0].PRED.min()
+    return(vpp_women, vpp_men, vpn_women, vpn_men, sens_women, sens_men, esp_women, esp_men, cp_women, cp_men)
 
 import numpy as np
 def healthy_preds_separate(models,modeltype):
@@ -142,7 +156,14 @@ def healthy_preds(model,modeltype,separate=False):
     healthy_predictions['FEMALE=0AGE_85GT']=predict_fn(zeros.copy())
     healthy_predictions['FEMALE=1AGE_85GT']=predict_fn(healthy_patients[f'FEMALE=1AGE_85GT'])
     return healthy_predictions
-
+# def cutpoint(preds, criteria, separate):
+#     p=preds.loc[preds[criteria]==1]
+#     if separate:
+#         women=p.loc[p.FEMALE==1].PRED.min()
+#         men=p.loc[p.FEMALE==0].PRED.min()
+#         return [women,men]
+#     else:
+#         return [p.PRED.min()]
 def table(path, modelname, models):
     modeltype=re.sub('[0-9]|_','',modelname) #this string will contain either "logistic" or "linear"
     cal='calibrated' if modeltype=='logistic' else ''
@@ -160,6 +181,7 @@ def table(path, modelname, models):
         sameprevalence_preds=concat_preds(path+'logistic_gender_balanced_Mujeres_calibrated_2018.csv',
                                           path+'logistic_gender_balanced_Hombres_calibrated_2018.csv')
         allpreds=[global_preds,separate_unproblematic_preds,sameprevalence_preds]
+        separate_flag=[False,True,False]
         # Overall metrics: auc and brier
         from sklearn.metrics import roc_auc_score,brier_score_loss 
         def AUC_muj(x): return roc_auc_score(np.where(x.loc[x.FEMALE==1].OBS,1,0),x.loc[x.FEMALE==1].PRED)
@@ -172,6 +194,7 @@ def table(path, modelname, models):
     else:
         index=['global','separate']
         allpreds=[global_preds,separate_unproblematic_preds]
+        separate_flag=[False,True]
         #Overall metrics: R2 and RMSE
         from sklearn.metrics import r2_score,mean_squared_error 
         def R2_muj(x): return r2_score(x.loc[x.FEMALE==1].OBS,x.loc[x.FEMALE==1].PRED)
@@ -211,17 +234,23 @@ def table(path, modelname, models):
         sameprevalence_preds['relativePRED']=sameprevalence_preds.PRED/sameprevalence_preds.BASELINE
         sameprevalence_preds=patient_selection(sameprevalence_preds,modeltype)
     # In either case, we use the same threshold-specific metrics
-    threshold_metrics=[np.array([threshold_muj_hom(x, 'top20k'),threshold_muj_hom(x, 'top10k_gender'),threshold_muj_hom(x, 'relative_top20k')]).ravel() for  x in allpreds]
+    threshold_metrics=[np.array([threshold_muj_hom(x, 'top20k'),
+                                 threshold_muj_hom(x, 'top10k_gender'),
+                                 threshold_muj_hom(x, 'relative_top20k')]).ravel() for  x in allpreds]
     
-    threshold_metrics=[list(e)+list([100*x.loc[x.top20k==1].FEMALE.sum()/x.top20k.sum(),100*x.loc[x.relative_top20k==1].FEMALE.sum()/x.top20k.sum()]) for e,x in zip(threshold_metrics, allpreds)]
+    threshold_metrics=[list(e)+list([100*x.loc[x.top20k==1].FEMALE.sum()/x.top20k.sum(),
+                                     100*x.loc[x.relative_top20k==1].FEMALE.sum()/x.top20k.sum()]
+                                    ) for e,x in zip(threshold_metrics, allpreds)]
     
     df_threshold=pd.DataFrame(threshold_metrics,columns=['PPV_20k_women','PPV_20k_men','NPV_20k_women','NPV_20k_men',
                                                          'SENS_20k_women','SENS_20k_men','SPEC_20k_women','SPEC_20k_men',
+                                                         'Cutpoint_top20k_women','Cutpoint_top20k_men',
                                                 'PPV_10k_women','PPV_10k_men','NPV_10k_women','NPV_10k_men',
                                                 'SENS_10k_women','SENS_10k_men','SPEC_10k_women','SPEC_10k_men',
+                                                'Cutpoint_10k_women','Cutpoint_10k_men',
                                                 'PPV_relative_women','PPV_relative_men','NPV_relative_women','NPV_relative_men',
                                                 'SENS_relative_women','SENS_relative_men','SPEC_relative_women','SPEC_relative_men',
-                                                'Perc_top20k_women',
+                                                'Cutpoint_relative_women','Cutpoint_relative_men','Perc_top20k_women',
                                                 'Perc_relativetop20k_women'],
                  index=index)
     
