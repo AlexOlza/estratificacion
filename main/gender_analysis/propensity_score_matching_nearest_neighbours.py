@@ -85,12 +85,11 @@ def load_pairs(filename,directory=config.DATAPATH):
     return(pairs)
 #%%
 np.random.seed(config.SEED)
-no_duplicates=eval(input('Drop duplicates? (True/False) '))
 plot=eval(input('Make plots? (True/False) '))
 evaluate_matching=eval(input('Evaluate matching? (True/False) '))
 prefix=input('Enter prefix: ')
     #%%
-X,y=getData(2016)
+X,y=getData(2016, columns=['COSTE_TOTAL_ANO2'])
 Xx,yyy=getData(2016, columns=['urgcms'])
 original_columns=X.columns
 intersection=set(X.PATIENT_ID).intersection(set(Xx.PATIENT_ID))
@@ -126,7 +125,7 @@ initial_AUC=roc_auc_score(X.FEMALE, propensity_scores)
 print('Initial AUC for propensity scores: ', initial_AUC)
 #%%
 """ PERFORM MATCHING OR RELOAD PAIRS FROM FILE """
-if   Path(filename).is_file():
+if not  Path(filename).is_file():
    
     X.loc[:,'propensity_score'] = propensity_scores
     X.loc[:,'propensity_score_logit'] = propensity_logit
@@ -150,52 +149,28 @@ if   Path(filename).is_file():
     common_support = (propensity_logit > -150) & (propensity_logit < 40)
     caliper = np.std(propensity_logit[common_support]) * 0.25
     
-    print('\nCaliper (radius) is: {:.4f}\n'.format(caliper))#radius is 1,1450
-    
-    # knn = NearestNeighbors(n_neighbors=2 , p = 2, radius=caliper,n_jobs=-1)
-    # knn.fit(propensity_logit.reshape(-1, 1))
-    
-    
-    # X.index=range(len(X))
-    # distances , indexes = knn.kneighbors(
-    #     X.propensity_score_logit.to_numpy().reshape(-1, 1), \
-    #     n_neighbors=2)
+    print('\nCaliper (radius) is: {:.4f}\n'.format(caliper))
         
     pairs=get_matching_pairs(X.loc[X.FEMALE==1][list(original_columns)+['propensity_score','propensity_score_logit']],
                              X.loc[X.FEMALE==0][list(original_columns)+['propensity_score','propensity_score_logit']],
                              caliper)
-    
-    # print('For item 0, the 4 closest distances are (first item is self):')
-    # for ds in distances[0,0:4]:
-    #     print('Element distance: {:4f}'.format(ds))
-    # print('...')
-   
-   
-    # X['matched_element'] = X.reset_index().apply(perfom_matching_v2, axis = 1, args = (indexes, X))
-    
-    # females=X.loc[~X.matched_element.isna()]
-    # males=X.loc[X.index.isin(X.matched_element)]
 
-    # pairs=pd.concat([males, females])
-
-    pairs.to_csv(filename, index=False)
-    print('Saved ',filename)
-else:
-    pairs=load_pairs(filename)
-   
-#%%
-
-if no_duplicates:
     females_=pairs.loc[pairs.FEMALE==1].drop_duplicates('counterfactual')
     males_=pairs.loc[pairs.FEMALE==0].drop_duplicates(original_columns)
     pairs=pd.concat([males_, females_]).sample(frac=1)# to shuffle the data
     pairs.index=range(len(pairs))
 
-pairs['outcome']=pd.merge(pairs,y, on='PATIENT_ID')[config.COLUMNS]
+    pairs.to_csv(filename, index=False)
+    print('Saved ',filename)
+else:
+    pairs=load_pairs(filename) 
 #%%
+
+pairs['outcome']=pd.merge(pairs,y, on='PATIENT_ID')[config.COLUMNS]
 threshold= 0 if config.ALGORITHM=='logistic' else y[config.COLUMNS].mean().values[0]
 X['binary_outcome']=(y[config.COLUMNS]>threshold)
 pairs['binary_outcome']=(pairs.outcome>threshold)
+#%%
 if evaluate_matching:
     print('Evaluating matches...')
     if plot:
@@ -212,59 +187,123 @@ if evaluate_matching:
         plt.show()
         
         
-        fig, ax = plt.subplots(2,1)
-        fig.suptitle('Comparison of {} split by outcome and treatment status'.format('propensity_score_logit'))
-        sns.stripplot(data = X, y = 'binary_outcome', alpha=0.5, x = 'propensity_score_logit', hue = 'FEMALE', orient = 'h', ax = ax[0]).set(title = 'Before matching', xlim=(-6, 4))
-        sns.stripplot(data = pairs, y = 'binary_outcome', alpha=0.5, x = 'propensity_score_logit', hue = 'FEMALE', ax = ax[1] , orient = 'h').set(title = 'After matching', xlim=(-6, 4))
-        plt.subplots_adjust(hspace = 0.3)
-        plt.savefig(os.path.join(config.FIGUREPATH,f'{prefix}two_stripplot.png'))
-        plt.show()
+        # fig, ax = plt.subplots(2,1)
+        # fig.suptitle('Comparison of {} split by outcome and treatment status'.format('propensity_score_logit'))
+        # sns.stripplot(data = X, y = 'binary_outcome', alpha=0.5, x = 'propensity_score_logit', hue = 'FEMALE', orient = 'h', ax = ax[0]).set(title = 'Before matching', xlim=(-6, 4))
+        # sns.stripplot(data = pairs, y = 'binary_outcome', alpha=0.5, x = 'propensity_score_logit', hue = 'FEMALE', ax = ax[1] , orient = 'h').set(title = 'After matching', xlim=(-6, 4))
+        # plt.subplots_adjust(hspace = 0.3)
+        # plt.savefig(os.path.join(config.FIGUREPATH,f'{prefix}two_stripplot.png'))
+        # plt.show()
         
         sns.set(rc={'figure.figsize':(10,60)}, font_scale=1.0)
-        def cohenD (tmp, metricName):
+        def effect_size (tmp, metricName, OR=True):
             treated_metric = tmp[tmp.FEMALE == 1][metricName]
             untreated_metric = tmp[tmp.FEMALE == 0][metricName]
-            
-            d = ( treated_metric.mean() - untreated_metric.mean() ) / np.sqrt(((treated_metric.count()-1)*treated_metric.std()**2 + (untreated_metric.count()-1)*untreated_metric.std()**2) / (treated_metric.count() + untreated_metric.count()-2))
-            return d
+            if OR:
+                p_treated=treated_metric.sum()/len(treated_metric)
+                p_untreated=untreated_metric.sum()/len(untreated_metric)
+                effect=p_treated*(1-p_untreated)/(p_untreated*(1-p_treated))
+            else: #compute Cohen's d
+                effect = ( treated_metric.mean() - untreated_metric.mean() ) / np.sqrt(((treated_metric.count()-1)*treated_metric.std()**2 + (untreated_metric.count()-1)*untreated_metric.std()**2) / (treated_metric.count() + untreated_metric.count()-2))
+            return effect
         data = []
-        cols = [c for c in original_columns if not (c=='FEMALE') or (c=='PATIENT_ID')]
-        for cl in cols:
-            data.append([cl,'before', cohenD(X,cl)])
-            data.append([cl,'after', cohenD(pairs,cl)])
+        cols = [c for c in original_columns if not ((c=='FEMALE') or (c=='PATIENT_ID'))]
+
+        def eff_OR(tmp,cols):
+            treated=tmp[tmp.FEMALE == 1][cols]
+            untreated=tmp[tmp.FEMALE == 0][cols]
+            p_t=treated.sum()/len(treated)
+            p_u=untreated.sum()/len(untreated)
+            effect=pd.Series(np.where(p_u==0,np.nan,p_t*(1-p_u)/(p_u*(1-p_t))),index=cols)
+            return effect
+        import textwrap
+        def wrap_labels(ax, width, break_long_words=False):
+            labels = []
+            for label in ax.get_yticklabels():
+                text = label.get_text()
+                labels.append(textwrap.fill(text, width=width,
+                              break_long_words=break_long_words))
+            ax.set_yticklabels(labels, rotation=0)
+            
+        effect_before=eff_OR(X, cols)
+        effect_before=effect_before.loc[effect_before!=0].dropna()
+        effect_after=eff_OR(pairs, cols)
+        effect_after=effect_after.loc[effect_after!=0].dropna()
+        effect_after=effect_after.loc[effect_after.index.isin(effect_before.index)]
+        effect_before=effect_before.loc[effect_before.index.isin(effect_after.index)]
+        
+        to_df=[[var, before, after] for var, before, after in zip(effect_before.index, effect_before.values, effect_after.values)]
+        res_plot=pd.DataFrame(to_df, columns=['variable','before','after'])
+        res_plot['N_women_before']=[X.loc[X[var]==1].FEMALE.sum() for var in res_plot.variable.values]
+        res_plot['N_men_before']=[len(X.loc[X[var]==1])-X.loc[X[var]==1].FEMALE.sum() for var in res_plot.variable.values]
+        res_plot['N_women_after']=[pairs.loc[pairs[var]==1].FEMALE.sum() for var in res_plot.variable.values]
+        res_plot['N_men_after']=[len(pairs.loc[pairs[var]==1])-pairs.loc[pairs[var]==1].FEMALE.sum() for var in res_plot.variable.values]
         
         descriptions=pd.read_csv(config.DATAPATH+'CCSCategoryNames_FullLabels.csv')
+        genitoCCS='PHARMA_Benign_prostatic_hyperplasia|CCS(2[4-9]$|3[0-1]$|46$|16[3-9]$|17[0-9]$|18[0-9]$|19[0-6]$|215$)'
         
         
-        res_plot = pd.DataFrame(data, columns=['variable','matching','effect_size'])
+        # res_plot = pd.DataFrame(data, columns=['variable','matching','effect_size'])
         res_plot['CATEGORIES']=res_plot.variable
-        res_plot.loc[res_plot.variable.str.startswith('CCS'),'description']=pd.merge(descriptions, res_plot, on='CATEGORIES').LABELS
+        res_plot['description']=np.nan
+        res_plot.loc[res_plot.variable.str.startswith('CCS'),'description']=pd.merge(descriptions, res_plot, on='CATEGORIES',how='right').LABELS
         res_plot.description=np.where(res_plot.description.isna(), res_plot.variable, res_plot.description)
-        res_plot['effect_size_abs']=res_plot.effect_size.abs()
-        largest_after=res_plot.loc[res_plot.matching=='after'].nlargest(10,'effect_size_abs')
-        largest_before=res_plot.loc[res_plot.matching=='before'].nlargest(10,'effect_size_abs')
-        res_plot_before=res_plot.loc[res_plot.variable.isin(largest_before.variable.values)]
-        sns.set(rc={'figure.figsize':(25,10)}, font_scale=2.0)
+        # res_plot.description=[v for v in res_plot.description.values]
+        # res_plot=res_plot.loc[(res_plot.before!=0) & (res_plot.after!=0)]
+        res_plot=res_plot.loc[~res_plot.variable.str.contains(genitoCCS)]
+        res_plot['log_before']=res_plot.before
+        res_plot['log_after']=res_plot.after
         
-        sn_plot = sns.barplot(data = res_plot_before, y = 'description', x = 'effect_size_abs', hue = 'matching', orient='h')
-        # sn_plot.set(title='Standardised Mean differences accross covariates before and after matching')
-        plt.xlabel('Effect size (absolute value)')
+        sns.set(rc={'figure.figsize':(40,20)}, font_scale=3.0)
+        fig, ax = plt.subplots(1,1)
+        before_plot=pd.concat([res_plot.nlargest(5,'before'),res_plot.nsmallest(5,'before')])[['description','variable','log_before','N_women_before','N_men_before','N_women_after','N_men_after']]
+        before_plot['matching']='before'
+        before_plot['OR_minus_one']=before_plot.log_before-1
+        before_plot_after=pd.concat([res_plot.nlargest(5,'before'),res_plot.nsmallest(5,'before')])[['description','variable','log_after','N_women_before','N_men_before','N_women_after','N_men_after']]
+        before_plot_after['matching']='after'
+        before_plot_after['OR_minus_one']=before_plot_after.log_after-1
+        before_plot['label']='M: '+before_plot.N_men_before.astype(str)+'\nW: '+before_plot.N_women_before.astype(str)
+        before_plot_after['label']='M: '+before_plot_after.N_men_after.astype(str)+'\nW: '+before_plot_after.N_women_after.astype(str)
+        df_plot_before=pd.concat([before_plot,before_plot_after])
+        sn_plot = sns.barplot(data = df_plot_before,left=1,hue_order=['before','after'], y = 'description', hue='matching', x= 'OR_minus_one', orient='h', ax=ax)
+
+        # _ = ax.bar_label(ax.containers[0], labels=before_plot.label)
+        # _ = ax.bar_label(ax.containers[1], labels=before_plot_after.label)
+        sn_plot.set_xscale("log")
+        
+        wrap_labels(ax, 50)
+        plt.xlabel('Odds Ratio')
+        plt.axvline(x=1)
+
         plt.tight_layout()
-        sn_plot.figure.savefig(os.path.join(config.FIGUREPATH,f"{prefix}two_all_standardised_mean_differences.jpeg"), dpi=300)
+        sn_plot.figure.savefig(os.path.join(config.FIGUREPATH,f"{prefix}psm_odds_ratios_nongenito_before.jpeg"), dpi=300)
+        plt.show()
         
+        fig, ax = plt.subplots(1,1)
+        after_plot=pd.concat([res_plot.nlargest(5,'after'),res_plot.nsmallest(5,'after')])[['description','variable','log_after']]
+        after_plot['matching']='after'
+        after_plot['OR_minus_one']=after_plot.log_after-1
+        after_plot_before=pd.concat([res_plot.nlargest(5,'after'),res_plot.nsmallest(5,'after')])[['description','variable','log_before']]
+        after_plot_before['matching']='before'
+        after_plot_before['OR_minus_one']=after_plot_before.log_before-1
+        df_plot_after=pd.concat([after_plot,after_plot_before])
+        sn_plot = sns.barplot(data = df_plot_after,left=1,hue_order=['before','after'], y = 'description', hue='matching', x= 'OR_minus_one', orient='h',ax=ax)
+        wrap_labels(ax, 50)
+        plt.xlabel('Odds Ratio')
+        sn_plot.set_xscale("log")
+        plt.axvline(x=1)
+        plt.tight_layout()
+        sn_plot.figure.savefig(os.path.join(config.FIGUREPATH,f"{prefix}psm_odds_ratios_nongenito_after.jpeg"), dpi=300)
+        plt.show()
+
+       
         print('Range of effect sizes before matching: ',
-              res_plot.loc[res_plot.matching=='before'].nlargest(1,'effect_size')[['effect_size','description']],
-              res_plot.loc[res_plot.matching=='before'].nsmallest(1,'effect_size')[['effect_size','description']])
+              df_plot_before.nlargest(1,'log_before')[['log_before','description']].values,
+              df_plot_before.nsmallest(1,'log_before')[['log_before','description']].values)
         print('Range of effect sizes after matching: ',
-            res_plot.loc[res_plot.matching=='after'].nlargest(1,'effect_size')[['effect_size','description']],
-              res_plot.loc[res_plot.matching=='after'].nsmallest(1,'effect_size')[['effect_size','description']])
+            df_plot_after.nlargest(1,'log_before')[['log_before','description']],
+            df_plot_after.nsmallest(1,'log_before')[['log_before','description']])
         
-        res_plot=res_plot.loc[res_plot.variable.isin(largest_after.variable.values)]
-        sns.set(rc={'figure.figsize':(25,10)}, font_scale=2.0)
-        sn_plot = sns.barplot(data = res_plot, y = 'description', x = 'effect_size_abs', hue = 'matching', orient='h')
-        sn_plot.set(title='Standardised Mean differences accross covariates before and after matching')
-        plt.tight_layout()
-        sn_plot.figure.savefig(os.path.join(config.FIGUREPATH,f"{prefix}two_all_standardised_mean_differences2.jpeg"), dpi=300)
         
     #%%
     # Evaluate the decrease in AUC
@@ -277,7 +316,7 @@ if evaluate_matching:
     print('After matching, AUC for new propensity scores: ', new_AUC)
 #%%
 overview = pairs[['outcome','FEMALE']].groupby(by = ['FEMALE']).aggregate([np.mean, np.var, np.std, 'count'])
-print(overview)
+print(overview.to_latex(index=False))
 
 treated_outcome = overview['outcome']['mean'][1]
 treated_counterfactual_outcome = overview['outcome']['mean'][0]
@@ -297,7 +336,7 @@ if config.ALGORITHM=='linear':
 
 #%%
 overview2 = pairs[['binary_outcome','FEMALE']].groupby(by = ['FEMALE']).aggregate(['sum',np.mean, np.var, np.std, 'count'])
-print(overview2)
+print(overview2.to_latex())
 treated_outcome = overview2['binary_outcome']['mean'][1]
 treated_counterfactual_outcome = overview2['binary_outcome']['mean'][0]
 att2 = treated_outcome - treated_counterfactual_outcome
