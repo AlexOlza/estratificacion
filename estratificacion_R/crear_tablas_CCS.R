@@ -4,6 +4,38 @@ library(stringr)
 
 remove_non_alphanumeric <- function(string) return(str_replace_all(pattern = '[^[:alnum:]]', replacement='',string=string))
 
+#Functions that do the same as I did in Python
+missingDX <- function(dic,diag) return(unique(diag$CODE[!diag$CODE %in% unique(dic$CODE)])) #detects missing diagnoses
+
+guessingCCS <- function(missingdx, dictionary){  # asume el CCS quitando "lo que cuelga"
+  success <- list() ; failure <- list()
+  for (dx in missingdx) {
+    if (! dx=='ONCOLO'){
+      i<-1
+      options<-unique(dictionary[startsWith(dictionary$CODE,dx)]$CCS)
+      code<-dx
+      while ((length(options)==0) & (i<=length(dx))){ 
+        i=i+1
+        print(code)
+        code <- str_sub(dx,end=-i)
+        options<-unique(startsWith(dictionary[dictionary$CODE],code)$CCS)
+        }
+        
+    }
+  }
+}
+
+
+if '259' in options and len(options)>=2: options.remove('259') #CCS 259 is for residual unclassified codes
+if len(options)==1:
+  success[(dx, code)]=options[0]
+else:
+  failure[(dx, code)]=options
+# break
+print(failure)
+return(success, failure)
+
+
 CCS_table <- function(year){
   year <- as.character(year)
   if (file.exists(as.character(config$ficheros_ccs[year]))){
@@ -35,9 +67,9 @@ CCS_table <- function(year){
                                  icd9$`CCS LVL 2 LABEL`,
                                  icd9$`CCS LVL 3 LABEL`,
                                  icd9$`CCS LVL 4 LABEL`,sep = ';')
-      #extract the number that is followed by a dot and a bracket. This is the CCS number.
+      #extract the number that is followed by a dot (optional) and a bracket. This is the CCS number.
       #Example: "... BACTERIAL INFECTION;TUBERCULOSIS [1.]" ----> "1"
-      icd9[, CCS := (str_extract(DESCRIPTION, '([0-9]+)(?=\\.\\])'))]  
+      icd9[, CCS := (str_extract(DESCRIPTION, '([0-9]+)(?=\\.?\\])'))]  
       # Truncate the code at the 5th digit, add the ICD version (which is 9), rename columns
       colnames(icd9)[colnames(icd9) == 'ICD-9-CM CODE']<-'CODE'
       icd9$CODE<-substr(icd9$CODE, 1, 5)
@@ -56,14 +88,38 @@ CCS_table <- function(year){
       icd10cm<-icd10cm[, c('CODE','CCS','DESCRIPTION','CIE_VERSION')]
       
   # PREPROCESSING DIAGNOSES
-      colnames(diags)[colnames(diags) == 'CIE_CODE'] <-'CODE'
-      diags[, c('CODE','CIE_VERSION')] <- diags[, lapply(.SD, as.character),.SDcols=c('CODE','CIE_VERSION')]
-      diags[, c('CODE','CIE_VERSION')] <- diags[, lapply(.SD, remove_non_alphanumeric),.SDcols=c('CODE','CIE_VERSION')] 
+      colnames(diags)[colnames(diags) == 'CIE_CODE'] <-'CODE' #for uniformity, I rename the column
+      diags[, c('CODE','CIE_VERSION')] <- diags[, lapply(.SD, as.character),.SDcols=c('CODE','CIE_VERSION')] #every column as character
+      diags[, c('CODE','CIE_VERSION')] <- diags[, lapply(.SD, remove_non_alphanumeric),.SDcols=c('CODE','CIE_VERSION')] #remove non-alphanumeric chars including spaces
       
       diags[startsWith(diags$CIE_VERSION,'9'),'CIE_VERSION']='9'
       diags[startsWith(diags$CIE_VERSION,'10'),'CIE_VERSION']='10'
-
+      
+      # ICD10CM diagnoses that begin with a number are grouped all together
       diags[diags$CIE_VERSION=='10' & grepl("^[0-9]", diags$CODE),'CODE']='ONCOLOGY'
+      
+      # We truncate ICD9 codes and ICD10CM codes at the 5th and the 6th position, respectively
+      # we act only on the necessary lines, otherwise this is very slow
+      diags[diags$CIE_VERSION=='9' & nchar(diags$CODE)>5, CODE := str_sub(diags[diags$CIE_VERSION=='9' & nchar(diags$CODE)>5, 'CODE'], 1,5)]
+      diags[diags$CIE_VERSION=='10' & nchar(diags$CODE)>6, CODE := str_sub(diags[diags$CIE_VERSION=='10' & nchar(diags$CODE)>6,'CODE'], 1,6)]
+      
+      # We drop null diagnoses
+      print(sprintf('Dropping %s NULL codes:',nrow(diags[is.na(diags$CODE),])))
+      diags<-na.omit(diags,cols='CODE')
+
+  # QUALITY CHECKS: Check that all the dx in the icd9 and icd10cm dictionaries have an assigned CCS
+      if (any(is.na(icd9$CCS))) stop('Some codes in the ICD9 dictionary have not been assigned a CCS :(')
+      if (any(is.na(icd10cm$CCS))) stop('Some codes in the ICD10CM dictionary have not been assigned a CCS :(')
+      if (any(is.na(diags))) stop('Null values encountered after preprocessing the diagnoses :(')
+      
+  # PERFORM MANUAL REVISION ON MISSING CODES
+      missing_in_icd9<-missingDX(icd9,diags[diags$CIE_VERSION=='9'])
+      missing_in_icd10cm<-missingDX(icd10cm,diags[diags$CIE_VERSION=='10'])
+      print(sprintf('Missing quantity ICD9: %s', length(missing_in_icd9)))
+      print(sprintf('Missing quantity ICD10: %s', length(missing_in_icd10cm)))
+      success9, failure9=guessingCCS(missing_in_icd9, icd9)
+      icd9=assign_success(success9,icd9)
+      
 }
 
 year <-2016
