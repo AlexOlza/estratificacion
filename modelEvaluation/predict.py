@@ -90,7 +90,7 @@ def predict_save(yr,model,model_name,X,y,**kwargs):
             print(i,'/',n)
             chunk = X.loc[index_slice] # your dataframe chunk ready for use
             ychunk=y.loc[index_slice]
-            if 'COSTE_TOTAL_ANO2' in config.COLUMNS:
+            if 'COSTE_TOTAL_ANO2' in columns:
                 predictions=model.predict(chunk.drop('PATIENT_ID',axis=1)).ravel() # predicted cost
             else:
                 if 'neural' in filename:
