@@ -116,6 +116,7 @@ def predict(model_name,experiment_name,year,**kwargs):
     predictors=kwargs.get('predictors',config.PREDICTORREGEX)
     custom_objects=kwargs.get('custom_objects',None)
     filename=kwargs.get('filename',model_name)
+    kwargs.pop('filename',None) #To avoid passing multiple values for keyword argument 'filename' to predict_save
     modelfilename=os.path.join(re.sub(config.EXPERIMENT,experiment_name,config.MODELPATH),model_name)
     
     if Path(modelfilename):
@@ -144,6 +145,8 @@ def predict(model_name,experiment_name,year,**kwargs):
     
     Xx=kwargs.get('X',None)
     Yy=kwargs.get('y',None)
+    kwargs.pop('X',None) #To avoid passing multiple values for keyword argument 'filename' to predict_save
+    kwargs.pop('y',None) #To avoid passing multiple values for keyword argument 'filename' to predict_save
     if no_predictions_found:
         if (not isinstance(Xx,pd.DataFrame)) or (not isinstance(Yy,pd.DataFrame)):
             Xx,Yy=getData(year-1,predictors=predictors)
@@ -181,7 +184,7 @@ def predict(model_name,experiment_name,year,**kwargs):
         print('No predictions found')
         predict_save(year, model,model_name, Xx, Yy, 
                      filename=predFilename,
-                     predictors=predictors, verbose=False)
+                     predictors=predictors, verbose=False, **kwargs)
         uncalibrated_predictions_found=True
     if calibrated_predictions_found:
         print('Calibrated predictions found; loading')
