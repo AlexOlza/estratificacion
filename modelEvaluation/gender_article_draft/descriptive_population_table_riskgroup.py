@@ -57,13 +57,19 @@ def table_1(X,y,Xcost, ycost, descriptions, chosen_CCSs,ages):
             
             #f'{inmen} ({round(100*inmen/len(topK),2)} %)',f'{inwomen} ({round(100*inwomen/len(X),2)} %)']
         else:
+            men_=men.copy()
+            women_=women.copy()
+            X_=X.copy()
             inmen,inwomen, inpopulation= 0, 0, 0
             for ccs in chosen_CCS_group:
                 chosen_CCS=f'CCS{ccs}'
-                # print(topK[chosen_CCS].sum(),'people have ',chosen_CCS)
-                inpopulation+=X[chosen_CCS].sum()
-                inmen+=men[chosen_CCS].sum()
-                inwomen+=women[chosen_CCS].sum()
+                print(X_[chosen_CCS].sum(),'people have ',chosen_CCS)
+                inpopulation+=X_[chosen_CCS].sum()
+                inmen+=men_[chosen_CCS].sum()
+                inwomen+=women_[chosen_CCS].sum()
+                men_=men_.loc[men_[chosen_CCS]==0]
+                women_=women_.loc[women_[chosen_CCS]==0]
+                X_=X_.loc[X_[chosen_CCS]==0]
             table[descriptions.loc[descriptions.CATEGORIES==chosen_CCS].LABELS.values[0]]=[round(100*inpopulation/len(X),2),round(100*inmen/len(men),2) ,round(100*inwomen/len(women),2) ]        
     table=pd.DataFrame.from_dict(table,orient='index',columns=['All','Male', 'Female'])
     # print(table.sort_values('Mujeres',ascending=False).to_markdown())
