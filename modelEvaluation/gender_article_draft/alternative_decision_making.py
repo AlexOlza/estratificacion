@@ -238,3 +238,5 @@ print(tablelin.T.to_latex())
     Porcentaje de  mujeres entre los 20k de mayor coste observado
 """
 table_linear['Prop_equit']=100*allpreds_lin.loc[allpreds_lin['should_be_selected_top20k']==1].FEMALE.sum()/20000
+
+allpreds.loc[allpreds.FEMALE==1].should_be_selected_.sum()/allpreds.should_be_selected_.sum()
