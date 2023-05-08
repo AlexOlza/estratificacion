@@ -25,7 +25,7 @@ import numpy as np
 from dataManipulation.dataPreparation import getData
 from modelEvaluation.compare import performance
 #%%
-X, y = getData(2017)
+X, y = getData(2017,columns='urgcms')
 Xcost, ycost=getData(2017, columns='COSTE_TOTAL_ANO2')
 #%%
 descriptions=pd.read_csv(config.DATAPATH+'CCSCategoryNames_FullLabels.csv')
