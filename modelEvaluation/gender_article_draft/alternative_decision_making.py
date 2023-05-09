@@ -297,7 +297,7 @@ dataframe.index=['Primeros 5000', 'Siguientes 5000', 'Siguientes 10000', 'Primer
 
 print(dataframe)
 #%%
-"""
+
 
 #%%
 """
