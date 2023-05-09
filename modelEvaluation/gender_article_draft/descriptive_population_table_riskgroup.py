@@ -38,10 +38,16 @@ def new_age_groups(X):
                                     agesRisk['Grupo edad'],
                                     agesRisk['Grupo edad'].str[:2]+'-'+agesRisk['Grupo edad'].str[2:])
     agesRisk['Porcentaje']=agesRisk[0]
-    agesRisk=agesRisk[['Grupo edad', 'Porcentaje']]
-    agesRisk.loc['AGE_7584']=['75-84',agesRisk.loc['AGE_7579'].Porcentaje+agesRisk.loc['AGE_8084'].Porcentaje]
-    agesRisk.loc['AGE_6574']=['65-74',agesRisk.loc['AGE_6569'].Porcentaje+agesRisk.loc['AGE_7074'].Porcentaje]
-    agesRisk.loc['AGE_1854']=['18-54',agesRisk.loc['AGE_1834'].Porcentaje+agesRisk.loc['AGE_3544'].Porcentaje+agesRisk.loc['AGE_4554'].Porcentaje]
+    agesRisk['N']=pd.DataFrame(X.filter(regex=("AGE*")).idxmax(1).value_counts())[0]
+    agesRisk=agesRisk[['Grupo edad', 'Porcentaje', 'N']]
+    agesRisk.loc['AGE_7584']=['75-84',agesRisk.loc['AGE_7579'].Porcentaje+agesRisk.loc['AGE_8084'].Porcentaje,
+                              agesRisk.loc['AGE_7579'].N+agesRisk.loc['AGE_8084'].N]
+    agesRisk.loc['AGE_6574']=['65-74',agesRisk.loc['AGE_6569'].Porcentaje+agesRisk.loc['AGE_7074'].Porcentaje,
+                              agesRisk.loc['AGE_6569'].N+agesRisk.loc['AGE_7074'].N]
+    agesRisk.loc['AGE_1854']=['18-54',agesRisk.loc['AGE_1834'].Porcentaje+agesRisk.loc['AGE_3544'].Porcentaje+agesRisk.loc['AGE_4554'].Porcentaje,
+                              agesRisk.loc['AGE_1834'].N+agesRisk.loc['AGE_3544'].N+agesRisk.loc['AGE_4554'].N]
+    
+    
     return agesRisk
 def table_1(X,y,Xcost, ycost, descriptions, chosen_CCSs,ages):
     table={}
@@ -84,20 +90,35 @@ def table_1(X,y,Xcost, ycost, descriptions, chosen_CCSs,ages):
         table.loc[col]=[round(agesRisk_population.loc[col].Porcentaje,2),
                                     round(agesRisk_men.loc[col].Porcentaje,2),
                                     round(agesRisk_women.loc[col].Porcentaje,2)]
-        
+        table.loc[f'N {col}']=[agesRisk_population.loc[col].N,
+                                    agesRisk_men.loc[col].N,
+                                    agesRisk_women.loc[col].N]
     y['FEMALE']=X.FEMALE
     y['hospit']=np.where(y.urgcms>=1,1,0)
     prev_all=y.hospit.sum()*100/len(y)
     prev_men=y.loc[y.FEMALE==0].hospit.sum()*100/len(y.loc[y.FEMALE==0])
     prev_women=y.loc[y.FEMALE==1].hospit.sum()*100/len(y.loc[y.FEMALE==1])
     table.loc['Prevalence of hospitalization']=[round(prev_all,2),round(prev_men,2),round(prev_women,2)]
-    
+    for age in ages:
+        y_=y.loc[y.PATIENT_ID.isin(X.loc[X[age]==1].PATIENT_ID)]
+        prev_all=y_.hospit.sum()*100/len(y_)
+        prev_men=y_.loc[y_.FEMALE==0].hospit.sum()*100/len(y_.loc[y_.FEMALE==0])
+        prev_women=y_.loc[y_.FEMALE==1].hospit.sum()*100/len(y_.loc[y_.FEMALE==1])
+        table.loc[f'Prevalence of hospit. {age}']=[round(prev_all,2),round(prev_men,2),round(prev_women,2)]
+        
     ycost['FEMALE']=Xcost.FEMALE
     mean_all=ycost.COSTE_TOTAL_ANO2.mean()
     mean_men=ycost.loc[ycost.FEMALE==0].COSTE_TOTAL_ANO2.mean()
     mean_women=ycost.loc[ycost.FEMALE==1].COSTE_TOTAL_ANO2.mean()
     table.loc['Mean cost (euro)']=[round(mean_all,2),round(mean_men,2),round(mean_women,2)]
     
+    for age in ages:
+        ycost_=ycost.loc[ycost.PATIENT_ID.isin(X.loc[X[age]==1].PATIENT_ID)]
+        mean_all=ycost_.COSTE_TOTAL_ANO2.mean()
+        mean_men=ycost_.loc[ycost_.FEMALE==0].COSTE_TOTAL_ANO2.mean()
+        mean_women=ycost_.loc[ycost_.FEMALE==1].COSTE_TOTAL_ANO2.mean()
+        table.loc[f'Mean cost (euro) {age}']=[round(mean_all,2),round(mean_men,2),round(mean_women,2)]
+        
     
     return table
 
@@ -148,3 +169,53 @@ if __name__=='__main__':
     print(t1bis.to_latex())    
     
     fullt1=pd.merge(t1,t1bis,left_index=True,right_index=True)
+    print(fullt1.to_latex())   
+#%%
+
+import matplotlib.pyplot as plt
+
+df=fullt1.loc[fullt1.index.str.startswith('Mean cost (euro) AGE')]
+ax=df[['All_x','Male_x','Female_x']].plot(rot=90)
+ax.set_title("Población general",color='black')
+ax.legend(bbox_to_anchor=(1.0, 1.0))
+ax.plot()
+ax.set_xticks(range(len(df)));
+ax.set_xticklabels(df.index, rotation=90);
+
+ax=df[['All_y','Male_y','Female_y']].plot(rot=90)
+ax.set_title("Grupo riesgo",color='black')
+ax.legend(bbox_to_anchor=(1.0, 1.0))
+ax.plot()
+ax.set_xticks(range(len(df)));
+ax.set_xticklabels(df.index, rotation=90);
+
+#%%
+df=fullt1.loc[fullt1.index.str.startswith('Prevalence of hospit. AGE')]
+ax=df[['All_x','Male_x','Female_x']].plot(rot=90)
+ax.set_title("Población general",color='black')
+ax.legend(bbox_to_anchor=(1.0, 1.0))
+ax.plot()
+ax.set_xticks(range(len(df)));
+ax.set_xticklabels(df.index, rotation=90);
+#%%
+df=fullt1.loc[fullt1.index.str.startswith('N AGE')]
+ax=df[['All_x','Male_x','Female_x']].plot(rot=90)
+ax.set_title("Población general",color='black')
+ax.legend(bbox_to_anchor=(1.0, 1.0))
+ax.plot()
+ax.set_xticks(range(len(df)));
+ax.set_xticklabels(df.index, rotation=90);
+
+ax=df[['All_y','Male_y','Female_y']].plot(rot=90)
+ax.set_title("Grupo riesgo",color='black')
+ax.legend(bbox_to_anchor=(1.0, 1.0))
+ax.plot()
+ax.set_xticks(range(len(df)));
+ax.set_xticklabels(df.index, rotation=90);
+
+ax=df[['All_y','Male_y','Female_y']].plot(rot=90)
+ax.set_title("Grupo riesgo",color='black')
+ax.legend(bbox_to_anchor=(1.0, 1.0))
+ax.plot()
+ax.set_xticks(range(len(df)));
+ax.set_xticklabels(df.index, rotation=90);
