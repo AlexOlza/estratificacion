@@ -16,25 +16,37 @@ guessingCCS <- function(missingdx, dictionary){  # asume el CCS quitando "lo que
       code<-dx
       while ((length(options)==0) & (i<=length(dx))){ 
         i=i+1
-        print(code)
         code <- str_sub(dx,end=-i)
-        options<-unique(startsWith(dictionary[dictionary$CODE],code)$CCS)
-        }
-        
+        options<-unique(dictionary[startsWith(dictionary$CODE,code)]$CCS)
+      }
+      if (length(options)>=2) options <- options[options != '259'] #CCS 259 is for residual unclassified codes
+      if (length(options)==1) {success[dx] <- options} 
+      else {
+        failure <- c(failure,dx)}
     }
   }
+  return(list('success'=success,'failure'=failure))
 }
 
+needsManualRevision <- function(failure, dictionary,filename){
+  filename <- paste(config$carpeta_datos_indispensable,'/ccs/manually_revised_icd9.csv',sep='')
+  if (file.exists(filename)){
+    already_there <- fread(filename)
+    append_to_csv <- TRUE
+  }else  {append_to_csv <- FALSE ; already_there <- data.frame()}
+ 
+ 
+}
 
-if '259' in options and len(options)>=2: options.remove('259') #CCS 259 is for residual unclassified codes
-if len(options)==1:
-  success[(dx, code)]=options[0]
-else:
-  failure[(dx, code)]=options
-# break
-print(failure)
-return(success, failure)
-
+keys_to_revise=[k[0] for k in failure.keys()]
+with open(f'needs_manual_revision{appendix}.csv', mode) as output:
+  writer = csv.writer(output)
+if not all([k in already_there.CODE.values for k in keys_to_revise]):
+  if mode=='w': writer.writerow(['CODE','N'])
+for key in keys_to_revise:
+  if not key in already_there.CODE.values: 
+  N=len(diags.loc[diags.CODE==key].PATIENT_ID.unique())
+writer.writerow([key, N]) 
 
 CCS_table <- function(year){
   year <- as.character(year)
@@ -74,7 +86,7 @@ CCS_table <- function(year){
       colnames(icd9)[colnames(icd9) == 'ICD-9-CM CODE']<-'CODE'
       icd9$CODE<-substr(icd9$CODE, 1, 5)
       icd9$CIE_VERSION<-'9'
-      icd9<-icd9[, c('CODE','CCS','DESCRIPTION','CIE_VERSION')]
+      icd9<-icd9[, c('CODE','CCS','CIE_VERSION')]
       
   # PREPROCESSING ICD10CM DICTIONARY
       colnames(icd10cm)[colnames(icd10cm) == 'ICD-10-CM CODE']<-'CODE'
@@ -85,7 +97,7 @@ CCS_table <- function(year){
       icd10cm[, c('CODE','CCS')] <- icd10cm[, lapply(.SD, remove_non_alphanumeric),.SDcols=c('CODE','CCS')]  
       icd10cm <- icd10cm[, lapply(.SD, toupper)]  # everything to uppercase
       icd10cm$CIE_VERSION<-'10'
-      icd10cm<-icd10cm[, c('CODE','CCS','DESCRIPTION','CIE_VERSION')]
+      icd10cm<-icd10cm[, c('CODE','CCS','CIE_VERSION')]
       
   # PREPROCESSING DIAGNOSES
       colnames(diags)[colnames(diags) == 'CIE_CODE'] <-'CODE' #for uniformity, I rename the column
@@ -117,8 +129,27 @@ CCS_table <- function(year){
       missing_in_icd10cm<-missingDX(icd10cm,diags[diags$CIE_VERSION=='10'])
       print(sprintf('Missing quantity ICD9: %s', length(missing_in_icd9)))
       print(sprintf('Missing quantity ICD10: %s', length(missing_in_icd10cm)))
-      success9, failure9=guessingCCS(missing_in_icd9, icd9)
-      icd9=assign_success(success9,icd9)
+      guesses9=guessingCCS(missing_in_icd9, icd9)
+      sprintf('In ICD9, %s codes need manual revision',length(guesses9$failure))
+      sprintf('In ICD9, %s codes have been assigned',length(guesses9$success))
+      #icd9=assign_success(success9,icd9)
+      
+      guesses10=guessingCCS(missing_in_icd10cm, icd10cm)
+      sprintf('In ICD10CM, %s codes need manual revision',length(guesses10$failure))
+      sprintf('In ICD10CM, %s codes have been assigned',length(guesses10$success))
+      
+      # Add successful codes to ICD9 and ICD10CM dictionaries
+      for(i in seq_along(guesses9$success)){
+        new_row=cbind('CODE'=names(guesses9$success)[i], 'CCS'=guesses9$success[[i]],'CIE_VERSION'='9')
+        icd9=rbind(icd9,new_row)
+      }
+      
+      for(i in seq_along(guesses10$success)){
+        new_row=cbind('CODE'=names(guesses10$success)[i], 'CCS'=guesses10$success[[i]],'CIE_VERSION'='10')
+        icd10cm=rbind(icd10cm,new_row)
+      }
+      
+     
       
 }
 
