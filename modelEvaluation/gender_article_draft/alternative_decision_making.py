@@ -80,12 +80,22 @@ def patient_selection(x,modeltype):
     
     
     if modeltype=='linear':
+        
         top10k_women=x.loc[x.FEMALE==1].nlargest(10000,'OBS')
         top10k_men=x.loc[x.FEMALE==0].nlargest(10000,'OBS')
         top1perc_women=x.loc[x.FEMALE==1].nlargest(int(0.01*len(x.loc[x.FEMALE==1])),'OBS')
         top1perc_men=x.loc[x.FEMALE==0].nlargest(int(0.01*len(x.loc[x.FEMALE==0])),'OBS')
         
         x['should_be_selected_top20k']=np.where(x.PATIENT_ID.isin(x.nlargest(20000,'OBS').PATIENT_ID),1,0)
+        
+        prop_equit=100*x.loc[x['should_be_selected_top20k']==1].FEMALE.sum()/20000
+        muj_forzar=x.loc[x.FEMALE==1].nlargest(int(10000*prop_equit/(100-prop_equit)),'PRED')
+        hom_forzar=x.loc[x.FEMALE==0].nlargest(10000,'PRED')
+        x['forzarproporcion']=np.where(x.PATIENT_ID.isin(pd.concat([muj_forzar,hom_forzar]).PATIENT_ID),1,0)
+        muj_forzar=x.loc[x.FEMALE==1].nlargest(int(10000*prop_equit/(100-prop_equit)),'OBS')
+        hom_forzar=x.loc[x.FEMALE==0].nlargest(10000,'OBS')
+        
+        x['should_be_selected_forzarproporcion']=np.where(x.PATIENT_ID.isin(pd.concat([muj_forzar,hom_forzar]).PATIENT_ID),1,0)
         x['should_be_selected_top10k_gender']=np.where(x.PATIENT_ID.isin(pd.concat([top10k_women,top10k_men]).PATIENT_ID),1,0)
         x['should_be_selected_top1perc_gender']=np.where(x.PATIENT_ID.isin(pd.concat([top1perc_women,top1perc_men]).PATIENT_ID),1,0)
         x['should_be_selected_']=x['should_be_selected_top20k']
@@ -97,14 +107,18 @@ def patient_selection(x,modeltype):
         muj_equit=x.loc[x.FEMALE==1].nlargest(Nmuj_equitativo,'PRED')
         hom_equit=x.loc[x.FEMALE==0].nlargest(Nhom_equitativo,'PRED')
         x['proporcion_equitativa']=np.where(x.PATIENT_ID.isin(pd.concat([muj_equit,hom_equit]).PATIENT_ID),1,0)
-        for col in ['top20k','top10k_gender','top1perc_gender','proporcion_equitativa']:
+        muj_forzar=x.loc[x.FEMALE==1].nlargest(int(10000*Nmuj_equitativo/Nhom_equitativo),'PRED')
+        hom_forzar=x.loc[x.FEMALE==0].nlargest(10000,'PRED')
+        x['forzarproporcion']=np.where(x.PATIENT_ID.isin(pd.concat([muj_forzar,hom_forzar]).PATIENT_ID),1,0)
+        
+        for col in ['top20k','top10k_gender','top1perc_gender','proporcion_equitativa','forzarproporcion']:
             x[f'should_be_selected_{col}']=x['should_be_selected_'].copy()
     return x
 from sklearn.metrics import confusion_matrix
-def cm(x,col): return {key: val for key, val in zip(['tn', 'fp', 'fn', 'tp'],confusion_matrix(x[f'should_be_selected_'],x[col]).ravel())} 
+def cm(x,col): return {key: val for key, val in zip(['tn', 'fp', 'fn', 'tp'],confusion_matrix(x[f'should_be_selected_{col}'],x[col]).ravel())} 
 def threshold_muj_hom(x,col):
     c=cm(x.loc[x.FEMALE==1],col)
-    print('Women c:' , c)
+    print(f'Women c {col}:' , c)
     vpp_women, vpn_women, sens_women, esp_women=c['tp']/(c['tp']+c['fp']),    c['tn']/(c['tn']+c['fn']),    c['tp']/(c['tp']+c['fn']),    c['tn']/(c['tn']+c['fp'])
     print('vpp_women,', vpp_women)
     c=cm(x.loc[x.FEMALE==0],col)
@@ -150,10 +164,13 @@ def table(preds,modeltype):
     if modeltype=='linear':
         threshold_metrics=[np.array([threshold_muj_hom(preds, 'top20k'),
                                      threshold_muj_hom(preds, 'top10k_gender'),
-                                     threshold_muj_hom(preds, 'top1perc_gender')]).ravel()]
+                                     threshold_muj_hom(preds, 'top1perc_gender'),
+                                     threshold_muj_hom(preds, 'forzarproporcion')]).ravel()]
         
         threshold_metrics=[list(e)+list([100*preds.loc[preds.top20k==1].FEMALE.sum()/preds.top20k.sum()])
-                           +list([100*preds.loc[preds.top1perc_gender==1].FEMALE.sum()/preds.top1perc_gender.sum()]) for e in threshold_metrics]
+                           +list([100*preds.loc[preds.top1perc_gender==1].FEMALE.sum()/preds.top1perc_gender.sum()])
+                           +list([preds.loc[preds.forzarproporcion==1].FEMALE.sum()])
+                           for e in threshold_metrics]
         
         df_threshold=pd.DataFrame(threshold_metrics,columns=['PPV_20k_women','PPV_20k_men','NPV_20k_women','NPV_20k_men',
                                                              'SENS_20k_women','SENS_20k_men','SPEC_20k_women','SPEC_20k_men',
@@ -164,17 +181,22 @@ def table(preds,modeltype):
                                                     'PPV_1perc_women','PPV_1perc_men','NPV_1perc_women','NPV_1perc_men',
                                                     'SENS_1perc_women','SENS_1perc_men','SPEC_1perc_women','SPEC_1perc_men',
                                                     'Cutpoint_1perc_women','Cutpoint_1perc_men',
-                                                    'Perc_top20k_women', 'Perc_top1perc_women'],
+                                                    'PPV_forzarproporcion_women','PPV_forzarproporcion_men','NPV_forzarproporcion_women','NPV_forzarproporcion_men',
+                                                    'SENS_forzarproporcion_women','SENS_forzarproporcion_men','SPEC_forzarproporcion_women','SPEC_forzarproporcion_men',
+                                                    'Cutpoint_forzarproporcion_women','Cutpoint_forzarproporcion_men',
+                                                    'Perc_top20k_women', 'Perc_top1perc_women', 'N_forzarproporcion_women'],
                      index=index)
     else:
         threshold_metrics=[np.array([threshold_muj_hom(preds, 'top20k'),
                                      threshold_muj_hom(preds, 'top10k_gender'),
                                      threshold_muj_hom(preds, 'top1perc_gender'),
-                                     threshold_muj_hom(preds, 'proporcion_equitativa')]).ravel()]
+                                     threshold_muj_hom(preds, 'proporcion_equitativa'),
+                                     threshold_muj_hom(preds, 'forzarproporcion')]).ravel()]
         
         threshold_metrics=[list(e)+list([100*preds.loc[preds.top20k==1].FEMALE.sum()/preds.top20k.sum()])
                            +list([100*preds.loc[preds.top1perc_gender==1].FEMALE.sum()/preds.top1perc_gender.sum()])
                            +list([100*preds.loc[preds.proporcion_equitativa==1].FEMALE.sum()/preds.proporcion_equitativa.sum()])
+                           +list([preds.loc[preds.forzarproporcion==1].FEMALE.sum()])
                            for e in threshold_metrics]
         
         df_threshold=pd.DataFrame(threshold_metrics,columns=['PPV_20k_women','PPV_20k_men','NPV_20k_women','NPV_20k_men',
@@ -189,7 +211,11 @@ def table(preds,modeltype):
                                                     'PPV_equit_women','PPV_equit_men','NPV_equit_women','NPV_equit_men',
                                                     'SENS_equit_women','SENS_equit_men','SPEC_equit_women','SPEC_equit_men',
                                                     'Cutpoint_equit_women','Cutpoint_equit_men',
-                                                    'Perc_top20k_women', 'Perc_top1perc_women','Perc_equit_women'],
+                                                    'PPV_forzarproporcion_women','PPV_forzarproporcion_men','NPV_forzarproporcion_women','NPV_forzarproporcion_men',
+                                                    'SENS_forzarproporcion_women','SENS_forzarproporcion_men','SPEC_forzarproporcion_women','SPEC_forzarproporcion_men',
+                                                    'Cutpoint_forzarproporcion_women','Cutpoint_forzarproporcion_men',
+                                                    'Perc_top20k_women', 'Perc_top1perc_women','Perc_equit_women',
+                                                    'N_forzarproporcion_women'],
                      index=index)
     
     df=pd.concat([df_overall,df_threshold],axis=1)
@@ -236,7 +262,53 @@ print(tablelin.T.to_latex())
 #%%
 """ Proporcion equitativa coste: 
     Porcentaje de  mujeres entre los 20k de mayor coste observado
+    Proporción equitativa ingreso:
+    Porcentaje de mujeres entre las personas que realmente ingresan (Perc equit en la tabla)
 """
 table_linear['Prop_equit']=100*allpreds_lin.loc[allpreds_lin['should_be_selected_top20k']==1].FEMALE.sum()/20000
 
 allpreds.loc[allpreds.FEMALE==1].should_be_selected_.sum()/allpreds.should_be_selected_.sum()
+#%%
+"""Porcentaje de mujeres entre los top 20k dividido por estratos:
+    Dentro de esos 20000 pacientes los hombres siguen ocupando posiciones
+    más altas de coste observado / predicho / probabilidad de ingreso predicha
+"""
+dataframe=pd.DataFrame()
+# Probabilidad de ingreso
+dataframe['Prob. ingreso']=[allpreds.nlargest(5000,'PRED').FEMALE.sum()*100/5000,
+allpreds.nlargest(10000,'PRED').nsmallest(5000,'PRED').FEMALE.sum()*100/5000,
+allpreds.nlargest(20000,'PRED').nsmallest(10000,'PRED').FEMALE.sum()*100/10000,
+allpreds.nlargest(20000,'PRED').FEMALE.sum()*100/20000]
+
+# Coste predicho
+dataframe['Coste predicho']=[allpreds_lin.nlargest(5000,'PRED').FEMALE.sum()*100/5000,
+allpreds_lin.nlargest(10000,'PRED').nsmallest(5000,'PRED').FEMALE.sum()*100/5000,
+allpreds_lin.nlargest(20000,'PRED').nsmallest(10000,'PRED').FEMALE.sum()*100/10000,
+allpreds_lin.nlargest(20000,'PRED').FEMALE.sum()*100/20000]
+
+# Coste observado
+dataframe['Coste observado']=[allpreds_lin.nlargest(5000,'OBS').FEMALE.sum()*100/5000,
+allpreds_lin.nlargest(10000,'OBS').nsmallest(5000,'OBS').FEMALE.sum()*100/5000,
+allpreds_lin.nlargest(20000,'OBS').nsmallest(10000,'OBS').FEMALE.sum()*100/10000,
+allpreds_lin.nlargest(20000,'OBS').FEMALE.sum()*100/20000
+]
+
+dataframe.index=['Primeros 5000', 'Siguientes 5000', 'Siguientes 10000', 'Primeros 20000']
+
+print(dataframe)
+#%%
+"""
+
+#%%
+"""
+ Si sabemos que el 41,7% es el % de mujeres que consideramos “equitativo”, 
+ ¿qué pasaría si se generaran los listados forzando esta proporción? 
+ Partiendo de que sabemos el ratio hombres/mujeres que queremos: 1,3975 (58,29/41,71)
+ podríamos subir el punto de corte en las mujeres para que solo entraran las x
+ (x= nº de hombres en el listado/1,3975) mujeres con mayor coste predicho
+ o bien bajar el punto de corte en los hombres hasta que entren los y 
+ (y=nº de mujeres en el listado*1,3975) hombres con mayor coste predicho.
+ Si hiciéramos esto qué valores ppv, sensi, epec, etc darían? 
+ """
+ 
+ 
