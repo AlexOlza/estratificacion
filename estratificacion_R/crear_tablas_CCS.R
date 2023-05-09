@@ -28,25 +28,16 @@ guessingCCS <- function(missingdx, dictionary){  # asume el CCS quitando "lo que
   return(list('success'=success,'failure'=failure))
 }
 
-needsManualRevision <- function(failure, dictionary,filename){
-  filename <- paste(config$carpeta_datos_indispensable,'/ccs/manually_revised_icd9.csv',sep='')
-  if (file.exists(filename)){
-    already_there <- fread(filename)
+needsManualRevision <- function(failure, manual_revision_filename){
+  if (file.exists( manual_revision_filename)){
+    already_there <- fread( manual_revision_filename)
     append_to_csv <- TRUE
   }else  {append_to_csv <- FALSE ; already_there <- data.frame()}
- 
+ still_not_revised <- failure[! failure  %in% already_there$CODE]
+ print(sprintf('%s codes are not in the manual revision:',length(still_not_revised)))
+ print(as.character(still_not_revised))
  
 }
-
-keys_to_revise=[k[0] for k in failure.keys()]
-with open(f'needs_manual_revision{appendix}.csv', mode) as output:
-  writer = csv.writer(output)
-if not all([k in already_there.CODE.values for k in keys_to_revise]):
-  if mode=='w': writer.writerow(['CODE','N'])
-for key in keys_to_revise:
-  if not key in already_there.CODE.values: 
-  N=len(diags.loc[diags.CODE==key].PATIENT_ID.unique())
-writer.writerow([key, N]) 
 
 CCS_table <- function(year){
   year <- as.character(year)
@@ -86,7 +77,7 @@ CCS_table <- function(year){
       colnames(icd9)[colnames(icd9) == 'ICD-9-CM CODE']<-'CODE'
       icd9$CODE<-substr(icd9$CODE, 1, 5)
       icd9$CIE_VERSION<-'9'
-      icd9<-icd9[, c('CODE','CCS','CIE_VERSION')]
+      icd9<-icd9[, c('CODE','CCS','DESCRIPTION','CIE_VERSION')]
       
   # PREPROCESSING ICD10CM DICTIONARY
       colnames(icd10cm)[colnames(icd10cm) == 'ICD-10-CM CODE']<-'CODE'
@@ -97,7 +88,7 @@ CCS_table <- function(year){
       icd10cm[, c('CODE','CCS')] <- icd10cm[, lapply(.SD, remove_non_alphanumeric),.SDcols=c('CODE','CCS')]  
       icd10cm <- icd10cm[, lapply(.SD, toupper)]  # everything to uppercase
       icd10cm$CIE_VERSION<-'10'
-      icd10cm<-icd10cm[, c('CODE','CCS','CIE_VERSION')]
+      icd10cm<-icd10cm[, c('CODE','CCS','DESCRIPTION','CIE_VERSION')]
       
   # PREPROCESSING DIAGNOSES
       colnames(diags)[colnames(diags) == 'CIE_CODE'] <-'CODE' #for uniformity, I rename the column
@@ -140,17 +131,51 @@ CCS_table <- function(year){
       
       # Add successful codes to ICD9 and ICD10CM dictionaries
       for(i in seq_along(guesses9$success)){
-        new_row=cbind('CODE'=names(guesses9$success)[i], 'CCS'=guesses9$success[[i]],'CIE_VERSION'='9')
+        new_row=cbind('CODE'=names(guesses9$success)[i], 'CCS'=guesses9$success[[i]],
+                      'DESCRIPTION'=as.character(icd9[icd9$CCS==guesses9$success[[i]],'DESCRIPTION'][1]),
+                      'CIE_VERSION'='9')
         icd9=rbind(icd9,new_row)
       }
       
       for(i in seq_along(guesses10$success)){
-        new_row=cbind('CODE'=names(guesses10$success)[i], 'CCS'=guesses10$success[[i]],'CIE_VERSION'='10')
+        new_row=cbind('CODE'=names(guesses10$success)[i], 'CCS'=guesses10$success[[i]],
+                      'DESCRIPTION'=as.character(icd10cm[icd10cm$CCS==guesses10$success[[i]],'DESCRIPTION'][1]),
+                      'CIE_VERSION'='10')
         icd10cm=rbind(icd10cm,new_row)
       }
-      
+    
+    #Check if any additional codes need manual revision, and print if so  
+     needsManualRevision(guesses9$failure,
+                         manual_revision_filename = 
+                           paste(config$carpeta_datos_indispensable,'/ccs/manually_revised_icd9.csv',sep=''))
+     needsManualRevision(guesses10$failure,
+                         manual_revision_filename = 
+                           paste(config$carpeta_datos_indispensable,'/ccs/manually_revised_icd10.csv',sep=''))
+     # USE THE MANUAL REVISION TO CHANGE DIAGNOSTIC CODES WHEN NECESSARY 
+     #Those with no NEW_CODE specified are lost -> discard rows with NAs
+     revision9<- fread(paste(config$carpeta_datos_indispensable,'/ccs/manually_revised_icd9.csv',sep=''),fill=TRUE)
+     revision10cm<- fread(paste(config$carpeta_datos_indispensable,'/ccs/manually_revised_icd10.csv',sep=''),fill=TRUE)
+     revision <- rbind(revision9[, c('CODE','NEW_CODE')], revision10cm[, c('CODE','NEW_CODE')])
      
-      
+     # This is where I modify the codes. It's quite slow, I should vectorize it :(
+     for (i in seq_len(nrow(revision))){
+       diags[diags$CODE==revision$CODE[i], 'CODE']<- revision$NEW_CODE[i]
+     }
+     diags[, 'CODE'] <- diags[, lapply(.SD, remove_non_alphanumeric),.SDcols=c('CODE')] #remove non-alphanumeric chars including spaces
+     diags <- diags[!diags$CODE=='']
+  # ASSIGN CCS CATEGORIES TO DIAGNOSTIC CODES 
+     dict9<-icd9[,c('CODE', 'CCS', 'DESCRIPTION', 'CIE_VERSION')]
+     dict10=icd10cm[['CODE', 'CCS', 'DESCRIPTION', 'CIE_VERSION']]
+     icd10cm <- rbind(icd10cm, 
+                      data.frame('CODE'='ONCOLO', 'CCS'='ONCOLO', 
+                         'DESCRIPTION'='Undetermined oncology code',
+                         'CIE_VERSION'='10'))
+     fulldict <- unique(rbind(icd9,icd10cm))
+     diags_with_ccs<-merge(diags, fulldict,by=c('CODE','CIE_VERSION')) #inner join
+     L0<-nrow(diags)
+     L<-nrow(diags_with_ccs)
+     print(sprintf('We have lost %s diagnoses that still have no CCS (%s percent)',L0-L,100*(L0-L)/L0))
+     
 }
 
 year <-2016
