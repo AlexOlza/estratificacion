@@ -23,14 +23,19 @@ configuration <- function(carpeta_datos ='/home/aolza/Desktop/estratificacionDat
                           ficheros_rx =   c("2016"="rx_in_2016.txt","2017"="rx_in_2017.txt"), #esta variable también
                           diccionario_cie9_ccs = 'translate_icd9_ccs_2015.csv',
                           diccionario_cie10cm_ccs = 'translate_icd10cm_ccs_2018.csv',
-                          # Ficheros derivados de los datos indispensables:
-                          ficheros_ccs = c("2016"="CCS2016.csv","2017"="CCS2017.csv")
+                          fichero_revision_manual_ccs_icd9="manually_revised_icd9.csv",
+                          fichero_revision_manual_ccs_icd10="manually_revised_icd10.csv",
+                          # Ficheros derivados de los datos indispensables
+                          # (si no existen, se calculan usando CCS_table del script crear_tablas_CCS):
+                          ficheros_ccs = c("2016"="CCS2016R.csv","2017"="CCS2017R.csv")
                           ) {
   
-  carpeta_datos_indispensable <- file.path(carpeta_datos,'indispensable')
-  carpeta_ccs                 <- file.path(carpeta_datos_indispensable,'ccs')
-  diccionario_cie9_ccs        <- file.path(carpeta_ccs, diccionario_cie9_ccs)
-  diccionario_cie10cm_ccs        <- file.path(carpeta_ccs, diccionario_cie10cm_ccs)
+  carpeta_datos_indispensable      <- file.path(carpeta_datos,'indispensable')
+  carpeta_ccs                      <- file.path(carpeta_datos_indispensable,'ccs')
+  diccionario_cie9_ccs             <- file.path(carpeta_ccs, diccionario_cie9_ccs)
+  diccionario_cie10cm_ccs          <- file.path(carpeta_ccs, diccionario_cie10cm_ccs)
+  fichero_revision_manual_ccs_icd9 <- file.path(carpeta_ccs, fichero_revision_manual_ccs_icd9)
+  fichero_revision_manual_ccs_icd10<- file.path(carpeta_ccs, fichero_revision_manual_ccs_icd10)
   
   for (name in names(ficheros_dx)){
     # test de calidad
@@ -60,7 +65,10 @@ configuration <- function(carpeta_datos ='/home/aolza/Desktop/estratificacionDat
                 ficheros_rx=ficheros_rx,
                 diccionario_cie9_ccs=diccionario_cie9_ccs,
                 diccionario_cie10cm_ccs=diccionario_cie10cm_ccs,
-                ficheros_ccs = ficheros_ccs)
+                ficheros_ccs = ficheros_ccs,
+                fichero_revision_manual_ccs_icd9=fichero_revision_manual_ccs_icd9,
+                fichero_revision_manual_ccs_icd10=fichero_revision_manual_ccs_icd10
+                )
   attr(value, 'class') <- 'configuration'
   value
 }

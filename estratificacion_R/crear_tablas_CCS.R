@@ -1,6 +1,28 @@
+##################################################################################################################
+#
+#       LA FUNCIÓN create_CCS_table(year, binarize):
+#         Devuelve la tabla de CCS del año correspondiente para los pacientes con algún CCS.
+#  ~~~~~~~~  MUY IMPORTANTE!!! Esta matriz sólo contiene a los pacientes con algún CCS. Y no tiene edad ni sexo.
+#  ~~~~~~~~                    Para conseguir a todos los pacientes con edad y sexo, usar get_CCS_table(year, binarize) !!!!
+#         Si la encuentra en disco (en la direción que marque config$ficheros_ccs[year]) la carga directamente,
+#         si no, la calcula (tarda aprox. 45 minutos) y la guarda allí.
+#         PASOS PARA CALCULARLA:
+#           - Leemos y preprocesamos los diccionarios ICD9-CCS, ICD10cm-CCS y el fichero de diagnósticos.
+#           - Miramos qué códigos diagnósticos no se encuentran en los diccionarios.
+#           - A esos les quitamos iterativamente el último dígito hasta que se encuentren en el diccionario (quitar "lo que cuelga")
+#             Si podemos asignarles un CCS único, lo hacemos. Si hay varias opciones quedan sin asignar.
+#           - Con los que han quedado sin asignar, usamos los ficheros de revisión manual 
+#             (deben estar guardados en la dirección indicada en configuración)
+#           - Asignamos los CCS a los diagnósticos
+#           - Con un doble group_by, contamos cuántas ocurrencias de cada CCS tiene cada paciente 
+#             y lo guardamos en una matriz (esto tarda media hora). Se escribe en disco esta matriz.
+#       - Opcional: Según el argumento binarize, se devuelve la matriz binarizada.
+#########################################################################################################################
 source('/home/aolza/Desktop/estratificacion/estratificacion_R/configuracion.R')
 library(data.table)
 library(stringr)
+library(tictoc)
+library(dplyr)
 
 remove_non_alphanumeric <- function(string) return(str_replace_all(pattern = '[^[:alnum:]]', replacement='',string=string))
 
@@ -39,21 +61,24 @@ needsManualRevision <- function(failure, manual_revision_filename){
  
 }
 
-CCS_table <- function(year){
+CCS_table <- function(year, binarize=TRUE){
   year <- as.character(year)
   if (file.exists(as.character(config$ficheros_ccs[year]))){
     print(sprintf('Loading %s',config$ficheros_ccs[year]))
-    #ccs <-fread(config$ficheros_ccs[year],colClasses = 'integer')
-    #return(ccs)
+    X <-fread(config$ficheros_ccs[year],colClasses = 'integer')
+    if (binarize){ X[,! 'PATIENT_ID']<-as.integer( X[,! 'PATIENT_ID']>0)}
+    return(X)
   
   }
-  print('Creating CCS table. This may take a while.')
+  print('Creating CCS table. This may take a while (between half an hour and an hour).')
   # Quality checks, and verification that the needed files exist
       if ( is.na(as.integer(year))) stop('year must be an integer number, or a string that represents an integer!')
       if ( !(file.exists(as.character(config$diccionario_cie9_ccs)))) stop(sprintf('Missing file: config$diccionario_cie9_ccs. %s does not exist.',config$diccionario_cie9_ccs))
       if ( !(file.exists(as.character(config$diccionario_cie10cm_ccs)))) stop(sprintf('Missing file: config$diccionario_cie10cm_ccs. %s does not exist.',config$diccionario_cie10cm_ccs))
       if ( !(file.exists(as.character(config$ficheros_dx[year])))) stop(sprintf('Missing file: config$ficheros_dx[year]. %s does not exist.',config$ficheros_dx[year]))
-  
+      if ( !(file.exists(as.character(config$fichero_revision_manual_ccs_icd9)))) stop(sprintf('Missing file: config$fichero_revision_manual_ccs_icd9. %s does not exist.',config$fichero_revision_manual_ccs_icd9))
+      if ( !(file.exists(as.character(config$fichero_revision_manual_ccs_icd10)))) stop(sprintf('Missing file: config$fichero_revision_manual_ccs_icd10. %s does not exist.',config$fichero_revision_manual_ccs_icd10))
+      
   # Reading dictionaries and diagnoses
       icd9    <- fread(as.character(config$diccionario_cie9_ccs))
       icd10cm <- fread(as.character(config$diccionario_cie10cm_ccs))
@@ -123,7 +148,6 @@ CCS_table <- function(year){
       guesses9=guessingCCS(missing_in_icd9, icd9)
       sprintf('In ICD9, %s codes need manual revision',length(guesses9$failure))
       sprintf('In ICD9, %s codes have been assigned',length(guesses9$success))
-      #icd9=assign_success(success9,icd9)
       
       guesses10=guessingCCS(missing_in_icd10cm, icd10cm)
       sprintf('In ICD10CM, %s codes need manual revision',length(guesses10$failure))
@@ -164,8 +188,6 @@ CCS_table <- function(year){
      diags[, 'CODE'] <- diags[, lapply(.SD, remove_non_alphanumeric),.SDcols=c('CODE')] #remove non-alphanumeric chars including spaces
      diags <- diags[!diags$CODE=='']
   # ASSIGN CCS CATEGORIES TO DIAGNOSTIC CODES 
-     dict9<-icd9[,c('CODE', 'CCS', 'DESCRIPTION', 'CIE_VERSION')]
-     dict10=icd10cm[['CODE', 'CCS', 'DESCRIPTION', 'CIE_VERSION']]
      icd10cm <- rbind(icd10cm, 
                       data.frame('CODE'='ONCOLO', 'CCS'='ONCOLO', 
                          'DESCRIPTION'='Undetermined oncology code',
@@ -175,8 +197,27 @@ CCS_table <- function(year){
      L0<-nrow(diags)
      L<-nrow(diags_with_ccs)
      print(sprintf('We have lost %s diagnoses that still have no CCS (%s percent)',L0-L,100*(L0-L)/L0))
-     
+  
+  # COMPUTE THE DATA MATRIX (takes half an hour)
+     tic('Computing CCS matrix')
+     X=data.frame('PATIENT_ID'=unique(diags_with_ccs$PATIENT_ID))
+     i=0
+     grouped <-diags_with_ccs %>% group_by(CCS,PATIENT_ID)
+     amount_per_patient<- grouped %>% summarize(count=n())
+     I<-length(unique(amount_per_patient$CCS))
+     for (ccs_number in unique(amount_per_patient$CCS)){
+       i<-i+1
+       patients_with_CCS <- amount_per_patient[amount_per_patient$CCS==ccs_number,c('PATIENT_ID','count')]
+       print(sprintf('CCS %s (%s percent done)',ccs_number,i*100/I))
+       X=merge(X,patients_with_CCS,all.x = TRUE)
+       names(X)[names(X) == "count"] <- paste('CCS',ccs_number,sep='')
+     }
+     X[is.na(X)] <- 0
+     toc()
+     fwrite(X,as.character(config$ficheros_ccs[year]))
+     if (binarize){ X[X!=0,-c('PATIENT_ID')]<- 1}
+     return(X)
 }
 
 year <-2016
-#ccs <- CCS_table(year)
+ccs <- CCS_table(year)
