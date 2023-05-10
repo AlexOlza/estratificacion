@@ -61,12 +61,12 @@ needsManualRevision <- function(failure, manual_revision_filename){
  
 }
 
-CCS_table <- function(year, binarize=TRUE){
+create_CCS_table <- function(year, binarize=TRUE){
   year <- as.character(year)
   if (file.exists(as.character(config$ficheros_ccs[year]))){
     print(sprintf('Loading %s',config$ficheros_ccs[year]))
     X <-fread(config$ficheros_ccs[year],colClasses = 'integer')
-    if (binarize){ X[,! 'PATIENT_ID']<-as.integer( X[,! 'PATIENT_ID']>0)}
+    if (binarize){ X[, names(X)[-1] := lapply(.SD, function(x) as.integer(x!=0)), .SDcols = 2:ncol(X)]}
     return(X)
   
   }
@@ -215,9 +215,9 @@ CCS_table <- function(year, binarize=TRUE){
      X[is.na(X)] <- 0
      toc()
      fwrite(X,as.character(config$ficheros_ccs[year]))
-     if (binarize){ X[X!=0,-c('PATIENT_ID')]<- 1}
+     if (binarize){X[, names(X)[-1] := lapply(.SD, function(x) as.integer(x!=0)), .SDcols = 2:ncol(X)]}
      return(X)
 }
 
-year <-2016
-ccs <- CCS_table(year)
+year <-2017
+ccs <- create_CCS_table(year)
