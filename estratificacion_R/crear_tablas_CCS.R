@@ -219,5 +219,23 @@ create_CCS_table <- function(year, binarize=TRUE){
      return(X)
 }
 
+get_CCS <- function(year, binarize=TRUE){
+  ##########################################################################################
+  #     Returns the CCS table for all patients in the Basque Country (including those without any illness)
+  ###########################################################################################
+  ccs <- create_CCS_table(year, binarize)
+  # I read the first row to extract the column names
+  column_names <-  names(fread(as.character(config$ficheros_ACG[as.character(year)]),nrows = 1))
+  # I now read only columns for ID, sex and age, EXCEPT AGE_85GT (that is a linear combination of the others)
+  all_patients <- fread(as.character(config$ficheros_ACG[as.character(year)]),
+                        select=column_names[! is.na(str_match(column_names,'PATIENT_ID|FEMALE|AGE_[0-9]+$'))])
+  X <- ccs[all_patients, on = .(PATIENT_ID)]
+  X <-setnafill(X, fill = 0)
+  predictors <- names(X)[names(X)!='PATIENT_ID']
+  setcolorder(X, c('PATIENT_ID',str_sort(predictors))) 
+  # I return X with the columns in alphabetical order. This is important for modelling (they must be always in the same order)
+  return(X)
+}
+
 year <-2017
-ccs <- create_CCS_table(year)
+ccs <- get_CCS(year)

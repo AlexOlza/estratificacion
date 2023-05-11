@@ -21,6 +21,7 @@ configuration <- function(carpeta_datos ='/home/aolza/Desktop/estratificacionDat
                           ficheros_dx =  c("2016"="dx_in_2016.txt","2017"="dx_in_2017.txt"),#esta variable será un diccionario con los años como claves 
                                                                                             #y los nombres de fichero como valores
                           ficheros_rx =   c("2016"="rx_in_2016.txt","2017"="rx_in_2017.txt"), #esta variable también
+                          ficheros_ACG =  c("2016"="2016-2017.txt","2017"="2017-2018.txt"), #contienen edad, sexo, acgs
                           diccionario_cie9_ccs = 'translate_icd9_ccs_2015.csv',
                           diccionario_cie10cm_ccs = 'translate_icd10cm_ccs_2018.csv',
                           fichero_revision_manual_ccs_icd9="manually_revised_icd9.csv",
@@ -58,11 +59,19 @@ configuration <- function(carpeta_datos ='/home/aolza/Desktop/estratificacionDat
     ficheros_ccs[name]         <- file.path(carpeta_datos,ficheros_ccs[name])
   }
   
+  for (name in names(ficheros_ACG)){
+    # test de calidad
+    if ( is.na(as.integer(name))) stop('ficheros_ACG debe ser un diccionario con los años como claves. Ejemplo: \n
+                                    ficheros_ACG =  c("2016"="2016-2017.txt","2017"="2017-2018.txt")')
+    ficheros_ACG[name]         <- file.path(carpeta_datos,ficheros_ACG[name])
+  }
+  
   value <- list(carpeta_datos=carpeta_datos,
                 carpeta_datos_indispensable=carpeta_datos_indispensable,
                 carpeta_ccs=carpeta_ccs,
                 ficheros_dx=ficheros_dx, 
                 ficheros_rx=ficheros_rx,
+                ficheros_ACG=ficheros_ACG,
                 diccionario_cie9_ccs=diccionario_cie9_ccs,
                 diccionario_cie10cm_ccs=diccionario_cie10cm_ccs,
                 ficheros_ccs = ficheros_ccs,
