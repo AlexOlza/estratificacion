@@ -28,7 +28,7 @@ import re
 import seaborn as sns
 import numpy as np
 from matplotlib import pyplot as plt
-figurepath='/home/aolza/Desktop/estratificacion/figures/gender_article_draft'
+figurepath='/home/aolza/Desktop/estratificacion/figures/gender_article_draft/'
 CCS=eval(input('CCS? True/False: '))
 ccs='CCS' if CCS else 'ACG'
 
@@ -237,6 +237,11 @@ def concat_preds(file1,file2):
 allpreds=concat_preds(logistic_predpath+f'{logistic_modelname}_Mujeres_calibrated_2018.csv',
                       logistic_predpath+f'{logistic_modelname}_Hombres_calibrated_2018.csv') 
 allpreds.loc[allpreds.PRED<0,'PRED']=0
+
+allpreds_sep=concat_preds(logistic_predpath+'logisticMujeres_calibrated_2018.csv',
+                      logistic_predpath+'logisticHombres_calibrated_2018.csv') 
+allpreds_sep.loc[allpreds.PRED<0,'PRED']=0
+allpreds_sep=patient_selection(allpreds_sep, 'logistic')
 # r2_score(allpreds.OBS,allpreds.PRED)
 table_logistic=table(allpreds,'logistic')
 #%%
@@ -297,18 +302,66 @@ dataframe.index=['Primeros 5000', 'Siguientes 5000', 'Siguientes 10000', 'Primer
 
 print(dataframe)
 #%%
-
-
+X,y=getData(2017)
 #%%
-"""
- Si sabemos que el 41,7% es el % de mujeres que consideramos “equitativo”, 
- ¿qué pasaría si se generaran los listados forzando esta proporción? 
- Partiendo de que sabemos el ratio hombres/mujeres que queremos: 1,3975 (58,29/41,71)
- podríamos subir el punto de corte en las mujeres para que solo entraran las x
- (x= nº de hombres en el listado/1,3975) mujeres con mayor coste predicho
- o bien bajar el punto de corte en los hombres hasta que entren los y 
- (y=nº de mujeres en el listado*1,3975) hombres con mayor coste predicho.
- Si hiciéramos esto qué valores ppv, sensi, epec, etc darían? 
- """
- 
+X['AGE_younger_than_54']=X['AGE_0004']+X['AGE_0511']+X['AGE_1217']+X['AGE_1834']+X['AGE_3544']+X['AGE_4554']
+#%%
+for allpreds_,modelo in zip([allpreds,allpreds_sep],['global','separate']):
+    df_percentages_full=pd.DataFrame()
+    for col in X.filter(regex='AGE').columns:
+        Xx=X.loc[X[col]==1]
+        preds=allpreds_.loc[allpreds_.PATIENT_ID.isin(Xx.PATIENT_ID)]
+    
+        withevent=preds.loc[(preds.should_be_selected_top20k==1)]
+        selected=preds.loc[(preds.top20k==1)]
+        benefited=preds.loc[(preds.top20k==1) & (preds.should_be_selected_top20k==1)]
+        df_percentages=pd.DataFrame()
+        
+        df_percentages.loc['Among people with the event','N_Female']=withevent.FEMALE.sum()
+        df_percentages.loc['Selected by the model','N_Female']=selected.FEMALE.sum()
+        df_percentages.loc['Benefited by the intervention','N_Female']=benefited.FEMALE.sum()
+        
+        df_percentages['N_Male']=(pd.Series([len(withevent),len(selected),len(benefited)])-pd.Series(df_percentages['N_Female'].values)).values
+        
+        df_percentages['Female']=100*(pd.Series(df_percentages['N_Female'].values)/pd.Series([len(withevent),len(selected),len(benefited)])).values
+        df_percentages['Male']=100*(pd.Series(df_percentages['N_Male'].values)/pd.Series([len(withevent),len(selected),len(benefited)])).values
+        
+        ax=df_percentages[['Female','Male']].plot.barh(stacked=True, title=f'{col} - {modelo} model')
+        plt.axvline(df_percentages.loc['Among people with the event','Female'])
+        
+        numbers=[ df_percentages.loc['Among people with the event','N_Female'],
+                 df_percentages.loc['Selected by the model','N_Female'],
+                 df_percentages.loc['Benefited by the intervention','N_Female'],
+                 df_percentages.loc['Among people with the event','N_Male'],
+                df_percentages.loc['Selected by the model','N_Male'],
+                df_percentages.loc['Benefited by the intervention','N_Male']]
+        
+        for p, n  in zip(ax.patches, numbers):
+            width, height = p.get_width(), p.get_height(), 
+            x, y = p.get_xy() 
+            print(x,y)
+            ax.text(x+width/2, 
+                    y+height/2, 
+                    ' {:.0f} ({:.0f} %)'.format(n,width), 
+                    horizontalalignment='center', 
+                    verticalalignment='center')
+        plt.savefig(figurepath+f'prop_equitativas_logistic_{modelo}_{col}.jpeg',dpi=300)
+        
+        df_percentages['AGE']=col
+        df_percentages_full=pd.concat([df_percentages_full,df_percentages])
+    
+    print(df_percentages_full.to_latex())
+#%%
+benefited=allpreds_lin.loc[(allpreds_lin.top20k==1) & (allpreds_lin.should_be_selected_top20k==1)]
+df_percentages=pd.DataFrame()
+df_percentages.loc['Among people with the event','Female']=table_linear['Prop_equit'].values[0]
+df_percentages.loc['Selected by the model','Female']=table_linear.Perc_top20k_women.values[0]
+df_percentages.loc['Benefited by the intervention','Female']=100*benefited.FEMALE.sum()/len(benefited)
+
+df_percentages.loc['Among people with the event','Male']=100-df_percentages.loc['Among people with the event','Female']
+df_percentages.loc['Selected by the model','Male']=100-df_percentages.loc['Selected by the model','Female']
+df_percentages.loc['Benefited by the intervention','Male']=100-df_percentages.loc['Benefited by the intervention','Female']
+
+
+df_percentages.plot.barh(stacked=True)
  
