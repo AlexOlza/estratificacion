@@ -308,6 +308,7 @@ X['AGE_older_than_85']=np.where(X.filter(regex='AGE').sum(axis=1)==0,1,0)
 X['AGE_younger_than_54']=X['AGE_0004']+X['AGE_0511']+X['AGE_1217']+X['AGE_1834']+X['AGE_3544']+X['AGE_4554']
 X_age=X.drop(['AGE_0004','AGE_0511','AGE_1217','AGE_1834','AGE_3544','AGE_4554'],axis=1)
 #%%
+from matplotlib import ticker
 fig,(ax3,ax4)=plt.subplots(1,2,figsize=(20,6))
 colorss=[['blue','red', 'red'],['lightblue','orange', 'black']]
 for intervention,colors in zip(['top20k','top10k_gender'],colorss):
@@ -379,12 +380,8 @@ for intervention,colors in zip(['top20k','top10k_gender'],colorss):
         ax3.scatter(range(len(avoided)),avoided['Male'].values,sizes=0.3*avoided.N_Male.values,color=colors[1])
         ax3.set_title(f'Proportion of avoided hospitalizations')
         ax4.set_title(f'Ratio of the proportion of avoided hospitalizations')
-        
-    # ax3.legend(labels=[f'Female (global)', f'Male (global)',f'Female (separate)', f'Male (separate)'])
-    # ax3.legend(labels=[f'{l} ({modelo})' for l in ax3.get_legend_handles_labels()[-1][-2:]])
-    # ax3.legend(fontsize=20,handles = ax3.get_legend_handles_labels()[:-1][0],
-    #            labels=[f'Female (global)', f'Male (global)',f'Female (separate)', f'Male (separate)'])
-    
+        ax4.set_yticks([0.6,1,1.25,1.5,2])
+        ax4.yaxis.set_major_formatter(ticker.StrMethodFormatter("{x:.1f}"))
 from matplotlib.lines import Line2D
 custom_lines = [Line2D([0], [0], color=colorss[0][0], lw=4),
                 Line2D([0], [0], color=colorss[0][1], lw=4),
