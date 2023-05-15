@@ -132,6 +132,7 @@ def concat_preds(file1,file2):
 if __name__=='__main__':
     X, y = getData(2017, columns=['urgcms'])
     Xcost, ycost=getData(2017, columns=['COSTE_TOTAL_ANO2'])
+    separate=eval(input('Use separate models for the risk group? (True/False): '))
     #%%
     descriptions=pd.read_csv(config.DATAPATH+'CCSCategoryNames_FullLabels.csv')
     
@@ -141,9 +142,12 @@ if __name__=='__main__':
     logistic_predpath=config.ROOTPATH+'predictions/urgcmsCCS_parsimonious/'
     logistic_modelname='logistic20230324_111354'
     model=joblib.load(logistic_modelpath+f'{logistic_modelname}.joblib')
-    preds=concat_preds(logistic_predpath+f'{logistic_modelname}_Mujeres_calibrated_2018.csv',
+    if not separate:
+        preds=concat_preds(logistic_predpath+f'{logistic_modelname}_Mujeres_calibrated_2018.csv',
                               logistic_predpath+f'{logistic_modelname}_Hombres_calibrated_2018.csv')  
-    
+    else:
+        preds=concat_preds(logistic_predpath+'logisticMujeres_calibrated_2018.csv',
+                                    logistic_predpath+'logisticHombres_calibrated_2018.csv')    
     #%%
     recall, ppv, spec, newpred= performance(obs=preds.OBS, pred=preds.PRED, K=20000)
     preds['TopK']=newpred.astype(int)

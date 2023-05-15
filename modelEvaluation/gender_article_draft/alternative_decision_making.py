@@ -309,19 +309,22 @@ X['AGE_younger_than_54']=X['AGE_0004']+X['AGE_0511']+X['AGE_1217']+X['AGE_1834']
 X_age=X.drop(['AGE_0004','AGE_0511','AGE_1217','AGE_1834','AGE_3544','AGE_4554'],axis=1)
 #%%
 from matplotlib import ticker
-fig,(ax3,ax4)=plt.subplots(1,2,figsize=(20,6))
-colorss=[['blue','red', 'red'],['lightblue','orange', 'black']]
+# fig,(ax3,ax4)=plt.subplots(1,2,figsize=(20,6))
+# fig2,(axppv,axppv2)=plt.subplots(1,2,figsize=(20,6))
+colorss=[['blue','red', 'black'],['lightblue','orange', 'black']]
 for intervention,colors in zip(['top20k','top10k_gender'],colorss):
-    # fig,(ax3,ax4)=plt.subplots(1,2,figsize=(20,6))
+    fig,(ax3,ax4)=plt.subplots(1,2,figsize=(20,6))
+    fig2,(axppv,axppv2)=plt.subplots(1,2,figsize=(20,6))
     for allpreds_,modelo,ls in zip([allpreds,allpreds_sep],['global','separate'],['-','--']):
         df_percentages_full=pd.DataFrame()
         for col in X_age.filter(regex='AGE').columns:
             Xx=X_age.loc[X_age[col]==1]
             preds=allpreds_.loc[allpreds_.PATIENT_ID.isin(Xx.PATIENT_ID)]
         
-            withevent=preds.loc[(preds.should_be_selected_==1)]
-            selected=preds.loc[(preds[intervention]==1)]
-            benefited=preds.loc[(preds[intervention]==1) & (preds.should_be_selected_==1)]
+            withevent=preds.loc[(preds.should_be_selected_==1)] # true positives + false negatives
+            selected=preds.loc[(preds[intervention]==1)] #true positives + false positives
+            benefited=preds.loc[(preds[intervention]==1) & (preds.should_be_selected_==1)] #true positives
+            PPV=len(benefited)/len(selected)
             df_percentages=pd.DataFrame()
             
             df_percentages.loc['Among people with the event','N_Female']=withevent.FEMALE.sum()
@@ -330,12 +333,15 @@ for intervention,colors in zip(['top20k','top10k_gender'],colorss):
             
             df_percentages['N_Male']=(pd.Series([len(withevent),len(selected),len(benefited)])-pd.Series(df_percentages['N_Female'].values)).values
             
+            df_percentages.loc['PPV']=df_percentages.loc['Benefited by the intervention']/df_percentages.loc['Selected by the model']
+            
             df_percentages['Female']=100*(pd.Series(df_percentages['N_Female'].values)/pd.Series([len(withevent),len(selected),len(benefited)])).values
             df_percentages['Male']=100*(pd.Series(df_percentages['N_Male'].values)/pd.Series([len(withevent),len(selected),len(benefited)])).values
             
             df_percentages.loc['Proportion avoided']=(df_percentages.loc['Benefited by the intervention']/df_percentages.loc['Among people with the event'].values)
             
-            ax=df_percentages.loc[df_percentages.index!='Proportion avoided',['Female','Male']].plot.barh(stacked=True, title=f'{col} - {modelo} model')
+            ax=df_percentages.loc[~ df_percentages.index.isin(['Proportion avoided', 'PPV']),
+                                                            ['Female','Male']].plot.barh(stacked=True, title=f'{col} - {modelo} model')
             plt.axvline(df_percentages.loc['Among people with the event','Female'])
             
             numbers=[ df_percentages.loc['Among people with the event','N_Female'],
@@ -356,7 +362,13 @@ for intervention,colors in zip(['top20k','top10k_gender'],colorss):
             plt.tight_layout()
             plt.savefig(figurepath+f'prop_equitativas_logistic_{modelo}_{col}_{intervention}.jpeg',dpi=300)
             
-            df_percentages['AGE']=col
+            df_percentages['AGE']= col 
+            df_percentages.AGE=df_percentages.AGE.str.replace('AGE_','')
+            ages=[]
+            for age in df_percentages.AGE.values:
+                if not age.startswith(('younger','older')): age= age[:2]+'-'+age[2:]
+                ages.append(age)
+            df_percentages.AGE=ages                
             df_percentages_full=pd.concat([df_percentages_full,df_percentages])
         
         print(df_percentages_full.to_latex())
@@ -369,9 +381,9 @@ for intervention,colors in zip(['top20k','top10k_gender'],colorss):
         avoided['N']=(df_percentages_full.loc['Benefited by the intervention','N_Female']+df_percentages_full.loc['Benefited by the intervention','N_Male']).values
         avoided['AGE']=df_percentages_full.AGE.unique()
         avoided.index=avoided.AGE.str.replace('AGE_','')
-        avoided=avoided.loc[['younger_than_54','5564',
-                                              '6569','7074','7579',
-                                              '8084','older_than_85']]
+        avoided=avoided.loc[['younger_than_54','55-64',
+                                              '65-69','70-74','75-79',
+                                              '80-84','older_than_85']]
     
         avoided[['Female','Male']].plot(rot=90,ls=ls,ax=ax3,color=colors[:2])
         (avoided['Male']/avoided['Female']).to_frame(name=f'Ratio M/F {modelo} model').plot(rot=90,logy=True,markersize=10,fontsize=20,ls=ls, color=colors[2], ax=ax4)
@@ -382,35 +394,94 @@ for intervention,colors in zip(['top20k','top10k_gender'],colorss):
         ax4.set_title(f'Ratio of the proportion of avoided hospitalizations')
         ax4.set_yticks([0.6,1,1.25,1.5,2])
         ax4.yaxis.set_major_formatter(ticker.StrMethodFormatter("{x:.1f}"))
-from matplotlib.lines import Line2D
-custom_lines = [Line2D([0], [0], color=colorss[0][0], lw=4),
-                Line2D([0], [0], color=colorss[0][1], lw=4),
-                Line2D([0], [0], color=colorss[1][0], lw=4),
-                Line2D([0], [0], color=colorss[1][1], lw=4)]
-
-ax3.legend(custom_lines, ['Female Top 20k', 'Male Top 20k',
-                          'Female 10k-10k', 'Male 10k-10k'],fontsize=20)
-custom_lines = [Line2D([0], [0], color=colorss[0][2], lw=4),
-                Line2D([0], [0], color=colorss[1][2], lw=4),]
-
-ax4.legend(custom_lines, ['Ratio M/F Top 20k',
-                          'Ratio M/F  10k-10k'],
-           fontsize=20,title='Scale: log10',title_fontsize=20)
-# ax4.legend(fontsize=20,title='Scale: log10',title_fontsize=20)
-# for ax in (ax33,ax34):
-ax3.title.set_fontsize(20)
-ax3.xaxis.label.set_fontsize(20)
-ax3.xaxis.set_tick_params(labelsize=20)
-ax3.yaxis.set_tick_params(labelsize=20)
-
-ax4.title.set_fontsize(20)
-ax4.xaxis.label.set_fontsize(20)
-ax4.xaxis.set_tick_params(labelsize=20)
-ax4.yaxis.set_tick_params(labelsize=20)
-
-
-plt.tight_layout()
-plt.savefig(figurepath+f'avoided_hospit_{intervention}.jpeg',dpi=300)
+        
+        PPV=pd.DataFrame()
+        PPV['Male']=pd.DataFrame(df_percentages_full.loc['PPV','N_Male'] )
+        PPV['Female']=pd.DataFrame(df_percentages_full.loc['PPV','N_Female'] )
+        PPV['N_Female']=df_percentages_full.loc['Benefited by the intervention','N_Female'].values
+        PPV['N_Male']=df_percentages_full.loc['Benefited by the intervention','N_Male'].values
+        PPV['AGE']=df_percentages_full.AGE.unique()
+        PPV.index=PPV.AGE.str.replace('AGE_','')
+        PPV=PPV.loc[['younger_than_54','55-64',
+                                              '65-69','70-74','75-79',
+                                              '80-84','older_than_85']]
+    
+        PPV[['Female','Male']].plot(rot=90,ls=ls,ax=axppv,color=colors[:2])
+        (PPV['Male']/PPV['Female']).to_frame(name=f'Ratio M/F {modelo} model').plot(rot=90,logy=True,markersize=10,fontsize=20,ls=ls, color=colors[2], ax=axppv2)
+        axppv2.axhline(1,color='lightgreen')
+        axppv.scatter(range(len(PPV)),PPV['Female'].values,sizes=0.3*PPV.N_Female.values,color=colors[0])
+        axppv.scatter(range(len(PPV)),PPV['Male'].values,sizes=0.3*PPV.N_Male.values,color=colors[1])
+        axppv.set_title('Positive Predictive Values (PPV)')
+        axppv2.set_title('Ratio of the PPVs')
+        axppv2.set_yticks(np.logspace(np.log10((PPV['Male']/PPV['Female']).min()),np.log10((PPV['Male']/PPV['Female']).max()),4))
+        for axis in [ax4.yaxis,axppv2.yaxis]:
+            axis.set_major_formatter(ticker.ScalarFormatter())
+            axis.set_minor_formatter(ticker.NullFormatter())
+        # axppv2.yaxis.set_major_formatter(ticker.StrMethodFormatter("{x:.1f}"))
+        
+    from matplotlib.lines import Line2D
+    custom_lines = [Line2D([0], [0], color=colorss[0][0], lw=4),
+                    Line2D([0], [0], color=colorss[0][1], lw=4),
+                    # Line2D([0], [0], color=colorss[1][0], lw=4),
+                    # Line2D([0], [0], color=colorss[1][1], lw=4)
+                    ]
+    
+    ax3.legend(custom_lines, ['Female', 'Male',
+                              # 'Female', 'Male'
+                              ],fontsize=20)
+    custom_lines = [Line2D([0], [0], color=colorss[0][2], lw=4),
+                    Line2D([0], [0], color=colorss[1][2], lw=4),]
+    
+    ax4.legend(custom_lines, ['Ratio M/F ',
+                              # 'Ratio M/F  10k-10k'
+                              ],
+               fontsize=20,title='Scale: log10',title_fontsize=20)
+    # ax4.legend(fontsize=20,title='Scale: log10',title_fontsize=20)
+    # for ax in (ax33,ax34):
+    ax3.title.set_fontsize(20)
+    ax3.xaxis.label.set_fontsize(20)
+    ax3.xaxis.set_tick_params(labelsize=20)
+    ax3.yaxis.set_tick_params(labelsize=20)
+    
+    ax4.title.set_fontsize(20)
+    ax4.xaxis.label.set_fontsize(20)
+    ax4.xaxis.set_tick_params(labelsize=20)
+    ax4.yaxis.set_tick_params(labelsize=20)
+    
+    from matplotlib.lines import Line2D
+    custom_lines = [Line2D([0], [0], color=colorss[0][0], lw=4),
+                    Line2D([0], [0], color=colorss[0][1], lw=4),
+                    # Line2D([0], [0], color=colorss[1][0], lw=4),
+                    # Line2D([0], [0], color=colorss[1][1], lw=4)
+                    ]
+    
+    axppv.legend(custom_lines, ['Female', 'Male',
+                              # 'Female 10k-10k', 'Male 10k-10k'
+                              ],
+                 fontsize=20)
+    custom_lines = [Line2D([0], [0], color=colorss[0][2], lw=4),
+                    Line2D([0], [0], color=colorss[1][2], lw=4),]
+    
+    axppv2.legend(custom_lines, ['Ratio M/F',
+                              # 'Ratio M/F'
+                              ],
+               fontsize=20,title='Scale: log10',title_fontsize=20)
+    # axppv2.legend(fontsize=20,title='Scale: log10',title_fontsize=20)
+    # for ax in (axppv3,axppv4):
+    axppv.title.set_fontsize(20)
+    axppv.xaxis.label.set_fontsize(20)
+    axppv.xaxis.set_tick_params(labelsize=20)
+    axppv.yaxis.set_tick_params(labelsize=20)
+    
+    axppv2.title.set_fontsize(20)
+    axppv2.xaxis.label.set_fontsize(20)
+    axppv2.xaxis.set_tick_params(labelsize=20)
+    axppv2.yaxis.set_tick_params(labelsize=20)
+    
+    fig.tight_layout()
+    fig2.tight_layout()
+    fig.savefig(figurepath+f'avoided_hospit_{intervention}.jpeg',dpi=300)
+    fig2.savefig(figurepath+f'PPV_{intervention}.jpeg',dpi=300)
 #%%
 # La figura global (la que decía Unai)
 withevent=allpreds.loc[(allpreds.should_be_selected_top20k==1)]
