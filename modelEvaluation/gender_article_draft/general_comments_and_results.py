@@ -110,7 +110,10 @@ def patient_selection(x,modeltype):
     top10k_women=x.loc[x.FEMALE==1].nlargest(10000,'PRED')
     top10k_men=x.loc[x.FEMALE==0].nlargest(10000,'PRED')
     x['top10k_gender']=np.where(x.PATIENT_ID.isin(pd.concat([top10k_women,top10k_men]).PATIENT_ID),1,0)
-    x['relative_top20k']=np.where(x.PATIENT_ID.isin(x.nlargest(20000,'relativePRED').PATIENT_ID),1,0)
+    try:
+        x['relative_top20k']=np.where(x.PATIENT_ID.isin(x.nlargest(20000,'relativePRED').PATIENT_ID),1,0)
+    except:
+        pass
     if modeltype=='linear':
         x['should_be_selected']=np.where(x.PATIENT_ID.isin(x.nlargest(20000,'OBS').PATIENT_ID),1,0)
     else:
@@ -286,3 +289,21 @@ df=pd.DataFrame(index=df_lin_round.index)
 for col in cols:
     df[col]=[c for c in df_lin_round.filter(regex=col).values]
 print(df.T.to_latex())
+
+#%%
+""" Intersection of global and separate risk groups """
+def symdif_preds(path, modelname):
+    modeltype=re.sub('[0-9]|_','',modelname)
+    cal='calibrated' if modeltype=='logistic' else ''
+    global_preds=concat_preds(path+f'{modelname}_Mujeres_{cal}_2018.csv',
+                              path+f'{modelname}_Hombres_{cal}_2018.csv')    
+    separate_preds=concat_preds(path+f'{modeltype}Mujeres_{cal}_2018.csv',
+                                path+f'{modeltype}Hombres_{cal}_2018.csv')    
+    global_preds=patient_selection(global_preds,modeltype)
+    separate_preds=patient_selection(separate_preds,modeltype)
+    not_in_both=set(global_preds.loc[global_preds.top20k==1].PATIENT_ID).symmetric_difference(set(separate_preds.loc[separate_preds.top20k==1].PATIENT_ID))
+    corr=pd.DataFrame(pd.merge(global_preds,separate_preds,on='PATIENT_ID')[['PRED_x','PRED_y']]).corr('spearman')
+    return(len(not_in_both), 100*len(not_in_both)/20000, corr.to_numpy()[0][1])
+        
+print(f'Logistic: symmetric difference between the top 20k is {symdif_preds(logistic_predpath,logistic_modelname)}')
+print(f'Linear: symmetric difference between the top 20k is {symdif_preds(linear_predpath,linear_modelname)}')
