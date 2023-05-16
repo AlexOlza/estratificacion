@@ -24,6 +24,7 @@ configuration <- function(carpeta_datos ='/home/aolza/Desktop/estratificacionDat
                           ficheros_ACG =  c("2016"="2016-2017.txt","2017"="2017-2018.txt"), #contienen edad, sexo, acgs
                           diccionario_cie9_ccs = 'translate_icd9_ccs_2015.csv',
                           diccionario_cie10cm_ccs = 'translate_icd10cm_ccs_2018.csv',
+                          diccionario_atc = 'diccionario_ATC_farmacia.csv',
                           fichero_revision_manual_ccs_icd9="manually_revised_icd9.csv",
                           fichero_revision_manual_ccs_icd10="manually_revised_icd10.csv",
                           # Ficheros derivados de los datos indispensables
@@ -35,6 +36,7 @@ configuration <- function(carpeta_datos ='/home/aolza/Desktop/estratificacionDat
   carpeta_ccs                      <- file.path(carpeta_datos_indispensable,'ccs')
   diccionario_cie9_ccs             <- file.path(carpeta_ccs, diccionario_cie9_ccs)
   diccionario_cie10cm_ccs          <- file.path(carpeta_ccs, diccionario_cie10cm_ccs)
+  diccionario_atc                  <- file.path(carpeta_ccs, diccionario_atc)
   fichero_revision_manual_ccs_icd9 <- file.path(carpeta_ccs, fichero_revision_manual_ccs_icd9)
   fichero_revision_manual_ccs_icd10<- file.path(carpeta_ccs, fichero_revision_manual_ccs_icd10)
   
@@ -74,6 +76,7 @@ configuration <- function(carpeta_datos ='/home/aolza/Desktop/estratificacionDat
                 ficheros_ACG=ficheros_ACG,
                 diccionario_cie9_ccs=diccionario_cie9_ccs,
                 diccionario_cie10cm_ccs=diccionario_cie10cm_ccs,
+                diccionario_atc = diccionario_atc,
                 ficheros_ccs = ficheros_ccs,
                 fichero_revision_manual_ccs_icd9=fichero_revision_manual_ccs_icd9,
                 fichero_revision_manual_ccs_icd10=fichero_revision_manual_ccs_icd10

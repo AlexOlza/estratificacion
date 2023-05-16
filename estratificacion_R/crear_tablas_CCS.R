@@ -1,3 +1,5 @@
+#!/usr/bin/Rscript
+# (La linea de arriba es necesaria)
 ##################################################################################################################
 #
 #       LA FUNCIÓN create_CCS_table(year, binarize):
@@ -236,6 +238,8 @@ get_CCS <- function(year, binarize=TRUE){
   # I return X with the columns in alphabetical order. This is important for modelling (they must be always in the same order)
   return(X)
 }
-
+# The statements below are not executed if this script is sourced
+if (sys.nframe() == 0){
 year <-2017
 ccs <- get_CCS(year)
+}
