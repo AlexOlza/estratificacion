@@ -13,7 +13,15 @@ X<- get_data(2016)
 cost <- fread(as.character(config$ficheros_ACG['2016']),select=c('PATIENT_ID','COSTE_TOTAL_ANO2'))
 
 Xy <- merge(X,cost, on='PATIENT_ID')
-sampleXy <-sample_n(Xy,10000)
+# La memoria no da para el modelo completo, lo hago con una muestra de los datos:
+sampleXy <-sample_n(Xy,100000)
 model <- lm(COSTE_TOTAL_ANO2~., sampleXy[,-'PATIENT_ID'])
-
-print(sort(model$coefficients, decreasing=TRUE))
+# Los coeficientes NO SON VÁLIDOS, pero se podrían describir así
+descrip<-fread(config$fichero_descripciones_ccs)
+coefs<-data.table(model$coefficients)
+setnames(coefs,'beta')
+coefs$CATEGORIES <- names(model$coefficients)
+coefs <- as.data.table(merge(coefs, descrip, on='CATEGORIES', all.x = TRUE))
+print(coefs[order(-beta)])
+print(coefs[coefs$CATEGORIES=='FEMALE'])
+print(coefs[startsWith(coefs$CATEGORIES,'AGE')])

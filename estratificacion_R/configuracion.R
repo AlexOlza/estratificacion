@@ -28,6 +28,7 @@ configuration <- function(carpeta_datos ='/home/aolza/Desktop/estratificacionDat
                           diccionario_atc = 'diccionario_ATC_farmacia.csv',
                           fichero_revision_manual_ccs_icd9="manually_revised_icd9.csv",
                           fichero_revision_manual_ccs_icd10="manually_revised_icd10.csv",
+                          fichero_descripciones_ccs='CCSCategoryNames_FullLabels.csv',
                           # Ficheros derivados de los datos indispensables
                           # (si no existen, se calculan usando CCS_table del script crear_tablas_CCS):
                           ficheros_ccs = c("2016"="CCS2016R.csv","2017"="CCS2017R.csv"),
@@ -41,6 +42,7 @@ configuration <- function(carpeta_datos ='/home/aolza/Desktop/estratificacionDat
   diccionario_atc                  <- file.path(carpeta_ccs, diccionario_atc)
   fichero_revision_manual_ccs_icd9 <- file.path(carpeta_ccs, fichero_revision_manual_ccs_icd9)
   fichero_revision_manual_ccs_icd10<- file.path(carpeta_ccs, fichero_revision_manual_ccs_icd10)
+  fichero_descripciones_ccs        <- file.path(carpeta_datos,fichero_descripciones_ccs)
   
   for (name in names(ficheros_dx)){
     # test de calidad
@@ -87,6 +89,7 @@ configuration <- function(carpeta_datos ='/home/aolza/Desktop/estratificacionDat
                 diccionario_cie9_ccs=diccionario_cie9_ccs,
                 diccionario_cie10cm_ccs=diccionario_cie10cm_ccs,
                 diccionario_atc = diccionario_atc,
+                fichero_descripciones_ccs=fichero_descripciones_ccs,
                 ficheros_ccs = ficheros_ccs,
                 ficheros_atc = ficheros_atc,
                 fichero_revision_manual_ccs_icd9=fichero_revision_manual_ccs_icd9,
