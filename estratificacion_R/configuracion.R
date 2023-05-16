@@ -17,6 +17,7 @@
 library("stringr")
 # función constructora de la clase "configuration"
 configuration <- function(carpeta_datos ='/home/aolza/Desktop/estratificacionDatos',
+                          carpeta_ficheros_auxiliares = '/home/aolza/Desktop/estratificacion/aux/',
                           # Ficheros de datos indispensables:
                           ficheros_dx =  c("2016"="dx_in_2016.txt","2017"="dx_in_2017.txt"),#esta variable será un diccionario con los años como claves 
                                                                                             #y los nombres de fichero como valores
@@ -29,7 +30,8 @@ configuration <- function(carpeta_datos ='/home/aolza/Desktop/estratificacionDat
                           fichero_revision_manual_ccs_icd10="manually_revised_icd10.csv",
                           # Ficheros derivados de los datos indispensables
                           # (si no existen, se calculan usando CCS_table del script crear_tablas_CCS):
-                          ficheros_ccs = c("2016"="CCS2016R.csv","2017"="CCS2017R.csv")
+                          ficheros_ccs = c("2016"="CCS2016R.csv","2017"="CCS2017R.csv"),
+                          ficheros_atc = c("2016"="atc2016R.csv","2017"="atc2017R.csv") #farmacia
                           ) {
   
   carpeta_datos_indispensable      <- file.path(carpeta_datos,'indispensable')
@@ -61,6 +63,13 @@ configuration <- function(carpeta_datos ='/home/aolza/Desktop/estratificacionDat
     ficheros_ccs[name]         <- file.path(carpeta_datos,ficheros_ccs[name])
   }
   
+  for (name in names(ficheros_atc)){
+    # test de calidad
+    if ( is.na(as.integer(name))) stop('ficheros_atc debe ser un diccionario con los años como claves. Ejemplo: \n
+                                    ficheros_atc= c("2016"="atc_2016.txt","2017"="atc_2017.txt")')
+    ficheros_atc[name]         <- file.path(carpeta_datos,ficheros_atc[name])
+  }
+  
   for (name in names(ficheros_ACG)){
     # test de calidad
     if ( is.na(as.integer(name))) stop('ficheros_ACG debe ser un diccionario con los años como claves. Ejemplo: \n
@@ -71,6 +80,7 @@ configuration <- function(carpeta_datos ='/home/aolza/Desktop/estratificacionDat
   value <- list(carpeta_datos=carpeta_datos,
                 carpeta_datos_indispensable=carpeta_datos_indispensable,
                 carpeta_ccs=carpeta_ccs,
+                carpeta_ficheros_auxiliares =carpeta_ficheros_auxiliares,
                 ficheros_dx=ficheros_dx, 
                 ficheros_rx=ficheros_rx,
                 ficheros_ACG=ficheros_ACG,
@@ -78,6 +88,7 @@ configuration <- function(carpeta_datos ='/home/aolza/Desktop/estratificacionDat
                 diccionario_cie10cm_ccs=diccionario_cie10cm_ccs,
                 diccionario_atc = diccionario_atc,
                 ficheros_ccs = ficheros_ccs,
+                ficheros_atc = ficheros_atc,
                 fichero_revision_manual_ccs_icd9=fichero_revision_manual_ccs_icd9,
                 fichero_revision_manual_ccs_icd10=fichero_revision_manual_ccs_icd10
                 )

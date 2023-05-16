@@ -18,6 +18,26 @@ library(dplyr)
 
 remove_non_alphanumeric <- function(string) return(str_replace_all(pattern = '[^[:alnum:]]', replacement='',string=string))
 
+ATC_drug_group_descriptive <- function(rx_with_drug_group, year){
+  number_of_cases=list()
+  grouped <-rx_with_drug_group %>% group_by('CODE')
+  for (code in unique(grouped$CODE)){
+    df <- grouped[grouped$CODE==code,]
+    print(code)
+    number_of_cases[code]<-length(unique(df$PATIENT_ID))
+  }
+  unique_rx_with_group<-unique(rx_with_drug_group,by=c('CODE','drug_group'))[,c('CODE','drug_group')]
+  cases <- data.table()
+  cases$N <- transpose(data.table(do.call(cbind, number_of_cases)))
+  cases$CODE <- names(number_of_cases)
+  df <- merge(unique_rx_with_group, cases, by='CODE')
+  number_of_cases_per_drug_group <- aggregate(N ~ drug_group, data=df, FUN=sum)
+  setorder(number_of_cases_per_drug_group, cols = - "N") 
+  fwrite(number_of_cases_per_drug_group,
+         file.path(config$carpeta_ficheros_auxiliares,paste('number_of_cases_per_drug_group_',year,'.xlsx',sep='')))
+}
+  
+
 create_ATC_table <- function(year, binarize=TRUE){
   year <- as.character(year)
   if (file.exists(as.character(config$ficheros_atc[year]))){
@@ -27,10 +47,10 @@ create_ATC_table <- function(year, binarize=TRUE){
     return(X)
     
   }
-  print('Creating ATC table. This may take a while (between half an hour and an hour).')
+  print('Creating ATC table. This may take a while (between 10min and half an hour).')
   # Quality checks, and verification that the needed files exist
   if ( is.na(as.integer(year))) stop('year must be an integer number, or a string that represents an integer!')
-  if ( !(file.exists(as.character(config$ficheros_x[year])))) stop(sprintf('Missing file: config$ficheros_rx[year]. %s does not exist.',config$ficheros_rx[year]))
+  if ( !(file.exists(as.character(config$ficheros_rx[year])))) stop(sprintf('Missing file: config$ficheros_rx[year]. %s does not exist.',config$ficheros_rx[year]))
   
   # Reading dictionary and prescriptions
   atc_dict <- fread(config$diccionario_atc)
@@ -40,10 +60,10 @@ create_ATC_table <- function(year, binarize=TRUE){
   # PREPROCESSING 
   atc_dict <- atc_dict[, lapply(.SD, remove_non_alphanumeric)]
   atc_dict <- atc_dict[, lapply(.SD, toupper)]
-  rx$CODE <- remove_non_alphanumeric(rx$CODE)
-  rx <- rx[, lapply(.SD, toupper),.SDcols=c('CODE')]
+  rx[, CODE := lapply(.SD, remove_non_alphanumeric),.SDcols=c('CODE')]
+  rx[, CODE := lapply(.SD, toupper),.SDcols=c('CODE')]
   
-  unique_codes_prescribed<-data.frame('CODE'=unique(rx$CODE))
+  unique_codes_prescribed<-data.table('CODE'=unique(rx$CODE))
   
   
   for (start in unique(atc_dict$starts_with)) {
@@ -52,50 +72,47 @@ create_ATC_table <- function(year, binarize=TRUE){
   n_distinct_drugs <- length(unique(unique_codes_prescribed$drug_group))
   print(sprintf('In year %s, %s distinct drug groups from the dictionary were prescribed to patients',year,n_distinct_drugs))
   
-  #Drop codes that were not prescribed to any patient in the current year
-  rx_with_drug_group=pd.DataFrame({'PATIENT_ID':[],'CODE':[],'drug_group':[]})
-  # df=diags.copy()
-  rx_with_drug_group=pd.merge(rx, unique_codes_prescribed, on=['CODE'], how='inner')[['PATIENT_ID','CODE','drug_group']].dropna()
-  ATC_drug_group_descriptive(rx_with_drug_group,yr)
+  rx_with_drug_group<-rx[ unique_codes_prescribed, on='CODE']
+  rx_with_drug_group <- rx_with_drug_group[!is.na(rx_with_drug_group$drug_group)]
+  ATC_drug_group_descriptive(rx_with_drug_group,year)
   
-  # COMPUTE THE DATA MATRIX (takes half an hour)
+  # COMPUTE THE DATA MATRIX (takes 10min)
   tic('Computing ATC matrix')
-  X=data.frame('PATIENT_ID'=unique(diags_with_ccs$PATIENT_ID))
+  X=data.table('PATIENT_ID'=unique(rx_with_drug_group$PATIENT_ID))
   i=0
-  grouped <-diags_with_ccs %>% group_by(CCS,PATIENT_ID)
+  grouped <-rx_with_drug_group %>% group_by(drug_group,PATIENT_ID)
   amount_per_patient<- grouped %>% summarize(count=n())
-  I<-length(unique(amount_per_patient$CCS))
-  for (ccs_number in unique(amount_per_patient$CCS)){
+  I<-length(unique(amount_per_patient$drug_group))
+  for (atc_group in unique(amount_per_patient$drug_group)){
     i<-i+1
-    patients_with_CCS <- amount_per_patient[amount_per_patient$CCS==ccs_number,c('PATIENT_ID','count')]
-    print(sprintf('CCS %s (%s percent done)',ccs_number,i*100/I))
-    X=merge(X,patients_with_CCS,all.x = TRUE)
-    names(X)[names(X) == "count"] <- paste('CCS',ccs_number,sep='')
+    patients_with_group <- amount_per_patient[amount_per_patient$drug_group==atc_group,c('PATIENT_ID','count')]
+    print(sprintf('ATC %s (%s percent done)',atc_group,i*100/I))
+    X=merge(X,patients_with_group,all.x = TRUE)
+    names(X)[names(X) == "count"] <- paste('PHARMA_',atc_group,sep='')
   }
   X[is.na(X)] <- 0
   toc()
-  fwrite(X,as.character(config$ficheros_ccs[year]))
+  fwrite(X,as.character(config$ficheros_atc[year]))
   if (binarize){X[, names(X)[-1] := lapply(.SD, function(x) as.integer(x!=0)), .SDcols = 2:ncol(X)]}
   return(X)
 }
 
-get_CCS <- function(year, binarize=TRUE){
+get_ATC <- function(year, binarize=TRUE){
   ##########################################################################################
   #     Returns the CCS table for all patients in the Basque Country (including those without any illness)
   ###########################################################################################
-  ccs <- create_CCS_table(year, binarize)
-  # I read the first row to extract the column names
-  column_names <-  names(fread(as.character(config$ficheros_ACG[as.character(year)]),nrows = 1))
-  # I now read only columns for ID, sex and age, EXCEPT AGE_85GT (that is a linear combination of the others)
-  all_patients <- fread(as.character(config$ficheros_ACG[as.character(year)]),
-                        select=column_names[! is.na(str_match(column_names,'PATIENT_ID|FEMALE|AGE_[0-9]+$'))])
-  X <- ccs[all_patients, on = .(PATIENT_ID)]
+  atc <- create_ATC_table(year, binarize)
+  # I read only column for ID
+  all_patients <- fread(as.character(config$ficheros_ACG[as.character(year)]),select='PATIENT_ID')
+  X <- atc[all_patients, on = .(PATIENT_ID)]
   X <-setnafill(X, fill = 0)
   predictors <- names(X)[names(X)!='PATIENT_ID']
   setcolorder(X, c('PATIENT_ID',str_sort(predictors))) 
   # I return X with the columns in alphabetical order. This is important for modelling (they must be always in the same order)
   return(X)
 }
-
+# The statements below are not executed if this script is sourced
+if (sys.nframe() == 0){
 year <-2017
-ccs <- get_CCS(year)
+atc <- get_ATC(year)
+}
