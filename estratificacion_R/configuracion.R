@@ -23,6 +23,7 @@ configuration <- function(carpeta_datos ='/home/aolza/Desktop/estratificacionDat
                                                                                             #y los nombres de fichero como valores
                           ficheros_rx =   c("2016"="rx_in_2016.txt","2017"="rx_in_2017.txt"), #esta variable también
                           ficheros_ACG =  c("2016"="2016-2017.txt","2017"="2017-2018.txt"), #contienen edad, sexo, acgs
+                          fichero_todos_los_ingresos = 'datos_hospitalizaciones/ingresos2016_2018.csv',
                           diccionario_cie9_ccs = 'translate_icd9_ccs_2015.csv',
                           diccionario_cie10cm_ccs = 'translate_icd10cm_ccs_2018.csv',
                           diccionario_atc = 'diccionario_ATC_farmacia.csv',
@@ -43,6 +44,7 @@ configuration <- function(carpeta_datos ='/home/aolza/Desktop/estratificacionDat
   fichero_revision_manual_ccs_icd9 <- file.path(carpeta_ccs, fichero_revision_manual_ccs_icd9)
   fichero_revision_manual_ccs_icd10<- file.path(carpeta_ccs, fichero_revision_manual_ccs_icd10)
   fichero_descripciones_ccs        <- file.path(carpeta_datos,fichero_descripciones_ccs)
+  fichero_todos_los_ingresos       <- file.path(carpeta_datos_indispensable,fichero_todos_los_ingresos)
   
   for (name in names(ficheros_dx)){
     # test de calidad
@@ -86,6 +88,7 @@ configuration <- function(carpeta_datos ='/home/aolza/Desktop/estratificacionDat
                 ficheros_dx=ficheros_dx, 
                 ficheros_rx=ficheros_rx,
                 ficheros_ACG=ficheros_ACG,
+                fichero_todos_los_ingresos=fichero_todos_los_ingresos,
                 diccionario_cie9_ccs=diccionario_cie9_ccs,
                 diccionario_cie10cm_ccs=diccionario_cie10cm_ccs,
                 diccionario_atc = diccionario_atc,

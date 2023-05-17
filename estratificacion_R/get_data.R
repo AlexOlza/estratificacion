@@ -3,16 +3,23 @@
 source('/home/aolza/Desktop/estratificacion/estratificacion_R/configuracion.R')
 source('/home/aolza/Desktop/estratificacion/estratificacion_R/crear_tablas_CCS.R')
 source('/home/aolza/Desktop/estratificacion/estratificacion_R/crear_tablas_ATC.R')
-
+source('/home/aolza/Desktop/estratificacion/estratificacion_R/extraer_hospitalizaciones.R')
 get_data <- function(year, binarize=TRUE){
+  # Función de nivel usuario.
+  # Devuelve una tabla con los pacientes, sus CCS y sus fármacos.
+  # Si se utiliza binarize=FALSE, en lugar de devolver presencia/ausencia de CCS y fármacos, devuelve el número de ocurrencias
   ccs <- get_CCS(year, binarize)
   atc <- get_ATC(year, binarize)
   X   <- merge(ccs,atc,on='PATIENT_ID')
   return(X)
 }
 if (sys.nframe() == 0){
-X<- get_data(2016)
-cost <- fread(as.character(config$ficheros_ACG['2016']),select=c('PATIENT_ID','COSTE_TOTAL_ANO2'))
+year <- 2017
+X<- get_data(year)
+cost <- fread(as.character(config$ficheros_ACG[as.character(year)]),select=c('PATIENT_ID','COSTE_TOTAL_ANO2'))
+
+ing <- get_hospitalizations(year+1, X, column='urgcms', exclude_nbinj=TRUE)
+
 descrip<-fread(config$fichero_descripciones_ccs)
 
 ##################################################################################################
@@ -29,6 +36,8 @@ dt <- merge(dt, descrip, on='CATEGORIES', all.x = TRUE)
 dt[dt$LABELS %like% '[Dd]iabetes',]
 # Pacientes con hipertensión
 dt[dt$LABELS %like% '[Hh]ypertension',]
+
+print(sprintf('Prevalence of hospitalization is: %s',100*sum(as.integer(ing$urgcms>=1))/nrow(ing)))
 ##################################################################################################
 ###                 MODELO DE REGRESIÓN LINEAL
 ##################################################################################################

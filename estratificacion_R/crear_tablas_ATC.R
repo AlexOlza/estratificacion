@@ -5,7 +5,7 @@
 #       LA FUNCIÓN create_ATC_table(year, binarize):
 #         Devuelve la tabla de ATC del año correspondiente para los pacientes con algún fármaco.
 #  ~~~~~~~~  MUY IMPORTANTE!!! Esta matriz sólo contiene a los pacientes con algún fármaco..
-#  ~~~~~~~~                    Para conseguir a todos los pacientes con edad y sexo, usar get_X(year, binarize) !!!!
+#  ~~~~~~~~                    Para conseguir a todos los pacientes con edad y sexo, usar get_data(year, binarize) !!!!
 #         Si la encuentra en disco (en la direción que marque config$ficheros_atc[year]) la carga directamente,
 #         si no, la calcula (tarda aprox. 45 minutos) y la guarda allí.
 #         PASOS PARA CALCULARLA: Similares a los de create_CCS_table (leer esa documentación)
