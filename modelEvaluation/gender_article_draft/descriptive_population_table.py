@@ -25,7 +25,7 @@ import numpy as np
 from dataManipulation.dataPreparation import getData
 from modelEvaluation.compare import performance
 #%%
-X, y = getData(2017)
+X, y = getData(2017,columns='urgcms')
 Xcost, ycost=getData(2017, columns='COSTE_TOTAL_ANO2')
 #%%
 descriptions=pd.read_csv(config.DATAPATH+'CCSCategoryNames_FullLabels.csv')
@@ -64,11 +64,15 @@ def table_1(X,y,Xcost, ycost, descriptions, chosen_CCSs):
             #f'{inlist} ({round(100*inlist/len(topK),2)} %)',f'{inpopulation} ({round(100*inpopulation/len(X),2)} %)']
         else:
             inlist,inpopulation= 0, 0
+            men_=men.copy()
+            women_=women.copy()
             for ccs in chosen_CCS_group:
                 chosen_CCS=f'CCS{ccs}'
                 # print(topK[chosen_CCS].sum(),'people have ',chosen_CCS)
-                inlist+=men[chosen_CCS].sum()
-                inpopulation+=women[chosen_CCS].sum()
+                inlist+=men_[chosen_CCS].sum()
+                inpopulation+=women_[chosen_CCS].sum()
+                men_=men_.loc[men_[chosen_CCS]==0]
+                women_=women_.loc[women_[chosen_CCS]==0]
             table[descriptions.loc[descriptions.CATEGORIES==chosen_CCS].LABELS.values[0]]=[round(100*inlist/len(men),2) ,round(100*inpopulation/len(women),2) ]        
     table=pd.DataFrame.from_dict(table,orient='index',columns=['Male', 'Female'])
     # print(table.sort_values('Mujeres',ascending=False).to_markdown())

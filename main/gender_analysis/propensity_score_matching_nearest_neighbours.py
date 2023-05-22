@@ -126,15 +126,12 @@ print('Initial AUC for propensity scores: ', initial_AUC)
 #%%
 """ PERFORM MATCHING OR RELOAD PAIRS FROM FILE """
 if not  Path(filename).is_file():
-   
-    X.loc[:,'propensity_score'] = propensity_scores
-    X.loc[:,'propensity_score_logit'] = propensity_logit
-    X.loc[:,'outcome'] = y.iloc[X.index][config.COLUMNS].values
-    
+
     if plot:
         import seaborn as sns
         from matplotlib import pyplot as plt
         sns.set(rc={'figure.figsize':(16,10)}, font_scale=1.3)
+        sns.set_style("white")
         # Density distribution of propensity score (logic) broken down by treatment status
         fig, ax = plt.subplots(1,1)
         # fig.suptitle('Density distribution plots for propensity score')
@@ -177,6 +174,7 @@ if evaluate_matching:
         import seaborn as sns
         from matplotlib import pyplot as plt
         sns.set(rc={'figure.figsize':(16,10)}, font_scale=1.3)
+        sns.set_style("white")
         # Density distribution of propensity score (logic) broken down by treatment status
         fig, ax = plt.subplots(1,1)
         # fig.suptitle('Density distribution plots for propensity score.')
@@ -254,7 +252,7 @@ if evaluate_matching:
         res_plot['log_before']=res_plot.before
         res_plot['log_after']=res_plot.after
         
-        sns.set(rc={'figure.figsize':(40,20)}, font_scale=3.0)
+        sns.set(rc={'figure.figsize':(40,20)}, font_scale=3.0,style='white')
         fig, ax = plt.subplots(1,1)
         before_plot=pd.concat([res_plot.nlargest(5,'before'),res_plot.nsmallest(5,'before')])[['description','variable','log_before','N_women_before','N_men_before','N_women_after','N_men_after']]
         before_plot['matching']='before'

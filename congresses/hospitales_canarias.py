@@ -85,11 +85,15 @@ def table_1(preds,X,descriptions, chosen_CCSs):
             #f'{inlist} ({round(100*inlist/len(topK),2)} %)',f'{inpopulation} ({round(100*inpopulation/len(X),2)} %)']
         else:
             inlist,inpopulation= 0, 0
+            X_=X.copy()
+            topK_=topK.copy()
             for ccs in chosen_CCS_group:
                 chosen_CCS=f'CCS{ccs}'
-                print(topK[chosen_CCS].sum(),'people have ',chosen_CCS)
-                inlist+=topK[chosen_CCS].sum()
-                inpopulation+=X[chosen_CCS].sum()
+                print(topK_[chosen_CCS].sum(),'people have ',chosen_CCS)
+                inlist+=topK_[chosen_CCS].sum()
+                inpopulation+=X_[chosen_CCS].sum()
+                X_=X_.loc[X_[chosen_CCS]==0]
+                topK_=topK_.loc[topK_[chosen_CCS]==0]
             table[descriptions.loc[descriptions.CATEGORIES==chosen_CCS].LABELS.values[0]]=[round(100*inlist/len(topK),2) ,round(100*inpopulation/len(X),2) ]
     table['Mujeres']=[100*topK['FEMALE'].sum()/len(topK),100*X['FEMALE'].sum()/len(X)]
     table=pd.DataFrame.from_dict(table,orient='index',columns=['Listado', 'Población General'])
