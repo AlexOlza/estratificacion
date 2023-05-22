@@ -4,10 +4,10 @@
 https://keras.io/guides/keras_tuner/getting_started/
 Created on Tue Mar  8 10:29:07 2022
 
-@author: aolza
+@author: alex
 """
 import sys
-sys.path.append('/home/aolza/Desktop/estratificacion/')
+sys.path.append('/home/alex/Desktop/estratificacion/')
 import numpy as np
 import pandas as pd
 import keras_tuner as kt

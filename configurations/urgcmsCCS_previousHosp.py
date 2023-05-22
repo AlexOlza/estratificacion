@@ -3,7 +3,7 @@
 """
 Created on Fri May 27 10:03:27 2022
 
-@author: aolza
+@author: alex
 """
 EXPERIMENT=__name__.split('.')[-1]
 CONFIGNAME=EXPERIMENT+'.py'

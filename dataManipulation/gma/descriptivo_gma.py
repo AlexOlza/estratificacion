@@ -3,7 +3,7 @@
 """
 Created on Wed Dec 14 11:39:29 2022
 
-@author: aolza
+@author: alex
 """
 #%% Descriptivo GMA
 import pandas as pd

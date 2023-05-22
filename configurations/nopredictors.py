@@ -3,7 +3,7 @@
 """
 Created on Wed Apr 20 15:41:27 2022
 
-@author: aolza
+@author: alex
 """
 
 EXPERIMENT='nopredictors'

@@ -3,7 +3,7 @@
 """
 Created on Thu Apr 13 12:28:50 2023
 
-@author: aolza
+@author: alex
 """
 import sys
 import os
@@ -27,7 +27,7 @@ import pandas as pd
 import re
 import seaborn as sns
 from matplotlib import pyplot as plt
-figurepath='/home/aolza/Desktop/estratificacion/figures/gender_article_draft'
+figurepath='/home/alex/Desktop/estratificacion/figures/gender_article_draft'
 CCS=eval(input('CCS? True/False: '))
 ccs='CCS' if CCS else 'ACG'
 

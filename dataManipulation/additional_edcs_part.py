@@ -3,7 +3,7 @@
 """
 Created on Mon 21 Feb 2022
 
-@author: aolza
+@author: alex
 """
 
 import pandas as pd
@@ -12,7 +12,7 @@ import re
 import numpy as np
 import csv
 
-DATAPATH='/home/aolza/Desktop/estratificacionDatos/'
+DATAPATH='/home/alex/Desktop/estratificacionDatos/'
 INDISPENSABLEDATAPATH=DATAPATH+'indispensable/'
 
 """FILES"""

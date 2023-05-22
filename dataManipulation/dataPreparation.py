@@ -3,7 +3,7 @@
 """
 Created on Wed Nov 17 11:20:27 2021
 
-@author: aolza
+@author: alex
 """
 import os
 import pandas as pd
@@ -478,7 +478,7 @@ def generateCCSData(yr,  X,
 #%%
 if __name__=='__main__':
     import sys
-    sys.path.append('/home/aolza/Desktop/estratificacion/')
+    sys.path.append('/home/alex/Desktop/estratificacion/')
     yr=2016
     X,Y=getData(yr, CCS=True, PHARMACY=True)
     # _ , _ =generateCCSData(yr,  X)

@@ -3,8 +3,8 @@
 #SBATCH--job-name="ver"
 #SBATCH --mem-per-cpu=6G
 #SBATCH--partition="short"
-#SBATCH--output=/home/aolza/Desktop/estratificacion/main/cluster/output/over.txt
-#SBATCH--error=/home/aolza/Desktop/estratificacion/main/cluster/output/ever.txt
+#SBATCH--output=/home/alex/Desktop/estratificacion/main/cluster/output/over.txt
+#SBATCH--error=/home/alex/Desktop/estratificacion/main/cluster/output/ever.txt
 echo "-------" 
 echo "Copying input files to temporary run dir" 
 cp *.py -v $SCRATCH_JOB
@@ -21,6 +21,6 @@ echo "-------"
 echo "Copying output files to home folder" 
 date +"%F %T" 
 
-cp -r $SCRATCH_JOB  /home/aolza/$SLURM_JOB_ID
-chmod -R 770 /home/aolza/$SLURM_JOB_ID
+cp -r $SCRATCH_JOB  /home/alex/$SLURM_JOB_ID
+chmod -R 770 /home/alex/$SLURM_JOB_ID
 

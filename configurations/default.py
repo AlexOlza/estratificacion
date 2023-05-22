@@ -3,13 +3,13 @@
 """
 Created on Thu Nov 18 16:14:16 2021
 
-@author: aolza
+@author: alex
 """
 SEED=42 #random seed
 """LOCATIONS"""
 PROJECT='estratificacion'
-ROOTPATH='/home/aolza/Desktop/estratificacion/'
-DATAPATH='/home/aolza/Desktop/estratificacionDatos/'
+ROOTPATH='/home/alex/Desktop/estratificacion/'
+DATAPATH='/home/alex/Desktop/estratificacionDatos/'
 INDISPENSABLEDATAPATH=DATAPATH+'indispensable/'
 CONFIGPATH=ROOTPATH+'configurations/'
 USEDCONFIGPATH=CONFIGPATH+'used/'

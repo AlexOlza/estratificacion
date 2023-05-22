@@ -3,7 +3,7 @@
 """
 Created on Tue Dec 14 16:13:19 2021
 
-@author: aolza
+@author: alex
 
 
     Input: Experiment name, prediction year
@@ -23,7 +23,7 @@ from sklearn.metrics import roc_auc_score, average_precision_score, brier_score_
     precision_recall_curve, PrecisionRecallDisplay
 import sys
 
-sys.path.append('/home/aolza/Desktop/estratificacion/')
+sys.path.append('/home/alex/Desktop/estratificacion/')
 import os
 import pandas as pd
 from pathlib import Path

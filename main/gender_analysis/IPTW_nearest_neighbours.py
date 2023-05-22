@@ -3,11 +3,11 @@
 """
 Created on Tue Nov  8 10:32:34 2022
 
-@author: aolza
+@author: alex
 Source: https://github.com/konosp/propensity-score-matching/blob/main/propensity_score_matching_v2.ipynb
 """
 import sys
-sys.path.append('/home/aolza/Desktop/estratificacion/')#necessary in cluster
+sys.path.append('/home/alex/Desktop/estratificacion/')#necessary in cluster
 
 chosen_config='configurations.cluster.'+sys.argv[1]
 experiment='configurations.'+sys.argv[2]

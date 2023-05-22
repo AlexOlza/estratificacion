@@ -3,7 +3,7 @@
 """
 Created on Wed Jan 25 15:08:20 2023
 
-@author: aolza
+@author: alex
 
 Modelo predictivo de riesgo de muerte a los 12 meses como elemento de ayuda para la identificación de personas con necesidades de cuidados paliativos
 
@@ -23,7 +23,7 @@ Modelo predictivo de riesgo de muerte a los 12 meses como elemento de ayuda para
 """
 
 import sys
-sys.path.append('/home/aolza/Desktop/estratificacion/')#necessary in cluster
+sys.path.append('/home/alex/Desktop/estratificacion/')#necessary in cluster
 
 chosen_config='configurations.cluster.logistic'
 experiment='configurations.death1year_canarias'

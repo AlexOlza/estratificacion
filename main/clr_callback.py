@@ -3,7 +3,7 @@
 """
 Created on Tue Sep 14 13:39:55 2021
 
-@author: aolza
+@author: alex
 """
 from tensorflow.keras.callbacks import *
 from tensorflow.keras import backend as K

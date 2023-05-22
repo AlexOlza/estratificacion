@@ -11,7 +11,7 @@ from pathlib import Path
 from sklearn.metrics import r2_score
 from sklearn.linear_model import LinearRegression, RidgeCV
 import sys
-sys.path.append('/home/aolza/Desktop/estratificacion/')
+sys.path.append('/home/alex/Desktop/estratificacion/')
 import pandas as pd
 #%%
 chosen_config='configurations.cluster.'+sys.argv[1]

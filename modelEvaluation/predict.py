@@ -3,7 +3,7 @@
 """
 Created on Thu Nov 25 09:59:25 2021
 
-@author: aolza
+@author: alex
 """
 #%%
 #EXTERNAL LIBRARIES
@@ -32,7 +32,7 @@ args, unknown_args = parser.parse_known_args()
 # year=args.year
 
 
-sys.path.append('/home/aolza/Desktop/estratificacion/')
+sys.path.append('/home/alex/Desktop/estratificacion/')
 from python_settings import settings as config
 from configurations.utility import configure
 if not config.configured: 

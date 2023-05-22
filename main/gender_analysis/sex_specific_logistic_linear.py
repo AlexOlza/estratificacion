@@ -4,10 +4,10 @@
 TRAIN TWO SEPARATE LOGISTIC REGRESSION MODELS FOR MALES AND FEMALES
 Created on Fri Mar 18 12:50:05 2022
 
-@author: aolza
+@author: alex
 """
 import sys
-sys.path.append('/home/aolza/Desktop/estratificacion/')#necessary in cluster
+sys.path.append('/home/alex/Desktop/estratificacion/')#necessary in cluster
 
 chosen_config='configurations.cluster.'+sys.argv[1]
 experiment='configurations.'+sys.argv[2]

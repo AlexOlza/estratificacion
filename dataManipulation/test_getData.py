@@ -4,7 +4,7 @@
 This scripts tests wether getData can recover the data matrix we had before (with OLDBASE)
 Created on Wed Jan 12 11:19:22 2022
 
-@author: aolza
+@author: alex
 """
 import importlib
 import sys

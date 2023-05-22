@@ -3,10 +3,10 @@
 """
 Created on Mon Nov 22 15:19:44 2021
 
-@author: aolza
+@author: alex
 """
 import sys
-sys.path.append('/home/aolza/Desktop/estratificacion/')
+sys.path.append('/home/alex/Desktop/estratificacion/')
 import argparse
 
 parser = argparse.ArgumentParser(description='Train HGB algorithm and save model')

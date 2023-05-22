@@ -3,7 +3,7 @@
 """
 Created on Thu Dec  9 11:32:19 2021
 
-@author: aolza
+@author: alex
 """
 
 EXPERIMENT=__name__.split('.')[-1]

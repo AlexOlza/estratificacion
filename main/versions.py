@@ -3,7 +3,7 @@
 """
 Created on Mon Dec 20 11:36:16 2021
 
-@author: aolza
+@author: alex
 """
 import importlib
 import joblib
