@@ -7,7 +7,7 @@ SI NO, LOS CARGA
 DESPUÉS, LOS JUNTA CON LOS ACGS (to do)
 Created on Wed Nov 10 15:58:34 2021
 
-@author: aolza
+@author: alex
 
 """
 from python_settings import settings as config

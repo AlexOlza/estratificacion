@@ -3,7 +3,7 @@
 """
 Created on Tue Jan 31 10:01:28 2023
 
-@author: aolza
+@author: alex
 """
 """
 We exclude 444162 patients, 65.18094749213125 % women
@@ -13,11 +13,11 @@ Initial AUC for propensity scores:  0.7095418287008433
 a reference: https://sci-hub.se/10.1213/ANE.0000000000002787
 Created on Tue Nov  8 10:32:34 2022
 
-@author: aolza
+@author: alex
 Source: https://github.com/konosp/propensity-score-matching/blob/main/propensity_score_matching_v2.ipynb
 """
 import sys
-sys.path.append('/home/aolza/Desktop/estratificacion/')#necessary in cluster
+sys.path.append('/home/alex/Desktop/estratificacion/')#necessary in cluster
 # cost=eval(input('Enter True for COST or False for HOSPITALIZATION: '))
 # exp= 'costCCS_vigo' if cost else 'urgcmsCCS_vigo'
 # conf='linear' if cost else 'logistic'

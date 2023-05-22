@@ -3,10 +3,10 @@
 """
 Created on Tue Apr 11 13:52:06 2023
 
-@author: aolza
+@author: alex
 """
 import sys
-sys.path.append('/home/aolza/Desktop/estratificacion/')#necessary in cluster
+sys.path.append('/home/alex/Desktop/estratificacion/')#necessary in cluster
 logistic_model='logistic20220207_122835'
 chosen_config='configurations.cluster.logistic'
 experiment='configurations.urgcms_excl_nbinj'

@@ -3,7 +3,7 @@
 """
 Created on Thu Nov 25 16:33:56 2021
 
-@author: aolza
+@author: alex
 """
 
 EXPERIMENT='almeria'

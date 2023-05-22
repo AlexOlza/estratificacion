@@ -3,10 +3,10 @@
 """
 Created on Thu Nov 25 16:23:21 2021
 
-@author: aolza
+@author: alex
 """
 import sys
-sys.path.append('/home/aolza/Desktop/estratificacion/')#necessary in cluster
+sys.path.append('/home/alex/Desktop/estratificacion/')#necessary in cluster
 try: 
     chosen_config='configurations.cluster.'+sys.argv[1]
     experiment='configurations.'+sys.argv[2]

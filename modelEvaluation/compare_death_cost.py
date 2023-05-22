@@ -3,7 +3,7 @@
 """
 Created on Tue Dec 14 16:13:19 2021
 
-@author: aolza
+@author: alex
 
 
     Input: Experiment name, prediction year
@@ -23,7 +23,7 @@ from sklearn.metrics import roc_auc_score, average_precision_score, brier_score_
     precision_recall_curve, PrecisionRecallDisplay
 import sys
 
-sys.path.append('/home/aolza/Desktop/estratificacion/')#necessary in cluster
+sys.path.append('/home/alex/Desktop/estratificacion/')#necessary in cluster
 
 chosen_config='configurations.cluster.'+sys.argv[1]
 experiment='configurations.'+sys.argv[2]
@@ -84,8 +84,8 @@ if __name__ == '__main__':
     deathModel='logistic20221104_132237'
     predDeathCCS, score=predict(deathModel,config.EXPERIMENT,2018,X=X,y=y)
 
-    predCostACG=pd.read_csv('/home/aolza/Desktop/estratificacion/predictions/cost_ACG/linear20221205_132708__2018.csv')
-    predCostCCS=pd.read_csv('/home/aolza/Desktop/estratificacion/predictions/costCCS_pharma/linear20221205_131359__2018.csv')
+    predCostACG=pd.read_csv('/home/alex/Desktop/estratificacion/predictions/cost_ACG/linear20221205_132708__2018.csv')
+    predCostCCS=pd.read_csv('/home/alex/Desktop/estratificacion/predictions/costCCS_pharma/linear20221205_131359__2018.csv')
     
     
     for preds in [predDeathCCS,predCostCCS,predCostACG]:

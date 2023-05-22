@@ -3,10 +3,10 @@
 """
 Created on Tue Apr  5 16:18:31 2022
 
-@author: aolza
+@author: alex
 """
 import sys
-sys.path.append('/home/aolza/Desktop/estratificacion/')
+sys.path.append('/home/alex/Desktop/estratificacion/')
 import os
 import pandas as pd
 from pathlib import Path

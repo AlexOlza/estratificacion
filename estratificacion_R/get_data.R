@@ -1,9 +1,9 @@
 #!/usr/bin/Rscript
 # (La linea de arriba es necesaria)
-source('/home/aolza/Desktop/estratificacion/estratificacion_R/configuracion.R')
-source('/home/aolza/Desktop/estratificacion/estratificacion_R/crear_tablas_CCS.R')
-source('/home/aolza/Desktop/estratificacion/estratificacion_R/crear_tablas_ATC.R')
-source('/home/aolza/Desktop/estratificacion/estratificacion_R/extraer_hospitalizaciones.R')
+source('/home/alex/Desktop/estratificacion/estratificacion_R/configuracion.R')
+source('/home/alex/Desktop/estratificacion/estratificacion_R/crear_tablas_CCS.R')
+source('/home/alex/Desktop/estratificacion/estratificacion_R/crear_tablas_ATC.R')
+source('/home/alex/Desktop/estratificacion/estratificacion_R/extraer_hospitalizaciones.R')
 get_data <- function(year, binarize=TRUE){
   # Función de nivel usuario.
   # Devuelve una tabla con los pacientes, sus CCS y sus fármacos.

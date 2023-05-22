@@ -16,8 +16,8 @@
 #########################################################################################
 library("stringr")
 # función constructora de la clase "configuration"
-configuration <- function(carpeta_datos ='/home/aolza/Desktop/estratificacionDatos',
-                          carpeta_ficheros_auxiliares = '/home/aolza/Desktop/estratificacion/aux/',
+configuration <- function(carpeta_datos ='/home/alex/Desktop/estratificacionDatos',
+                          carpeta_ficheros_auxiliares = '/home/alex/Desktop/estratificacion/aux/',
                           # Ficheros de datos indispensables:
                           ficheros_dx =  c("2016"="dx_in_2016.txt","2017"="dx_in_2017.txt"),#esta variable será un diccionario con los años como claves 
                                                                                             #y los nombres de fichero como valores

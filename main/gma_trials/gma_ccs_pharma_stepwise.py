@@ -3,11 +3,11 @@
 """
 Created on Mon Jan 16 09:53:52 2023
 
-@author: aolza
+@author: alex
 """
 prefix='stepwise_logistic_'
 import sys
-sys.path.append('/home/aolza/Desktop/estratificacion/')#necessary in cluster
+sys.path.append('/home/alex/Desktop/estratificacion/')#necessary in cluster
 
 chosen_config='configurations.cluster.'+sys.argv[1]
 experiment='configurations.'+sys.argv[2]

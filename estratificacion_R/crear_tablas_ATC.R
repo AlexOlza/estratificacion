@@ -10,7 +10,7 @@
 #         si no, la calcula (tarda aprox. 45 minutos) y la guarda allí.
 #         PASOS PARA CALCULARLA: Similares a los de create_CCS_table (leer esa documentación)
 #########################################################################################################################
-source('/home/aolza/Desktop/estratificacion/estratificacion_R/configuracion.R')
+source('/home/alex/Desktop/estratificacion/estratificacion_R/configuracion.R')
 library(data.table)
 library(stringr)
 library(tictoc)

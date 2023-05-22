@@ -3,11 +3,11 @@
 """
 Created on Tue May 24 11:51:54 2022
 
-@author: aolza
+@author: alex
 https://github.com/slundberg/shap
 """
 import sys
-sys.path.append('/home/aolza/Desktop/estratificacion/')
+sys.path.append('/home/alex/Desktop/estratificacion/')
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split

@@ -3,7 +3,7 @@
 """
 Created on Wed Mar 23 11:37:21 2022
 
-@author: aolza
+@author: alex
 """
 
 EXPERIMENT='edc_urgcms_excl_nbinj'

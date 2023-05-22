@@ -3,10 +3,10 @@
 """
 Created on Wed Feb 22 12:21:35 2023
 
-@author: aolza
+@author: alex
 """
 import sys
-sys.path.append('/home/aolza/Desktop/estratificacion/')#necessary in cluster
+sys.path.append('/home/alex/Desktop/estratificacion/')#necessary in cluster
 
 
 import configurations.utility as util

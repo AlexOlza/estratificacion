@@ -2,10 +2,10 @@
 ##201612
 i<-2 #Para 2017 poner 2 en lugar de 1
 #indicar el camino a la carpeta que contiene los archivos de members y diagnósticos
-datapath<-"/home/aolza/Desktop/estratificacionDatos"
+datapath<-"/home/alex/Desktop/estratificacionDatos"
 indispensabledatapath<-paste(datapath,'indispensable',sep='/')
 #indicar dónde guardaremos los archivos inGMA
-outpath <- '/home/aolza/GMA_SNS_v30112022/dat'
+outpath <- '/home/alex/GMA_SNS_v30112022/dat'
 #indicar cómo se llaman los archivos members
 membersfile2016<-paste(indispensabledatapath,"members_201612.txt",sep='/')
 membersfile2017<-paste(indispensabledatapath,"members_201712.txt",sep='/')
@@ -82,13 +82,13 @@ write.table(gma2016_m, outfile_m,na="", sep="|",row.names=FALSE,col.names=FALSE,
 #Ahora los archivos de entrada están guardados donde deben
 # CARGAMOS EL WORKSPACE DE GMA
 
-load("/home/aolza/GMA_SNS_v30112022/bin/GMA SNS v11.RData")
+load("/home/alex/GMA_SNS_v30112022/bin/GMA SNS v11.RData")
 
 # Llamamos a la función AgrupaGMA
 
 #Parámetros que no cambian para cada trozo de la población
-path.in  = "/home/aolza/GMA_SNS_v30112022/dat/"
-path.out = "/home/aolza/GMA_SNS_v30112022/dat/"
+path.in  = "/home/alex/GMA_SNS_v30112022/dat/"
+path.out = "/home/alex/GMA_SNS_v30112022/dat/"
 date.ini = "20000101"
 date.end = sprintf("%s1231",year)
 language = "ES"

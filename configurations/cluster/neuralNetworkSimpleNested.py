@@ -3,7 +3,7 @@
 """
 Created on Tue Mar  8 12:22:32 2022
 
-@author: aolza
+@author: alex
 """
 """EXTERNAL IMPORTS"""
 import keras_tuner as kt

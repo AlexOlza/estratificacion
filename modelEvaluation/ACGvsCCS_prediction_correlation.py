@@ -3,10 +3,10 @@
 """
 Created on Wed Oct  5 10:12:55 2022
 
-@author: aolza
+@author: alex
 """
 import sys
-sys.path.append('/home/aolza/Desktop/estratificacion/')#necessary in cluster
+sys.path.append('/home/alex/Desktop/estratificacion/')#necessary in cluster
 
 chosen_config='configurations.cluster.'+sys.argv[1]
 experiment='configurations.'+sys.argv[2]
@@ -64,7 +64,7 @@ len(set(acg20k.PATIENT_ID).intersection(set(ccs20k.PATIENT_ID)))/20000
 
 #%%
 import joblib as job
-acg_model=job.load('/home/aolza/Desktop/estratificacion/models/cost_ACG/linear20221205_132708.joblib')
+acg_model=job.load('/home/alex/Desktop/estratificacion/models/cost_ACG/linear20221205_132708.joblib')
 #%%
 predsACG.PRED.corr(predsCCS.PRED, method='spearman') #ingreso 0.9016; coste 0.921 not 0.9107
 

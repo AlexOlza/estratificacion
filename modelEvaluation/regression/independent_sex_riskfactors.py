@@ -3,7 +3,7 @@
 """
 Created on Wed Oct  5 10:12:12 2022
 
-@author: aolza
+@author: alex
 """
 from scipy.stats import norm
 import re
@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 from sklearn.metrics import average_precision_score, roc_auc_score, RocCurveDisplay,roc_curve, auc,precision_recall_curve, PrecisionRecallDisplay
 import sys
-sys.path.append('/home/aolza/Desktop/estratificacion/')
+sys.path.append('/home/alex/Desktop/estratificacion/')
 import pandas as pd
 
 #%%

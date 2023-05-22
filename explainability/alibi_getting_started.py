@@ -3,10 +3,10 @@
 """
 Created on Thu Jan 12 12:09:10 2023
 
-@author: aolza
+@author: alex
 """
 import sys
-sys.path.append('/home/aolza/Desktop/estratificacion/')#necessary in cluster
+sys.path.append('/home/alex/Desktop/estratificacion/')#necessary in cluster
 
 chosen_config='configurations.cluster.logistic'
 experiment='configurations.urgcmsCCS_pharma'
@@ -35,7 +35,7 @@ tf.disable_v2_behavior()
 X,y=getData(2017)
 feature_names=X.drop('PATIENT_ID',axis=1).columns
 #%%
-modelpath='/home/aolza/Desktop/estratificacion/models/urgcmsCCS_pharma/nested_neural'
+modelpath='/home/alex/Desktop/estratificacion/models/urgcmsCCS_pharma/nested_neural'
 model=keras.models.load_model(modelpath+'/DemoDiagPharmaBinary')
 #%%
 predict_fn = lambda x: np.array([model.predict(x), 1-model.predict(x)]).ravel().reshape(1,-2)

@@ -15,11 +15,11 @@ PROCEDURE:
 
 Created on Tue Mar 29 10:01:15 2022
 
-@author: aolza
+@author: alex
 """
 #%% EXTERNAL IMPORTS
 import sys
-sys.path.append('/home/aolza/Desktop/estratificacion/')
+sys.path.append('/home/alex/Desktop/estratificacion/')
 import pandas as pd
 
 from scipy.stats import norm

@@ -20,7 +20,7 @@
 #             y lo guardamos en una matriz (esto tarda media hora). Se escribe en disco esta matriz.
 #       - Opcional: Según el argumento binarize, se devuelve la matriz binarizada.
 #########################################################################################################################
-source('/home/aolza/Desktop/estratificacion/estratificacion_R/configuracion.R')
+source('/home/alex/Desktop/estratificacion/estratificacion_R/configuracion.R')
 library(data.table)
 library(stringr)
 library(tictoc)

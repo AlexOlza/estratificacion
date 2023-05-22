@@ -3,14 +3,14 @@
 """
 Created on Fri Jan 13 10:08:49 2023
 
-@author: aolza
+@author: alex
 """
 from anchor import utils
 from anchor import anchor_tabular
 
 #%%
 import sys
-sys.path.append('/home/aolza/Desktop/estratificacion/')#necessary in cluster
+sys.path.append('/home/alex/Desktop/estratificacion/')#necessary in cluster
 
 chosen_config='configurations.cluster.logistic'
 experiment='configurations.urgcmsCCS_pharma'
@@ -39,7 +39,7 @@ tf.disable_v2_behavior()
 X,y=getData(2017)
 feature_names=X.drop('PATIENT_ID',axis=1).columns
 #%%
-modelpath='/home/aolza/Desktop/estratificacion/models/urgcmsCCS_pharma/nested_neural'
+modelpath='/home/alex/Desktop/estratificacion/models/urgcmsCCS_pharma/nested_neural'
 model=keras.models.load_model(modelpath+'/DemoDiagPharmaBinary')
 #%%
 catnames={i:['0','1'] for i,v in enumerate(feature_names) if not 'CCS' in v}

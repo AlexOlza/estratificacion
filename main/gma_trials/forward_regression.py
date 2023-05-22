@@ -3,7 +3,7 @@
 """
 Created on Mon Jan 16 09:53:52 2023
 
-@author: aolza
+@author: alex
 source:
     https://fakhredin.medium.com/forward-selection-to-find-predictive-variables-with-python-code-3c33f0db2393
 """

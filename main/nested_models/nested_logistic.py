@@ -5,12 +5,12 @@ Assess the predictive performance gain
 of the ACG variable, task #48 
 Created on Mon Feb  7 12:30:42 2022
 
-@author: aolza
+@author: alex
 What should I do with these? Ask Edu
 HOSDOM|FRAILTY|INGRED_14GT
 """
 import sys
-sys.path.append('/home/aolza/Desktop/estratificacion/')#necessary in cluster
+sys.path.append('/home/alex/Desktop/estratificacion/')#necessary in cluster
 
 chosen_config='configurations.cluster.'+sys.argv[1]
 experiment='configurations.'+sys.argv[2]

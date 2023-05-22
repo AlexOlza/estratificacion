@@ -5,7 +5,7 @@ OBJECTIVE:
     Compare model performance for men and women
 Created on Fri Mar 18 13:13:37 2022
 
-@author: aolza
+@author: alex
 """
 import sys
 import os
@@ -38,7 +38,7 @@ from sklearn.metrics import confusion_matrix,average_precision_score, roc_auc_sc
 from sklearn.metrics import auc as auc_function
 import sys
 from sklearn.metrics import mean_squared_error,r2_score
-sys.path.append('/home/aolza/Desktop/estratificacion/')
+sys.path.append('/home/alex/Desktop/estratificacion/')
 # %%
 
 

@@ -5,7 +5,7 @@ OBJECTIVE:
     Compare model performance for men and women
 Created on Tue Oct 4 2022
 
-@author: aolza
+@author: alex
 """
 import os
 import configurations.utility as util
@@ -28,7 +28,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.metrics import average_precision_score, r2_score, mean_squared_error, RocCurveDisplay, roc_curve, auc, precision_recall_curve, PrecisionRecallDisplay
 import sys
-sys.path.append('/home/aolza/Desktop/estratificacion/')
+sys.path.append('/home/alex/Desktop/estratificacion/')
 # %%
 
 

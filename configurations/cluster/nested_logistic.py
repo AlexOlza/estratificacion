@@ -3,7 +3,7 @@
 """
 Created on Mon Feb  7 12:55:17 2022
 
-@author: aolza
+@author: alex
 """
 from configurations.default import *
 import os

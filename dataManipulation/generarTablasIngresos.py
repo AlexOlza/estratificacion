@@ -14,7 +14,7 @@ POTENCIALES VARIABLES RESPUESTA:
 
 Created on Fri Nov 12 12:01:39 2021
 
-@author: aolza
+@author: alex
 """
 from pathlib import Path
 from warnings import warn

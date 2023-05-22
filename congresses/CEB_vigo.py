@@ -6,10 +6,10 @@ OBJECTIVE:
 
 Created on Wed Feb  1 10:38:17 2023
 
-@author: aolza
+@author: alex
 """
 import sys
-sys.path.append('/home/aolza/Desktop/estratificacion/')#necessary in cluster
+sys.path.append('/home/alex/Desktop/estratificacion/')#necessary in cluster
 
 import os
 import configurations.utility as util

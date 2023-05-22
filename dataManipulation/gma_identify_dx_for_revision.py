@@ -3,7 +3,7 @@
 """
 Created on Wed Nov 17 11:20:27 2021
 
-@author: aolza
+@author: alex
 """
 import os
 import pandas as pd
@@ -12,7 +12,7 @@ import numpy as np
 from pathlib import Path
 from python_settings import settings as config
 import sys
-sys.path.append('/home/aolza/Desktop/estratificacion/')#necessary in cluster
+sys.path.append('/home/alex/Desktop/estratificacion/')#necessary in cluster
 
 chosen_config='configurations.cluster.'+sys.argv[1]
 experiment='configurations.'+sys.argv[2]
