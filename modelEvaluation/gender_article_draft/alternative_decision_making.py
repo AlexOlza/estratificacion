@@ -28,7 +28,7 @@ import re
 import seaborn as sns
 import numpy as np
 from matplotlib import pyplot as plt
-figurepath='/home/aolza/Desktop/estratificacion/figures/gender_article_draft/'
+figurepath='/home/alex/Desktop/estratificacion/figures/gender_article_draft/'
 CCS=eval(input('CCS? True/False: '))
 ccs='CCS' if CCS else 'ACG'
 

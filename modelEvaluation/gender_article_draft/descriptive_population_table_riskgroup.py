@@ -37,8 +37,9 @@ def new_age_groups(X):
     agesRisk['Grupo edad']=np.where(agesRisk['Grupo edad'].str.contains('85+'),
                                     agesRisk['Grupo edad'],
                                     agesRisk['Grupo edad'].str[:2]+'-'+agesRisk['Grupo edad'].str[2:])
-    agesRisk['Porcentaje']=agesRisk[0]
-    agesRisk['N']=pd.DataFrame(X.filter(regex=("AGE*")).idxmax(1).value_counts())[0]
+    print(agesRisk)
+    agesRisk['Porcentaje']=agesRisk['proportion']
+    agesRisk['N']=pd.DataFrame(X.filter(regex=("AGE*")).idxmax(1).value_counts())
     agesRisk=agesRisk[['Grupo edad', 'Porcentaje', 'N']]
     agesRisk.loc['AGE_7584']=['75-84',agesRisk.loc['AGE_7579'].Porcentaje+agesRisk.loc['AGE_8084'].Porcentaje,
                               agesRisk.loc['AGE_7579'].N+agesRisk.loc['AGE_8084'].N]
