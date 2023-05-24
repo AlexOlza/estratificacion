@@ -33,6 +33,7 @@ CCS=eval(input('CCS? True/False: '))
 ccs='CCS' if CCS else 'ACG'
 
 if CCS:
+    suffix=''
     logistic_modelpath=config.ROOTPATH+'models/urgcmsCCS_parsimonious/'
     linear_modelpath=config.ROOTPATH+'models/costCCS_parsimonious/'
     
@@ -42,6 +43,7 @@ if CCS:
     logistic_predpath=re.sub('models','predictions',logistic_modelpath)
     linear_predpath=re.sub('models','predictions',linear_modelpath)
 else: #ACG
+    suffix='ACG'
     logistic_modelpath=config.ROOTPATH+'models/urgcms_excl_nbinj/'
     linear_modelpath=config.ROOTPATH+'models/cost_ACG/'
     
@@ -360,7 +362,7 @@ for intervention,colors in zip(['top20k','top10k_gender'],colorss):
                         horizontalalignment='center', 
                         verticalalignment='center')
             plt.tight_layout()
-            plt.savefig(figurepath+f'prop_equitativas_logistic_{modelo}_{col}_{intervention}.jpeg',dpi=300)
+            plt.savefig(figurepath+f'prop_equitativas_logistic_{modelo}_{col}_{intervention}_{suffix}.jpeg',dpi=300)
             
             df_percentages['AGE']= col 
             df_percentages.AGE=df_percentages.AGE.str.replace('AGE_','')
@@ -390,9 +392,11 @@ for intervention,colors in zip(['top20k','top10k_gender'],colorss):
         ax4.axhline(1,color='lightgreen')
         ax3.scatter(range(len(avoided)),avoided['Female'].values,sizes=0.3*avoided.N_Female.values,color=colors[0])
         ax3.scatter(range(len(avoided)),avoided['Male'].values,sizes=0.3*avoided.N_Male.values,color=colors[1])
+        ax3.set_ylim(0,0.25)
         ax3.set_title(f'Proportion of avoided hospitalizations')
         ax4.set_title(f'Ratio of the proportion of avoided hospitalizations')
-        ax4.set_yticks([0.6,1,1.25,1.5,2])
+        ax4.set_yticks([0.8,1,1.25,1.5,2])
+        ax4.set_ylim([0.8,2.5])
         ax4.yaxis.set_major_formatter(ticker.StrMethodFormatter("{x:.1f}"))
         
         PPV=pd.DataFrame()
@@ -412,6 +416,8 @@ for intervention,colors in zip(['top20k','top10k_gender'],colorss):
         axppv.scatter(range(len(PPV)),PPV['Female'].values,sizes=0.3*PPV.N_Female.values,color=colors[0])
         axppv.scatter(range(len(PPV)),PPV['Male'].values,sizes=0.3*PPV.N_Male.values,color=colors[1])
         axppv.set_title('Positive Predictive Values (PPV)')
+        axppv2.set_ylim([0.85,1.15])
+        axppv.set_ylim([0.45,0.6])
         axppv2.set_title('Ratio of the PPVs')
         axppv2.set_yticks(np.logspace(np.log10((PPV['Male']/PPV['Female']).min()),np.log10((PPV['Male']/PPV['Female']).max()),4))
         for axis in [ax4.yaxis,axppv2.yaxis]:
@@ -480,8 +486,8 @@ for intervention,colors in zip(['top20k','top10k_gender'],colorss):
     
     fig.tight_layout()
     fig2.tight_layout()
-    fig.savefig(figurepath+f'avoided_hospit_{intervention}.jpeg',dpi=300)
-    fig2.savefig(figurepath+f'PPV_{intervention}.jpeg',dpi=300)
+    fig.savefig(figurepath+f'avoided_hospit_{intervention}_{suffix}.jpeg',dpi=300)
+    fig2.savefig(figurepath+f'PPV_{intervention}_{suffix}.jpeg',dpi=300)
 #%%
 # La figura global (la que decía Unai)
 withevent=allpreds.loc[(allpreds.should_be_selected_top20k==1)]
