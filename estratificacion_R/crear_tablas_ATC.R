@@ -102,10 +102,19 @@ get_ATC <- function(year, binarize=TRUE){
   #     Returns the CCS table for all patients in the Basque Country (including those without any illness)
   ###########################################################################################
   atc <- create_ATC_table(year, binarize)
-  # I read only column for ID
-  all_patients <- fread(as.character(config$ficheros_ACG[as.character(year)]),select='PATIENT_ID')
+  # I read only column for ID and gender
+  all_patients <- fread(as.character(config$ficheros_ACG[as.character(year)]),select=c('PATIENT_ID','FEMALE'))
   X <- atc[all_patients, on = .(PATIENT_ID)]
   X <-setnafill(X, fill = 0)
+  # Condition 1: PHARMA_BENIGNPROSTATICHYPERPLASIA must be zero for females
+  X[X$FEMALE==1,"PHARMA_BENIGNPROSTATICHYPERPLASIA"] <- 0
+  # Condition 2: Congestive_heart_failure must have at least one in every block
+  X$PHARMA_CONGESTIVEHEARTFAILURE <- 0
+  congestive <- c("PHARMA_CONGESTIVEHEARTFAILUREBLOCK1",
+                  "PHARMA_CONGESTIVEHEARTFAILUREBLOCK2",
+                  "PHARMA_CONGESTIVEHEARTFAILUREBLOCK3")
+  X[rowSums(X[,..congestive])==3,"PHARMA_CONGESTIVEHEARTFAILURE"] <- 1
+  X <- X[,(congestive):=NULL]
   predictors <- names(X)[names(X)!='PATIENT_ID']
   setcolorder(X, c('PATIENT_ID',str_sort(predictors))) 
   # I return X with the columns in alphabetical order. This is important for modelling (they must be always in the same order)
