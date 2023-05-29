@@ -75,7 +75,8 @@ def concat_preds(file1,file2):
     hom=pd.read_csv(file2)
     hom['FEMALE']=0
     return pd.concat([muj,hom])
-for path,modeltype in zip([linear_predpath,logistic_predpath],['linear','logistic']):
+for path, modelname in zip([linear_predpath,logistic_predpath],[linear_modelname,logistic_modelname]):
+    modeltype='linear' if modelname.startswith('linear') else 'logistic'
     cal='calibrated' if modeltype=='logistic' else ''
     separate_preds_w=pd.read_csv(path+f'{modeltype}Mujeres_{cal}_2018.csv')
     separate_preds_m=pd.read_csv(path+f'{modeltype}Hombres_{cal}_2018.csv')  
@@ -84,6 +85,15 @@ for path,modeltype in zip([linear_predpath,logistic_predpath],['linear','logisti
         separate_preds_m.loc[separate_preds_m.PRED<0,'PRED']=0
         separate_preds_w.loc[separate_preds_w.PRED<0,'PRED']=0
     separate_preds=pd.concat([separate_preds_m,separate_preds_w]).reset_index()
+    
+    global_preds_w=pd.read_csv(path+f'{modelname}_Mujeres_{cal}_2018.csv')
+    global_preds_m=pd.read_csv(path+f'{modelname}_Hombres_{cal}_2018.csv')  
+    global_preds_m['Gender']='Male' ; global_preds_w['Gender']='Female'
+    if modeltype=='linear':
+        global_preds_m.loc[global_preds_m.PRED<0,'PRED']=0
+        global_preds_w.loc[global_preds_w.PRED<0,'PRED']=0
+    global_preds=pd.concat([global_preds_m,global_preds_w]).reset_index()
+    
     df=pd.concat([separate_preds_m.PRED.describe().rename('Men'),separate_preds_w.PRED.describe().rename('Women')],axis=1)
     print(df)
     
@@ -95,10 +105,23 @@ for path,modeltype in zip([linear_predpath,logistic_predpath],['linear','logisti
         xlabel='Predicted probability'
 
     fig,ax=plt.subplots()
-    plot=sns.kdeplot(data=data,x='PRED',hue='Gender', ax=ax,clip=(data.PRED.min(),data.PRED.max()))
+    plot=sns.kdeplot(data=data,x='PRED',hue='Gender',palette={'Female':'orange','Male':'blue'}, ax=ax,clip=(data.PRED.min(),data.PRED.max()))
     ax.set_xlabel(xlabel)
     plt.tight_layout()
     plt.savefig(figurepath+f'/{modeltype}_{ccs}_separate_predictions_density.jpeg', dpi=300)
+    
+    data=global_preds.nlargest(20000,'PRED')
+    if modeltype=='linear':
+        data=data.nsmallest(len(data)-2,'PRED') #remove two outliers
+        xlabel='Predicted cost in euros'
+    else:
+        xlabel='Predicted probability'
+
+    fig,ax=plt.subplots()
+    plot=sns.kdeplot(data=data,x='PRED',hue='Gender',palette={'Female':'orange','Male':'blue'}, ax=ax,clip=(data.PRED.min(),data.PRED.max()))
+    ax.set_xlabel(xlabel)
+    plt.tight_layout()
+    plt.savefig(figurepath+f'/{modeltype}_{ccs}_global_predictions_density.jpeg', dpi=300)
 #%%
 
 """
