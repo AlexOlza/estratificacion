@@ -254,8 +254,12 @@ allpreds_lin_sep=concat_preds(linear_predpath+'linearMujeres__2018.csv',
                       linear_predpath+'linearHombres__2018.csv') 
 #%%
 X,y=getData(2017, predictors='PATIENT_ID|AGE_[0-9]+$|FEMALE')
+x2016,_=getData(2016, predictors='PATIENT_ID')
+x2016acg,_=getData(2016, CCS=False, predictors='PATIENT_ID')
 XACG,yacg=getData(2017,CCS=False, predictors='PATIENT_ID|AGE_[0-9]+$|FEMALE')
 X=X.loc[X.PATIENT_ID.isin(XACG.PATIENT_ID)]
+x2016=x2016.loc[x2016.PATIENT_ID.isin(x2016acg.PATIENT_ID)]
+not_in_both=set(X.PATIENT_ID).symmetric_difference(set(x2016.PATIENT_ID))
 #%%
 allpreds=allpreds.loc[allpreds.PATIENT_ID.isin(X.PATIENT_ID)]
 allpreds_sep=allpreds_sep.loc[allpreds_sep.PATIENT_ID.isin(X.PATIENT_ID)]
@@ -267,6 +271,7 @@ allpreds_lin_sep=allpreds_lin_sep.loc[allpreds_lin_sep.PATIENT_ID.isin(X.PATIENT
 allpreds_sep=patient_selection(allpreds_sep, 'logistic')
 # r2_score(allpreds.OBS,allpreds.PRED)
 table_logistic=table(allpreds,'logistic')
+table_logistic_sep=table(allpreds_sep,'logistic')
 #%%
 
 
@@ -277,6 +282,15 @@ table_linear=table(allpreds_lin,'linear')
 #%%
 table_log_round=table_logistic.round(3)
 cols=pd.Series([re.sub('_men|_women','',c) for c in table_logistic]).drop_duplicates()
+tablelog=pd.DataFrame(index=table_log_round.index)
+for col in cols:
+    tablelog[col]=[c for c in table_log_round.filter(regex=col).values]
+print(tablelog.T.to_latex())
+
+
+#%%
+table_log_round=table_logistic_sep.round(3)
+cols=pd.Series([re.sub('_men|_women','',c) for c in table_logistic_sep]).drop_duplicates()
 tablelog=pd.DataFrame(index=table_log_round.index)
 for col in cols:
     tablelog[col]=[c for c in table_log_round.filter(regex=col).values]
@@ -336,8 +350,8 @@ from matplotlib import ticker
 # fig2,(axppv,axppv2)=plt.subplots(1,2,figsize=(20,6))
 colorss=[['blue','red', 'black'],['lightblue','orange', 'black']]
 for intervention,colors in zip(['top20k','top10k_gender'],colorss):
-    fig,(ax3,ax4)=plt.subplots(1,2,figsize=(20,6))
-    fig2,(axppv,axppv2)=plt.subplots(1,2,figsize=(20,6))
+    fig,(ax3,ax4)=plt.subplots(1,2,figsize=(20,10))
+    fig2,(axppv,axppv2)=plt.subplots(1,2,figsize=(20,10))
     for allpreds_,modelo,ls in zip([allpreds,allpreds_sep],['global','separate'],['-','--']):
         df_percentages_full=pd.DataFrame()
         for col in X_age.filter(regex='AGE').columns:
@@ -350,36 +364,36 @@ for intervention,colors in zip(['top20k','top10k_gender'],colorss):
             PPV=len(benefited)/len(selected)
             df_percentages=pd.DataFrame()
             
-            df_percentages.loc['Among people with the event','N_Female']=withevent.FEMALE.sum()
-            df_percentages.loc['Selected by the model','N_Female']=selected.FEMALE.sum()
-            df_percentages.loc['Benefited by the intervention','N_Female']=benefited.FEMALE.sum()
+            df_percentages.loc['People with the event','N_Female']=withevent.FEMALE.sum()
+            df_percentages.loc['Selected by the model \n (Intervention Group)','N_Female']=selected.FEMALE.sum()
+            df_percentages.loc['People with the event \n in the Intervention Group','N_Female']=benefited.FEMALE.sum()
             
             df_percentages['N_Male']=(pd.Series([len(withevent),len(selected),len(benefited)])-pd.Series(df_percentages['N_Female'].values)).values
             
-            df_percentages.loc['PPV']=df_percentages.loc['Benefited by the intervention']/df_percentages.loc['Selected by the model']
+            df_percentages.loc['PPV']=df_percentages.loc['People with the event \n in the Intervention Group']/df_percentages.loc['Selected by the model \n (Intervention Group)']
             
             df_percentages['Female']=100*(pd.Series(df_percentages['N_Female'].values)/pd.Series([len(withevent),len(selected),len(benefited)])).values
             df_percentages['Male']=100*(pd.Series(df_percentages['N_Male'].values)/pd.Series([len(withevent),len(selected),len(benefited)])).values
             
-            df_percentages.loc['Proportion avoided']=(df_percentages.loc['Benefited by the intervention']/df_percentages.loc['Among people with the event'].values)
+            df_percentages.loc['Proportion avoided']=(df_percentages.loc['People with the event \n in the Intervention Group']/df_percentages.loc['People with the event'].values)
             
             ax=df_percentages.loc[~ df_percentages.index.isin(['Proportion avoided', 'PPV']),
-                                                            ['Female','Male']].plot.barh(stacked=True, title=f'{col} - {modelo} model')
-            plt.axvline(df_percentages.loc['Among people with the event','Female'])
+                                                            ['Female','Male']].plot.bar(stacked=True, title=f'{col} - {modelo} model')
+            plt.axhline(df_percentages.loc['People with the event','Female'])
             
-            numbers=[ df_percentages.loc['Among people with the event','N_Female'],
-                     df_percentages.loc['Selected by the model','N_Female'],
-                     df_percentages.loc['Benefited by the intervention','N_Female'],
-                     df_percentages.loc['Among people with the event','N_Male'],
-                    df_percentages.loc['Selected by the model','N_Male'],
-                    df_percentages.loc['Benefited by the intervention','N_Male']]
+            numbers=[ df_percentages.loc['People with the event','N_Female'],
+                     df_percentages.loc['Selected by the model \n (Intervention Group)','N_Female'],
+                     df_percentages.loc['People with the event \n in the Intervention Group','N_Female'],
+                     df_percentages.loc['People with the event','N_Male'],
+                    df_percentages.loc['Selected by the model \n (Intervention Group)','N_Male'],
+                    df_percentages.loc['People with the event \n in the Intervention Group','N_Male']]
             
             for p, n  in zip(ax.patches, numbers):
                 width, height = p.get_width(), p.get_height(), 
                 x, y = p.get_xy() 
                 ax.text(x+width/2, 
                         y+height/2, 
-                        ' {:.0f} ({:.0f} %)'.format(n,width), 
+                        ' {:.0f} ({:.0f} %)'.format(n,height), 
                         horizontalalignment='center', 
                         verticalalignment='center')
             plt.tight_layout()
@@ -398,10 +412,10 @@ for intervention,colors in zip(['top20k','top10k_gender'],colorss):
         avoided=pd.DataFrame(df_percentages_full.loc['Proportion avoided','N_Female']/df_percentages_full.loc['Proportion avoided','N_Male'] )
         avoided['Male']=pd.DataFrame(df_percentages_full.loc['Proportion avoided','N_Male'] )
         avoided['Female']=pd.DataFrame(df_percentages_full.loc['Proportion avoided','N_Female'] )
-        avoided['N_Male']=pd.DataFrame(df_percentages_full.loc['Benefited by the intervention','N_Male'] ).values
-        avoided['N_Female']=pd.DataFrame(df_percentages_full.loc['Benefited by the intervention','N_Female'] ).values
+        avoided['N_Male']=pd.DataFrame(df_percentages_full.loc['People with the event \n in the Intervention Group','N_Male'] ).values
+        avoided['N_Female']=pd.DataFrame(df_percentages_full.loc['People with the event \n in the Intervention Group','N_Female'] ).values
         
-        avoided['N']=(df_percentages_full.loc['Benefited by the intervention','N_Female']+df_percentages_full.loc['Benefited by the intervention','N_Male']).values
+        avoided['N']=(df_percentages_full.loc['People with the event \n in the Intervention Group','N_Female']+df_percentages_full.loc['People with the event \n in the Intervention Group','N_Male']).values
         avoided['AGE']=df_percentages_full.AGE.unique()
         avoided.index=avoided.AGE.str.replace('AGE_','')
         avoided=avoided.loc[['younger_than_54','55-64',
@@ -413,9 +427,9 @@ for intervention,colors in zip(['top20k','top10k_gender'],colorss):
         ax4.axhline(1,color='lightgreen')
         ax3.scatter(range(len(avoided)),avoided['Female'].values,sizes=0.3*avoided.N_Female.values,color=colors[0])
         ax3.scatter(range(len(avoided)),avoided['Male'].values,sizes=0.3*avoided.N_Male.values,color=colors[1])
-        ax3.set_title(f'Proportion of avoided hospitalizations')
+        ax3.set_title(f'Sensitivities')
         ax3.set_ylim(0,0.25)
-        ax4.set_title(f'Ratio of the proportion of avoided hospitalizations')
+        ax4.set_title(f'Ratio of the Sensitivities')
         ax4.set_yticks([0.8,1,1.5,2, 2.5])
         ax4.set_ylim([0.8,3])
         ax4.yaxis.set_major_formatter(ticker.StrMethodFormatter("{x:.1f}"))
@@ -423,8 +437,8 @@ for intervention,colors in zip(['top20k','top10k_gender'],colorss):
         PPV=pd.DataFrame()
         PPV['Male']=pd.DataFrame(df_percentages_full.loc['PPV','N_Male'] )
         PPV['Female']=pd.DataFrame(df_percentages_full.loc['PPV','N_Female'] )
-        PPV['N_Female']=df_percentages_full.loc['Benefited by the intervention','N_Female'].values
-        PPV['N_Male']=df_percentages_full.loc['Benefited by the intervention','N_Male'].values
+        PPV['N_Female']=df_percentages_full.loc['People with the event \n in the Intervention Group','N_Female'].values
+        PPV['N_Male']=df_percentages_full.loc['People with the event \n in the Intervention Group','N_Male'].values
         PPV['AGE']=df_percentages_full.AGE.unique()
         PPV.index=PPV.AGE.str.replace('AGE_','')
         PPV=PPV.loc[['younger_than_54','55-64',
@@ -455,25 +469,25 @@ for intervention,colors in zip(['top20k','top10k_gender'],colorss):
     
     ax3.legend(custom_lines, ['Female', 'Male',
                               # 'Female', 'Male'
-                              ],fontsize=20)
+                              ],fontsize=25)
     custom_lines = [Line2D([0], [0], color=colorss[0][2], lw=4),
                     Line2D([0], [0], color=colorss[1][2], lw=4),]
     
     ax4.legend(custom_lines, ['Ratio M/F ',
                               # 'Ratio M/F  10k-10k'
                               ],
-               fontsize=20,title='Scale: log10',title_fontsize=20)
-    # ax4.legend(fontsize=20,title='Scale: log10',title_fontsize=20)
+               fontsize=25,title='Scale: log10',title_fontsize=25)
+    # ax4.legend(fontsize=25,title='Scale: log10',title_fontsize=25)
     # for ax in (ax33,ax34):
     ax3.title.set_fontsize(20)
     ax3.xaxis.label.set_fontsize(20)
-    ax3.xaxis.set_tick_params(labelsize=20)
-    ax3.yaxis.set_tick_params(labelsize=20)
+    ax3.xaxis.set_tick_params(labelsize=25)
+    ax3.yaxis.set_tick_params(labelsize=25)
     
     ax4.title.set_fontsize(20)
     ax4.xaxis.label.set_fontsize(20)
-    ax4.xaxis.set_tick_params(labelsize=20)
-    ax4.yaxis.set_tick_params(labelsize=20)
+    ax4.xaxis.set_tick_params(labelsize=25)
+    ax4.yaxis.set_tick_params(labelsize=25)
     
     from matplotlib.lines import Line2D
     custom_lines = [Line2D([0], [0], color=colorss[0][0], lw=4),
@@ -485,25 +499,25 @@ for intervention,colors in zip(['top20k','top10k_gender'],colorss):
     axppv.legend(custom_lines, ['Female', 'Male',
                               # 'Female 10k-10k', 'Male 10k-10k'
                               ],
-                 fontsize=20)
+                 fontsize=25)
     custom_lines = [Line2D([0], [0], color=colorss[0][2], lw=4),
                     Line2D([0], [0], color=colorss[1][2], lw=4),]
     
     axppv2.legend(custom_lines, ['Ratio M/F',
                               # 'Ratio M/F'
                               ],
-               fontsize=20,title='Scale: log10',title_fontsize=20)
-    # axppv2.legend(fontsize=20,title='Scale: log10',title_fontsize=20)
+               fontsize=25,title='Scale: log10',title_fontsize=25)
+    # axppv2.legend(fontsize=25,title='Scale: log10',title_fontsize=25)
     # for ax in (axppv3,axppv4):
     axppv.title.set_fontsize(20)
     axppv.xaxis.label.set_fontsize(20)
-    axppv.xaxis.set_tick_params(labelsize=20)
-    axppv.yaxis.set_tick_params(labelsize=20)
+    axppv.xaxis.set_tick_params(labelsize=25)
+    axppv.yaxis.set_tick_params(labelsize=25)
     
     axppv2.title.set_fontsize(20)
     axppv2.xaxis.label.set_fontsize(20)
-    axppv2.xaxis.set_tick_params(labelsize=20)
-    axppv2.yaxis.set_tick_params(labelsize=20)
+    axppv2.xaxis.set_tick_params(labelsize=25)
+    axppv2.yaxis.set_tick_params(labelsize=25)
     
     fig.tight_layout()
     fig2.tight_layout()
@@ -528,36 +542,36 @@ for allpreds_lin_,modelo,ls in zip([allpreds_lin,allpreds_lin_sep],['global','se
         PPV=len(benefited)/len(selected)
         df_percentages=pd.DataFrame()
         
-        df_percentages.loc['Among people with the event','N_Female']=withevent.FEMALE.sum()
-        df_percentages.loc['Selected by the model','N_Female']=selected.FEMALE.sum()
-        df_percentages.loc['Benefited by the intervention','N_Female']=benefited.FEMALE.sum()
+        df_percentages.loc['People with the event','N_Female']=withevent.FEMALE.sum()
+        df_percentages.loc['Selected by the model \n (Intervention Group)','N_Female']=selected.FEMALE.sum()
+        df_percentages.loc['People with the event \n in the Intervention Group','N_Female']=benefited.FEMALE.sum()
         
         df_percentages['N_Male']=(pd.Series([len(withevent),len(selected),len(benefited)])-pd.Series(df_percentages['N_Female'].values)).values
         
-        df_percentages.loc['PPV']=df_percentages.loc['Benefited by the intervention']/df_percentages.loc['Selected by the model']
+        df_percentages.loc['PPV']=df_percentages.loc['People with the event \n in the Intervention Group']/df_percentages.loc['Selected by the model \n (Intervention Group)']
         
         df_percentages['Female']=100*(pd.Series(df_percentages['N_Female'].values)/pd.Series([len(withevent),len(selected),len(benefited)])).values
         df_percentages['Male']=100*(pd.Series(df_percentages['N_Male'].values)/pd.Series([len(withevent),len(selected),len(benefited)])).values
         
-        df_percentages.loc['Proportion avoided']=(df_percentages.loc['Benefited by the intervention']/df_percentages.loc['Among people with the event'].values)
+        df_percentages.loc['Proportion avoided']=(df_percentages.loc['People with the event \n in the Intervention Group']/df_percentages.loc['People with the event'].values)
         
         ax=df_percentages.loc[~ df_percentages.index.isin(['Proportion avoided', 'PPV']),
-                                                        ['Female','Male']].plot.barh(stacked=True, title=f'{col} - {modelo} model')
-        plt.axvline(df_percentages.loc['Among people with the event','Female'])
+                                                        ['Female','Male']].plot.bar(stacked=True, title=f'{col} - {modelo} model')
+        plt.axhline(df_percentages.loc['People with the event','Female'])
         
-        numbers=[ df_percentages.loc['Among people with the event','N_Female'],
-                 df_percentages.loc['Selected by the model','N_Female'],
-                 df_percentages.loc['Benefited by the intervention','N_Female'],
-                 df_percentages.loc['Among people with the event','N_Male'],
-                df_percentages.loc['Selected by the model','N_Male'],
-                df_percentages.loc['Benefited by the intervention','N_Male']]
+        numbers=[ df_percentages.loc['People with the event','N_Female'],
+                 df_percentages.loc['Selected by the model \n (Intervention Group)','N_Female'],
+                 df_percentages.loc['People with the event \n in the Intervention Group','N_Female'],
+                 df_percentages.loc['People with the event','N_Male'],
+                df_percentages.loc['Selected by the model \n (Intervention Group)','N_Male'],
+                df_percentages.loc['People with the event \n in the Intervention Group','N_Male']]
         
         for p, n  in zip(ax.patches, numbers):
             width, height = p.get_width(), p.get_height(), 
             x, y = p.get_xy() 
             ax.text(x+width/2, 
                     y+height/2, 
-                    ' {:.0f} ({:.0f} %)'.format(n,width), 
+                    ' {:.0f} ({:.0f} %)'.format(n,height), 
                     horizontalalignment='center', 
                     verticalalignment='center')
         plt.tight_layout()
@@ -576,10 +590,10 @@ for allpreds_lin_,modelo,ls in zip([allpreds_lin,allpreds_lin_sep],['global','se
     avoided=pd.DataFrame(df_percentages_full.loc['Proportion avoided','N_Female']/df_percentages_full.loc['Proportion avoided','N_Male'] )
     avoided['Male']=pd.DataFrame(df_percentages_full.loc['Proportion avoided','N_Male'] )
     avoided['Female']=pd.DataFrame(df_percentages_full.loc['Proportion avoided','N_Female'] )
-    avoided['N_Male']=pd.DataFrame(df_percentages_full.loc['Benefited by the intervention','N_Male'] ).values
-    avoided['N_Female']=pd.DataFrame(df_percentages_full.loc['Benefited by the intervention','N_Female'] ).values
+    avoided['N_Male']=pd.DataFrame(df_percentages_full.loc['People with the event \n in the Intervention Group','N_Male'] ).values
+    avoided['N_Female']=pd.DataFrame(df_percentages_full.loc['People with the event \n in the Intervention Group','N_Female'] ).values
     
-    avoided['N']=(df_percentages_full.loc['Benefited by the intervention','N_Female']+df_percentages_full.loc['Benefited by the intervention','N_Male']).values
+    avoided['N']=(df_percentages_full.loc['People with the event \n in the Intervention Group','N_Female']+df_percentages_full.loc['People with the event \n in the Intervention Group','N_Male']).values
     avoided['AGE']=df_percentages_full.AGE.unique()
     avoided.index=avoided.AGE.str.replace('AGE_','')
     avoided=avoided.loc[['younger_than_54','55-64',
@@ -601,8 +615,8 @@ for allpreds_lin_,modelo,ls in zip([allpreds_lin,allpreds_lin_sep],['global','se
     PPV=pd.DataFrame()
     PPV['Male']=pd.DataFrame(df_percentages_full.loc['PPV','N_Male'] )
     PPV['Female']=pd.DataFrame(df_percentages_full.loc['PPV','N_Female'] )
-    PPV['N_Female']=df_percentages_full.loc['Benefited by the intervention','N_Female'].values
-    PPV['N_Male']=df_percentages_full.loc['Benefited by the intervention','N_Male'].values
+    PPV['N_Female']=df_percentages_full.loc['People with the event \n in the Intervention Group','N_Female'].values
+    PPV['N_Male']=df_percentages_full.loc['People with the event \n in the Intervention Group','N_Male'].values
     PPV['AGE']=df_percentages_full.AGE.unique()
     PPV.index=PPV.AGE.str.replace('AGE_','')
     PPV=PPV.loc[['younger_than_54','55-64',
@@ -697,36 +711,76 @@ selected=allpreds.loc[(allpreds.top20k==1)]
 benefited=allpreds.loc[(allpreds.top20k==1) & (allpreds.should_be_selected_top20k==1)]
 df_percentages=pd.DataFrame()
 
-df_percentages.loc['Among people with the event','N_Female']=withevent.FEMALE.sum()
-df_percentages.loc['Selected by the model','N_Female']=selected.FEMALE.sum()
-df_percentages.loc['Benefited by the intervention','N_Female']=benefited.FEMALE.sum()
+df_percentages.loc['People with the event','N_Female']=withevent.FEMALE.sum()
+df_percentages.loc['Selected by the model \n (Intervention Group)','N_Female']=selected.FEMALE.sum()
+df_percentages.loc['People with the event \n in the Intervention Group','N_Female']=benefited.FEMALE.sum()
 
 df_percentages['N_Male']=(pd.Series([len(withevent),len(selected),len(benefited)])-pd.Series(df_percentages['N_Female'].values)).values
 
 df_percentages['Female']=100*(pd.Series(df_percentages['N_Female'].values)/pd.Series([len(withevent),len(selected),len(benefited)])).values
 df_percentages['Male']=100*(pd.Series(df_percentages['N_Male'].values)/pd.Series([len(withevent),len(selected),len(benefited)])).values
 
-axglobal=df_percentages[['Female','Male']].plot.barh(stacked=True)
+axglobal=df_percentages[['Female','Male']].plot.bar(stacked=True)
 
-numbers=[ df_percentages.loc['Among people with the event','N_Female'],
-         df_percentages.loc['Selected by the model','N_Female'],
-         df_percentages.loc['Benefited by the intervention','N_Female'],
-         df_percentages.loc['Among people with the event','N_Male'],
-        df_percentages.loc['Selected by the model','N_Male'],
-        df_percentages.loc['Benefited by the intervention','N_Male']]
+numbers=[ df_percentages.loc['People with the event','N_Female'],
+         df_percentages.loc['Selected by the model \n (Intervention Group)','N_Female'],
+         df_percentages.loc['People with the event \n in the Intervention Group','N_Female'],
+         df_percentages.loc['People with the event','N_Male'],
+        df_percentages.loc['Selected by the model \n (Intervention Group)','N_Male'],
+        df_percentages.loc['People with the event \n in the Intervention Group','N_Male']]
 
 for p, n  in zip(axglobal.patches, numbers):
     width, height = p.get_width(), p.get_height(), 
     x, y = p.get_xy() 
     axglobal.text(x+width/2, 
             y+height/2, 
-            ' {:.0f} ({:.0f} %)'.format(n,width), 
+            ' {:.0f} ({:.0f} %)'.format(n,height), 
             horizontalalignment='center', 
             verticalalignment='center')
 
-plt.axvline(df_percentages.loc['Among people with the event','Female'])
+plt.axhline(df_percentages.loc['People with the event','Female'])
 plt.tight_layout()
 plt.savefig(figurepath+f'hospit_gender_figures/prop_equitativas_global_hospit{suffix}.jpeg',dpi=300)
+
+#%%
+# La figura global (la que decía Unai)
+
+withevent=allpreds_sep.loc[(allpreds_sep.should_be_selected_top20k==1)]
+selected=allpreds_sep.loc[(allpreds_sep.top20k==1)]
+benefited=allpreds_sep.loc[(allpreds_sep.top20k==1) & (allpreds_sep.should_be_selected_top20k==1)]
+df_percentages=pd.DataFrame()
+
+df_percentages.loc['People with the event','N_Female']=withevent.FEMALE.sum()
+df_percentages.loc['Selected by the model \n (Intervention Group)','N_Female']=selected.FEMALE.sum()
+df_percentages.loc['People with the event \n in the Intervention Group','N_Female']=benefited.FEMALE.sum()
+
+df_percentages['N_Male']=(pd.Series([len(withevent),len(selected),len(benefited)])-pd.Series(df_percentages['N_Female'].values)).values
+
+df_percentages['Female']=100*(pd.Series(df_percentages['N_Female'].values)/pd.Series([len(withevent),len(selected),len(benefited)])).values
+df_percentages['Male']=100*(pd.Series(df_percentages['N_Male'].values)/pd.Series([len(withevent),len(selected),len(benefited)])).values
+
+axglobal=df_percentages[['Female','Male']].plot.bar(stacked=True)
+
+numbers=[ df_percentages.loc['People with the event','N_Female'],
+         df_percentages.loc['Selected by the model \n (Intervention Group)','N_Female'],
+         df_percentages.loc['People with the event \n in the Intervention Group','N_Female'],
+         df_percentages.loc['People with the event','N_Male'],
+        df_percentages.loc['Selected by the model \n (Intervention Group)','N_Male'],
+        df_percentages.loc['People with the event \n in the Intervention Group','N_Male']]
+
+for p, n  in zip(axglobal.patches, numbers):
+    width, height = p.get_width(), p.get_height(), 
+    x, y = p.get_xy() 
+    axglobal.text(x+width/2, 
+            y+height/2, 
+            ' {:.0f} ({:.0f} %)'.format(n,height), 
+            horizontalalignment='center', 
+            verticalalignment='center')
+
+plt.axhline(df_percentages.loc['People with the event','Female'])
+plt.tight_layout()
+plt.savefig(figurepath+f'hospit_gender_figures/prop_equitativas_separate_hospit{suffix}.jpeg',dpi=300)
+
 #%%
 # La figura global (la que decía Unai) - coste
 withevent=allpreds_lin.loc[(allpreds_lin.should_be_selected_top20k==1)]
@@ -734,33 +788,33 @@ selected=allpreds_lin.loc[(allpreds_lin.top20k==1)]
 benefited=allpreds_lin.loc[(allpreds_lin.top20k==1) & (allpreds_lin.should_be_selected_top20k==1)]
 df_percentages=pd.DataFrame()
 
-df_percentages.loc['Among people with the event','N_Female']=withevent.FEMALE.sum()
-df_percentages.loc['Selected by the model','N_Female']=selected.FEMALE.sum()
-df_percentages.loc['Benefited by the intervention','N_Female']=benefited.FEMALE.sum()
+df_percentages.loc['People with the event','N_Female']=withevent.FEMALE.sum()
+df_percentages.loc['Selected by the model \n (Intervention Group)','N_Female']=selected.FEMALE.sum()
+df_percentages.loc['People with the event \n in the Intervention Group','N_Female']=benefited.FEMALE.sum()
 
 df_percentages['N_Male']=(pd.Series([len(withevent),len(selected),len(benefited)])-pd.Series(df_percentages['N_Female'].values)).values
 
 df_percentages['Female']=100*(pd.Series(df_percentages['N_Female'].values)/pd.Series([len(withevent),len(selected),len(benefited)])).values
 df_percentages['Male']=100*(pd.Series(df_percentages['N_Male'].values)/pd.Series([len(withevent),len(selected),len(benefited)])).values
 
-axglobal=df_percentages[['Female','Male']].plot.barh(stacked=True)
+axglobal=df_percentages[['Female','Male']].plot.bar(stacked=True)
 
-numbers=[ df_percentages.loc['Among people with the event','N_Female'],
-         df_percentages.loc['Selected by the model','N_Female'],
-         df_percentages.loc['Benefited by the intervention','N_Female'],
-         df_percentages.loc['Among people with the event','N_Male'],
-        df_percentages.loc['Selected by the model','N_Male'],
-        df_percentages.loc['Benefited by the intervention','N_Male']]
+numbers=[ df_percentages.loc['People with the event','N_Female'],
+         df_percentages.loc['Selected by the model \n (Intervention Group)','N_Female'],
+         df_percentages.loc['People with the event \n in the Intervention Group','N_Female'],
+         df_percentages.loc['People with the event','N_Male'],
+        df_percentages.loc['Selected by the model \n (Intervention Group)','N_Male'],
+        df_percentages.loc['People with the event \n in the Intervention Group','N_Male']]
 
 for p, n  in zip(axglobal.patches, numbers):
     width, height = p.get_width(), p.get_height(), 
     x, y = p.get_xy() 
     axglobal.text(x+width/2, 
             y+height/2, 
-            ' {:.0f} ({:.0f} %)'.format(n,width), 
+            ' {:.0f} ({:.0f} %)'.format(n,height), 
             horizontalalignment='center', 
             verticalalignment='center')
     
-plt.axvline(df_percentages.loc['Among people with the event','Female'])
+plt.axhline(df_percentages.loc['People with the event','Female'])
 plt.tight_layout()
 plt.savefig(figurepath+f'cost_gender_figures/prop_equitativas_global_coste{suffix}.jpeg',dpi=300)
